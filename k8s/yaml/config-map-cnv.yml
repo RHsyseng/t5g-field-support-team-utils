@@ -1,0 +1,22 @@
+apiVersion: v1
+data:
+  t5g.cfg: |+
+    card_action 	: create
+    debug       	: true
+    subject       : New Card(s) Have Been Created to Track Webscale Issues
+    labels        : cnv, no-qe, no-doc
+    priority      : High
+    type          : Story
+    query         : case_summary:*cnv,* OR case_tags:*cnv*
+    project       : KNIECO
+    component     : KNI Labs & Field
+    board         : KNI-ECO Labs & Field
+    sprintname    : Labs and Field Sprint
+    to          	: EMAIL@EXAMPLE.COM
+    team         : [{"jira_user": "kgershon", "name": "Kobi Gershon", "accounts": []}]
+    user        	: Jira_User
+    password    	: Jira_Pass
+    offline_token : Offline_token
+kind: ConfigMap
+metadata:
+  name: portal-to-jira-sync-cnv-cm

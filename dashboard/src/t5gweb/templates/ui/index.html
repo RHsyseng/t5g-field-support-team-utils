@@ -1,0 +1,57 @@
+{% extends "skeleton.html" %}
+{% block title %}{% endblock %}
+{% block content %}
+  <h1>{{ new_cases | length }} Cases Opened in the Last 7 Days:</h1>
+
+  <div>
+    <table>
+      <th>case#</th><th>severity</th><th>summary</th>
+
+      {% for case in new_cases %}
+      <tr>
+        <td><a href=https://access.redhat.com/support/cases/#/case/{{ case.case_number }}>{{ case.case_number }}</a></td>
+        <td>{{ case.case_severity }}</td>
+        <td>{{ case.case_summary }}</td>
+      </tr>
+      {% endfor %}
+    </table>
+  </div>
+        
+  <h1> New Card Updates </h1>
+  <div>
+     {% for account in new_comments %}
+     <ul>
+        <li>{{ account }}</li>
+        {% if new_comments[account] != "No Updates" %}
+        {% for status in new_comments[account] %}
+        {% if new_comments[account][status] | length > 0 %}
+        <ul>
+           {% if status == "Code Review" %}
+           <li>Waiting On Engineering</li>
+           {% elif status == "QE Review" %}
+           <li>Waiting On Customer</li>
+           {% else %}
+           <li>{{ status }}</li>
+           {% endif %}
+           <ul>
+              {% for details in new_comments[account][status] %}
+              <li><a href=https://access.redhat.com/support/cases/#/case/{{ new_comments[account][status][details]['case'] }}>{{new_comments[account][status][details]['case'] }}</a> {{new_comments[account][status][details]['summary']}}</li>
+              {% for comment in new_comments[account][status][details]['comments'] %}
+              <ul>
+                 <li>{{ comment }}</li>
+              </ul>
+              {% endfor %}
+              {% endfor %}
+           </ul>
+        </ul>
+        {% endif %}
+        {% endfor %}
+        {% else %}
+        <ul>
+           <li>{{ new_comments[account] }}</li>
+        </ul>
+        {% endif %}
+     </ul>
+     {% endfor %}
+  </div>
+  {% endblock %}

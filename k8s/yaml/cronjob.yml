@@ -1,0 +1,39 @@
+apiVersion: batch/v1beta1
+kind: CronJob
+metadata:
+  name: portal-to-jira-sync
+  labels:
+    cronjob: portal-to-jira-sync
+spec:
+  schedule: '*/30 * * * *'
+  successfulJobsHistoryLimit: 24
+  failedJobsHistoryLimit: 3
+  concurrencyPolicy: Forbid
+  jobTemplate:
+    metadata:
+      name: portal-to-jira-sync
+      labels:
+        cronjob: portal-to-jira-sync
+    spec:
+      template:
+        metadata:
+          name: portal-to-jira-sync
+          labels:
+            cronjob: portal-to-jira-sync
+        spec:
+          volumes:
+            - name: portal-to-jira-sync-cm
+              configMap:
+                name: portal-to-jira-sync-cm
+          containers:
+            - name: portal-to-jira-sync
+              image: image-registry.openshift-image-registry.svc.cluster.local:5000/telco-jira/portal-to-jira-sync:latest
+              imagePullPolicy: Always
+              command:
+                - 'bash'
+                - '-exc'
+                - '/opt/sync.sh'
+              volumeMounts:
+              - name: portal-to-jira-sync-cm
+                mountPath: /srv/cfg/
+          restartPolicy: OnFailure

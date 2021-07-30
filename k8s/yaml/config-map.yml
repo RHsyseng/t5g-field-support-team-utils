@@ -1,0 +1,24 @@
+apiVersion: v1
+data:
+  t5g.cfg: |+
+    card_action 	: create
+    debug       	: true
+    subject       : New Card(s) Have Been Created to Track Webscale Issues
+    labels        : field, no-qe, no-doc
+    priority      : High
+    type          : Story
+    query         : case_summary:*webscale* OR case_tags:*shift_telco5g*
+    project       : KNIECO
+    component     : KNI Labs & Field
+    board         : KNI-ECO Labs & Field
+    sprintname    : Labs and Field Sprint
+    to            : rh-telco5g-field-support@redhat.com
+    team          : Team
+    user        	: Jira_User
+    password    	: Jira_Pass
+    offline_token : Offline_token
+    slack_token		: Slack_token
+    slack_channel : Slack_channel
+kind: ConfigMap
+metadata:
+  name: portal-to-jira-sync-cm
