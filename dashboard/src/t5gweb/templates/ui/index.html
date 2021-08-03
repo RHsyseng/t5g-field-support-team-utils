@@ -35,7 +35,7 @@
            {% endif %}
            <ul>
               {% for details in new_comments[account][status] %}
-              <li><a href=https://access.redhat.com/support/cases/#/case/{{ new_comments[account][status][details]['case'] }}>{{new_comments[account][status][details]['case'] }}</a> {{new_comments[account][status][details]['summary']}}</li>
+              <li><a href=https://access.redhat.com/support/cases/#/case/{{ new_comments[account][status][details]['case'] }}>{{new_comments[account][status][details]['case'] }}</a> {{new_comments[account][status][details]['summary']}} (<a href=https://issues.redhat.com/browse/{{ details }}>{{ details }}</a> / new_comments[account][status][details]['assignee'])</li>
               {% for comment in new_comments[account][status][details]['comments'] %}
               <ul>
                  <li>{{ comment }}</li>
