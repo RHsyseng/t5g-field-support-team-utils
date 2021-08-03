@@ -1,0 +1,61 @@
+variables:
+  NAMESPACE: "telco-jira"
+  IMAGE: "portal-to-jira-sync"
+  TAG: "latest" #$CI_PIPELINE_IID
+
+stages:
+  - build
+  - pushToRegisty
+  - deploy
+
+
+before_script: 
+  - oc login -u $OCP_USER -p $OCP_PASS --server=$SERVER --insecure-skip-tls-verify 
+
+build_container:
+  stage: build
+  variables:
+    NAMESPACE: "telco-jira"
+  before_script:
+  - echo "Please make sure that Podman and Kubectl are installed" 
+  script:
+  - podman build -t $REGISTRY/$NAMESPACE/$IMAGE:$TAG .
+  rules:
+  - if: '$CI_COMMIT_BRANCH == "master"'
+
+
+connect-and-push-registry:
+  stage: pushToRegisty
+  script:
+  - podman login -u $(oc whoami) -p $(oc whoami -t) --tls-verify=false $REGISTRY
+  - podman push --tls-verify=false $REGISTRY/$NAMESPACE/$IMAGE:$TAG
+  rules:
+  - if: '$CI_COMMIT_BRANCH == "master"'
+
+
+Deploy-WebScale:
+  stage: deploy
+  before_script:
+  #Shift_Telco
+  - sed -i 's/Jira_User/'"$Jira_User"'/g' k8s/yaml/config-map.yml
+  - sed -i 's/Jira_Pass/'"$Jira_Pass"'/g' k8s/yaml/config-map.yml
+  - echo k8s/yaml/config-map.yml | awk -i inplace -v srch="Offline_token" -v repl="$Offline_token" '{ sub(srch,repl,$0); print $0 }' k8s/yaml/config-map.yml
+  - echo k8s/yaml/config-map.yml | awk -i inplace -v srch="Slack_token" -v repl="$Slack_token" '{ sub(srch,repl,$0); print $0 }' k8s/yaml/config-map.yml
+  - echo k8s/yaml/config-map.yml | awk -i inplace -v srch="Slack_channel" -v repl="$Slack_channel" '{ sub(srch,repl,$0); print $0 }' k8s/yaml/config-map.yml
+  - echo k8s/yaml/config-map.yml | awk -i inplace -v srch="Team" -v repl="$Team" '{ sub(srch,repl,$0); print $0 }' k8s/yaml/config-map.yml
+  #CNV
+  - sed -i 's/Jira_User/'"$Jira_User"'/g' k8s/yaml/config-map-cnv.yml
+  - sed -i 's/Jira_Pass/'"$Jira_Pass"'/g' k8s/yaml/config-map-cnv.yml
+  - echo k8s/yaml/config-map-cnv.yml | awk -i inplace -v srch="Offline_token" -v repl="$Offline_token" '{ sub(srch,repl,$0); print $0 }' k8s/yaml/config-map-cnv.yml
+  #Dashboard
+  - sed -i 's/Jira_User/'"$Jira_User"'/g' dashboard/yaml/04_t5gweb-app-deployment.yml
+  - sed -i 's/Jira_Pass/'"$Jira_Pass"'/g' dashboard/yaml/04_t5gweb-app-deployment.yml
+  - echo dashboard/yaml/04_t5gweb-app-deployment.yml | awk -i inplace -v srch="Offline_token" -v repl="$Offline_token" '{ sub(srch,repl,$0); print $0 }' dashboard/yaml/04_t5gweb-app-deployment.yml
+  - echo dashboard/yaml/04_t5gweb-app-deployment.yml | awk -i inplace -v srch="Accounts" -v repl="$Accounts" '{ sub(srch,repl,$0); print $0 }' dashboard/yaml/04_t5gweb-app-deployment.yml
+
+  script:
+  - kubectl apply -f k8s/yaml/ -n $NAMESPACE 
+  - sed -i '/portal-to-jira-sync:/! s/portal-to-jira-sync/portal-to-jira-sync-cnv/g' k8s/yaml/cronjob.yml
+  - kubectl apply -f k8s/yaml/ -n $NAMESPACE 
+  rules:
+  - if: '$CI_COMMIT_BRANCH == "master"'

@@ -1,0 +1,4 @@
+include t5gweb/schema.sql
+graft t5gweb/static
+graft t5gweb/templates
+global-exclude *.pyc

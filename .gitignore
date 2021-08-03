@@ -1,0 +1,3 @@
+venv/
+cfg/*
+!cfg/sample.cfg
