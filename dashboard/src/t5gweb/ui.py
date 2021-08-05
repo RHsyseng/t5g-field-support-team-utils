@@ -4,7 +4,7 @@ import datetime
 from flask import (
     Blueprint, redirect, render_template, request, url_for, make_response, send_file
 )
-
+from . import cache
 from t5gweb.t5gweb import (
     get_new_cases,
     get_new_comments
@@ -13,6 +13,7 @@ from t5gweb.t5gweb import (
 BP = Blueprint('ui', __name__, url_prefix='/')
 
 @BP.route('/')
+@cache.cached(timeout=14400)
 def index():
     """list new cases"""
     new_cases = get_new_cases()
