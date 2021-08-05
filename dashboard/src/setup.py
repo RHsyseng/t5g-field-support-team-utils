@@ -12,6 +12,7 @@ setup(
         'gunicorn',
         'jira',
         'requests',
-        'slack_sdk'
+        'slack_sdk',
+        'flask_caching'
     ],
 )
