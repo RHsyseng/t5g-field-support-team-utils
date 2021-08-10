@@ -53,5 +53,39 @@
         {% endif %}
      </ul>
      {% endfor %}
+     {% for cnv in new_cnv %}
+     <ul>
+        <li>{{ cnv }}</li>
+        {% if new_cnv[cnv] != "No Updates" %}
+        {% for status in new_cnv[cnv] %}
+        {% if new_cnv[cnv][status] | length > 0 %}
+        <ul>
+           {% if status == "Code Review" %}
+           <li>Waiting On Engineering</li>
+           {% elif status == "QE Review" %}
+           <li>Waiting On Customer</li>
+           {% else %}
+           <li>{{ status }}</li>
+           {% endif %}
+           <ul>
+              {% for details in new_cnv[cnv][status] %}
+              <li><a href=https://access.redhat.com/support/cases/#/case/{{ new_cnv[cnv][status][details]['case'] }}>{{new_cnv[cnv][status][details]['case'] }}</a> {{new_cnv[cnv][status][details]['summary']}} (<a href=https://issues.redhat.com/browse/{{ details }}>{{ details }}</a> / {{ new_cnv[cnv][status][details]['assignee'] }})</li>
+              {% for comment in new_cnv[cnv][status][details]['comments'] %}
+              <ul>
+                 <li>{{ comment }}</li>
+              </ul>
+              {% endfor %}
+              {% endfor %}
+           </ul>
+        </ul>
+        {% endif %}
+        {% endfor %}
+        {% else %}
+        <ul>
+           <li>{{ new_cnv[cnv] }}</li>
+        </ul>
+        {% endif %}
+     </ul>
+     {% endfor %}
   </div>
   {% endblock %}

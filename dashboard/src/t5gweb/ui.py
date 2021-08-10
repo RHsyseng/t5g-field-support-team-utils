@@ -7,7 +7,8 @@ from flask import (
 from . import cache
 from t5gweb.t5gweb import (
     get_new_cases,
-    get_new_comments
+    get_new_comments,
+    get_cnv
 )
 
 BP = Blueprint('ui', __name__, url_prefix='/')
@@ -19,7 +20,8 @@ def index():
     new_cases = get_new_cases()
     now = datetime.datetime.utcnow()
     new_comments = get_new_comments()
-    return render_template('ui/index.html', new_cases=new_cases, now=now, new_comments=new_comments)
+    new_cnv = get_cnv()
+    return render_template('ui/index.html', new_cases=new_cases, now=now, new_comments=new_comments, new_cnv = new_cnv)
 
 @BP.route('/live')
 def live():
