@@ -23,8 +23,8 @@ def index():
     new_cnv = get_cnv()
     return render_template('ui/index.html', new_cases=new_cases, now=now, new_comments=new_comments, new_cnv = new_cnv)
 
-@BP.route('/live')
-def live():
+@BP.route('/refresh')
+def refresh():
     """Forces an update to the dashboard"""
     cache.clear()
     return redirect(url_for("ui.index"))
