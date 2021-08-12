@@ -1,5 +1,5 @@
 body {
-  font-family: monospace;
+  font-family: Arial, Helvetica, sans-serif;
   font-size: 100%;
   background-color: white;
   color: #111;
@@ -41,6 +41,33 @@ div.content {
 a {
   text-decoration: underline;
   color: #111;
+}
+
+.account {
+  color: #f66;
+  font-size: 140%;
+  font-weight: bold;
+
+}
+
+.status {
+  font-size: 130%;
+  font-style: italic;
+}
+
+.case {
+  font-weight: bold;
+  /* border: rgb(202, 199, 199);
+  border-width: 1px;
+  border-style: solid; */
+}
+
+hr.divide {
+  border: 1px dashed rgb(136, 128, 128);
+}
+
+ul li { 
+  padding: 5px 0px; 
 }
 
 .right         { text-align: right; }
