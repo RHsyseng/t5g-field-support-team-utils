@@ -101,7 +101,8 @@ def get_new_comments():
         case_num = linked_cards[card_name]
         if linked_cards[card_name] in cases: #check if casenum exists in cases
             detailed_cards[card_name] = {'case': case_num, 'summary': issue.fields.summary, "account": cases[case_num]['account'], "card_status": issue.fields.status.name, "comments": [comment.body for comment in issue.fields.comment.comments if (time_now - datetime.strptime(comment.updated, '%Y-%m-%dT%H:%M:%S.%f%z')).days < 7], "assignee": issue.fields.assignee }
-
+            if len(detailed_cards[card_name]['comments']) == 0:
+                detailed_cards.pop(card_name)
     # Grouping Cards by Account
     for i in detailed_cards:
         for account in accounts:
@@ -178,7 +179,8 @@ def get_cnv():
         case_num = linked_cards[card_name]
         if linked_cards[card_name] in cases: #check if casenum exists in cases
             detailed_cards[card_name] = {'case': case_num, 'summary': issue.fields.summary, "account": cases[case_num]['account'], "card_status": issue.fields.status.name, "comments": [comment.body for comment in issue.fields.comment.comments if (time_now - datetime.strptime(comment.updated, '%Y-%m-%dT%H:%M:%S.%f%z')).days < 7], "assignee": issue.fields.assignee }
-
+            if len(detailed_cards[card_name]['comments']) == 0:
+                detailed_cards.pop(card_name)
 # # Grouping Cards by Account
     for i in detailed_cards:
         for account in accounts:
