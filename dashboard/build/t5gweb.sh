@@ -5,14 +5,14 @@ set -ex
 IMAGE=t5gweb
 TAG=${1:-latest}
 PUSH=${2:-false}
-REGISTRY=$(oc get route/default-route -n openshift-image-registry -o json | jq -r .spec.host)
+REGISTRY=${REGISTRY:-$(oc get route/default-route -n openshift-image-registry -o json | jq -r .spec.host)}
 NS=t5g-web
 
 echo building $IMAGE:$TAG
 
-container=$(buildah from python3:latest)
+container=$(buildah from registry.access.redhat.com/ubi8/python-38)
 echo "building container with id $container"
-buildah config --label maintainer="David Critch <dcritch@gmail.com>" $container
+buildah config --label maintainer="David Critch <dcritch@redhat.com.com>" $container
 buildah copy $container ../src/ /srv/
 buildah copy $container ../../bin/libtelco5g.py /srv/t5gweb/libtelco5g.py
 buildah config --workingdir /srv $container
@@ -26,7 +26,7 @@ if [[ $PUSH == "true" ]]; then
   echo pushing to $REGISTRY
   buildah tag $IMAGE:$TAG $REGISTRY/$NS/$IMAGE:$TAG
   buildah login -u $(oc whoami) -p $(oc whoami -t) --tls-verify=false $REGISTRY
-  buildah push $REGISTRY/$NS/$IMAGE:$TAG
+  buildah push --tls-verify=false $REGISTRY/$NS/$IMAGE:$TAG
   oc scale --replicas=0 deployment/t5gweb -n $NS
   oc scale --replicas=1 deployment/t5gweb -n $NS
 fi
