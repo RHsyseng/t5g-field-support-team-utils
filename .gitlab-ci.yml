@@ -5,7 +5,6 @@ variables:
 
 stages:
   - build
-  - pushToRegisty
   - sync
   - deploy
 
@@ -13,7 +12,7 @@ stages:
 before_script: 
   - oc login -u $OCP_USER -p $OCP_PASS --server=$SERVER --insecure-skip-tls-verify 
 
-build_container:
+build_push_sync_container:
   stage: build
   variables:
     NAMESPACE: "telco-jira"
@@ -21,19 +20,22 @@ build_container:
   - echo "Please make sure that Podman and Kubectl are installed" 
   script:
   - podman build -t $REGISTRY/$NAMESPACE/$IMAGE:$TAG .
-  rules:
-  - if: '$CI_COMMIT_BRANCH == "master"'
-
-
-connect-and-push-registry:
-  stage: pushToRegisty
-  script:
   - podman login -u $(oc whoami) -p $(oc whoami -t) --tls-verify=false $REGISTRY
   - podman push --tls-verify=false $REGISTRY/$NAMESPACE/$IMAGE:$TAG
   rules:
   - if: '$CI_COMMIT_BRANCH == "master"'
 
-github-sync:
+build_push_dashboard_container:
+  stage: build
+  before_script:
+  - echo "Please make sure that Podman and Kubectl are installed" 
+  script:
+  - cd dashboard/build
+  - ./t5gweb.sh latest true
+  rules:
+  - if: '$CI_COMMIT_BRANCH == "master"'
+
+github_sync:
   stage: sync
   script:
     - git config --global user.email "${GL_USER_EMAIL}"
@@ -49,7 +51,7 @@ github-sync:
   rules:
     - if: $CI_PIPELINE_SOURCE == "schedule"
 
-Deploy-WebScale:
+k8s_deploy:
   stage: deploy
   before_script:
   #Shift_Telco
