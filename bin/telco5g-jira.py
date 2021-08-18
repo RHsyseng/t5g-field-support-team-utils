@@ -134,8 +134,8 @@ def main():
         print('\nDEBUG: Cards to Create')
         dpp.pprint(to_create)
     print("to create: %d" % (number_of_cards))
-    if number_of_cards >= 5:
-        email_content = ["Warning: more than 5 cases will be created, so refusing to proceed. Please check log output.\n"]
+    if number_of_cards >= 10:
+        email_content = ["Warning: more than 10 cases will be created, so refusing to proceed. Please check log output.\n"]
         cfg['to'] = cfg['alert_to']
         cfg['subject'] = 'High New Case Count Detected'
         libtelco5g.notify(cfg, email_content)
