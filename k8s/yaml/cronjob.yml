@@ -6,7 +6,7 @@ metadata:
     cronjob: portal-to-jira-sync
 spec:
   schedule: '*/30 * * * *'
-  successfulJobsHistoryLimit: 24
+  successfulJobsHistoryLimit: 3
   failedJobsHistoryLimit: 3
   concurrencyPolicy: Forbid
   jobTemplate:
