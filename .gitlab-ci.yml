@@ -9,8 +9,8 @@ stages:
   - deploy
 
 
-before_script: 
-  - oc login -u $OCP_USER -p $OCP_PASS --server=$SERVER --insecure-skip-tls-verify 
+#before_script: 
+#  - oc login -u $OCP_USER -p $OCP_PASS --server=$SERVER --insecure-skip-tls-verify 
 
 build_push_sync_container:
   stage: build
@@ -19,6 +19,7 @@ build_push_sync_container:
   before_script:
   - echo "Please make sure that Podman and Kubectl are installed" 
   script:
+  - oc login -u $OCP_USER -p $OCP_PASS --server=$SERVER --insecure-skip-tls-verify 
   - podman build -t $REGISTRY/$NAMESPACE/$IMAGE:$TAG .
   - podman login -u $(oc whoami) -p $(oc whoami -t) --tls-verify=false $REGISTRY
   - podman push --tls-verify=false $REGISTRY/$NAMESPACE/$IMAGE:$TAG
@@ -30,6 +31,7 @@ build_push_dashboard_container:
   before_script:
   - echo "Please make sure that Podman and Kubectl are installed" 
   script:
+  - oc login -u $OCP_USER -p $OCP_PASS --server=$SERVER --insecure-skip-tls-verify 
   - cd dashboard/build
   - ./t5gweb.sh latest true
   rules:
