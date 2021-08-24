@@ -3,6 +3,10 @@
   <head>
     {% block head %}
     <link rel=stylesheet type=text/css href="{{ url_for('static', filename='style.css') }}">
+
+    <!-- Include ClipboardJS-->
+    <script src="https://cdn.jsdelivr.net/npm/clipboard@2.0.8/dist/clipboard.min.js"></script>
+    
     <title>t5gweb://{% block title %}{% endblock %}</title>
     {% endblock %}
   </head>
@@ -24,5 +28,15 @@
       <a href="https://github.com/RHsyseng/t5g-field-support-team-utils">t5g-field-support-team-utils</a>
       {% endblock %}
     </div>
+    <script>
+          var clipboard = new ClipboardJS('.btn');
+          clipboard.on('success', function (e) {
+              console.log(e);
+          });
+
+          clipboard.on('error', function (e) {
+              console.log(e);
+          });
+    </script>
   </body>
 </html>
