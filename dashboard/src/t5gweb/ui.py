@@ -8,7 +8,8 @@ from . import cache
 from t5gweb.t5gweb import (
     get_new_cases,
     get_new_comments,
-    get_cnv
+    get_cnv,
+    plots
 )
 
 BP = Blueprint('ui', __name__, url_prefix='/')
@@ -28,3 +29,10 @@ def refresh():
     """Forces an update to the dashboard"""
     cache.clear()
     return redirect(url_for("ui.index"))
+
+@BP.route('/plots')
+def plot():
+    """Retrieves summary data and creates Chart.JS plot"""
+    plot_data = plots()
+    y = list(plot_data.values())
+    return render_template('ui/plot.html', values = y)

@@ -8,6 +8,7 @@ import re
 from werkzeug.exceptions import abort
 from . import libtelco5g
 import json
+import sys
 
 def get_new_cases():
     """get new cases created since X days ago"""
@@ -195,3 +196,38 @@ def get_cnv():
             accounts[account] = "No Updates"
 
     return accounts
+
+def plots():
+    cfg = libtelco5g.set_defaults()
+    if len(sys.argv) > 1:
+        if os.path.isfile(sys.argv[1]):
+            tfcfg = libtelco5g.read_config(sys.argv[1])
+            for key in tfcfg:
+                cfg[key] = tfcfg[key]
+        else:
+            print("File", sys.argv[1], "does not exist")
+            exit(1)
+    trcfg = libtelco5g.read_env_config(cfg.keys())
+    for key in trcfg:
+        cfg[key] = trcfg[key]
+    cfg['labels'] = cfg['labels'].split(',')
+    if cfg['debug'].lower() == 'true':
+        cfg['debug'] = True
+    else:
+        cfg['debug'] = False
+    jira_user = os.environ.get('jira_user')
+    jira_pass = os.environ.get('jira_pass')
+    options = { 'server': cfg['server'] }
+
+    try:
+        conn = jira.JIRA(options, basic_auth=(jira_user, jira_pass))
+    except jira.exceptions as e:
+        if e.status_code ==401:
+            print("Login to JIRA failed. Check your username and password")
+            exit (1)
+    project = libtelco5g.get_project_id(conn, cfg['project'])
+    component = libtelco5g.get_component_id(conn, project.id, cfg['component'])
+    board = libtelco5g.get_board_id(conn, cfg['board'])
+    sprint = libtelco5g.get_latest_sprint(conn, board.id, cfg['sprintname'])
+    summary = libtelco5g.get_card_summary(conn, sprint.id)
+    return summary

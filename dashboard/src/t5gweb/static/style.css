@@ -72,6 +72,11 @@ ul li {
   padding: 5px 0px; 
 }
 
+.chart-container {
+  width: 400px;
+  height: 400px;
+}
+
 .right         { text-align: right; }
 .left         { text-align: left; float: left; }
 
