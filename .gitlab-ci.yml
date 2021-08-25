@@ -51,7 +51,7 @@ github_sync:
   - git push origin master
   - echo "Sync has completed"
   rules:
-  - if: '$CI_PIPELINE_SOURCE == "schedule"''
+  - if: '$CI_PIPELINE_SOURCE == "schedule"'
 
 k8s_deploy:
   stage: deploy
