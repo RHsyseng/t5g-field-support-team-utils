@@ -75,4 +75,4 @@ k8s_deploy:
   - kubectl apply -f k8s/yaml/ -n $NAMESPACE 
   rules:
   - if: '$CI_COMMIT_BRANCH == "master"'
-  - if: $CI_PIPELINE_SOURCE == "schedule"
+  - if: '$CI_PIPELINE_SOURCE == "schedule"'
