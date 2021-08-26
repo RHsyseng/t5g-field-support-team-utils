@@ -30,7 +30,7 @@ def index():
 def refresh():
     """Forces an update to the dashboard"""
     cache.clear()
-    return redirect(url_for("ui.index"))
+    return redirect(url_for("ui.updates"))
 
 
 @BP.route('/updates')
