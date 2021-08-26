@@ -62,9 +62,10 @@ a {
   border-style: solid; */
 }
 
-/* hr.divide {
+hr.divide {
   border: 1px dashed rgb(136, 128, 128);
-} */
+}
+
 .header {
   padding-top: 10px;
 }
@@ -73,8 +74,8 @@ ul li {
 }
 
 .chart-container {
-  width: 400px;
-  height: 400px;
+  width: 600px;
+  height: 800px;
 }
 
 .right         { text-align: right; }

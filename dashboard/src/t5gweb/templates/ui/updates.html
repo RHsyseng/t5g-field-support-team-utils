@@ -1,0 +1,92 @@
+{% extends "skeleton.html" %}
+{% block content %}
+<button
+class="btn"
+data-clipboard-target=".copy"
+>
+Copy to clipboard
+</button>
+<h1> New Card Updates </h1>
+<div class="copy">
+   {% for account in new_comments %}
+   <ul>
+    <li><span class = "account">{{ account }}</span></li>
+    {% if new_comments[account] != "No Updates" %}
+      {% for status in new_comments[account] %}
+      {% if new_comments[account][status] | length > 0 %}
+      <ul>
+         {% if status == "Code Review" %}
+         <li><span class = "status">Waiting On Engineering</span></li>
+         {% elif status == "QE Review" %}
+         <li><span class = "status">Waiting On Customer</span></li>
+         {% else %}
+         <li><span class = "status">{{ status }}</span></li>
+         {% endif %}
+         <ul>
+            {% for details in new_comments[account][status] %}
+            <li class="header"><a href=https://access.redhat.com/support/cases/#/case/{{ new_comments[account][status][details]['case'] }}>{{new_comments[account][status][details]['case'] }}</a> <span class = "case">{{new_comments[account][status][details]['summary']}}</span> (<a href=https://issues.redhat.com/browse/{{ details }}>{{ details }}</a> / {{ new_comments[account][status][details]['assignee'] }})</li>
+            {% for comment in new_comments[account][status][details]['comments'] %}
+            <ul>
+               <li>{{ comment }}</li>
+            </ul>
+            {% endfor %}
+            <!-- <hr class="divide"> -->
+            {% endfor %}
+         </ul>
+      </ul>
+      {% endif %}
+      {% endfor %}
+      {% else %}
+      <ul>
+         <li>{{ new_comments[account] }}</li>
+      </ul>
+      {% endif %}
+   </ul>
+   {% endfor %}
+   {% for cnv in new_cnv %}
+   <ul>
+    <li><span class = "account">{{ cnv }}</span></li>
+    {% if new_cnv[cnv] != "No Updates" %}
+      {% for status in new_cnv[cnv] %}
+      {% if new_cnv[cnv][status] | length > 0 %}
+      <ul>
+         {% if status == "Code Review" %}
+         <li><span class = "status">Waiting On Engineering</span></li>
+         {% elif status == "QE Review" %}
+         <li><span class = "status">Waiting On Customer</span></li>
+         {% else %}
+         <li><span class = "status">{{ status }}</span></li>
+         {% endif %}
+         <ul>
+            {% for details in new_cnv[cnv][status] %}
+            <li class="header"><a href=https://access.redhat.com/support/cases/#/case/{{ new_cnv[cnv][status][details]['case'] }}>{{new_cnv[cnv][status][details]['case'] }}</a> <span class="case">{{new_cnv[cnv][status][details]['summary']}}</span> (<a href=https://issues.redhat.com/browse/{{ details }}>{{ details }}</a> / {{ new_cnv[cnv][status][details]['assignee'] }})</li>
+            {% for comment in new_cnv[cnv][status][details]['comments'] %}
+            <ul>
+               <li>{{ comment }}</li>
+            </ul>
+            {% endfor %}
+            <!-- <hr class="divide"> -->
+            {% endfor %}
+         </ul>
+      </ul>
+      {% endif %}
+      {% endfor %}
+      {% else %}
+      <ul>
+         <li>{{ new_cnv[cnv] }}</li>
+      </ul>
+      {% endif %}
+   </ul>
+   {% endfor %}
+</div>
+<script>
+    var clipboard = new ClipboardJS('.btn');
+    clipboard.on('success', function (e) {
+        console.log(e);
+    });
+
+    clipboard.on('error', function (e) {
+        console.log(e);
+    });
+</script>
+{% endblock %}
