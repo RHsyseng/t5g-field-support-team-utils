@@ -6,6 +6,9 @@
 
     <!-- Include ClipboardJS-->
     <script src="https://cdn.jsdelivr.net/npm/clipboard@2.0.8/dist/clipboard.min.js"></script>
+
+    <!-- Include ChartJS -->
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
     
     <title>t5gweb://{% block title %}{% endblock %}</title>
     {% endblock %}
@@ -28,15 +31,5 @@
       <a href="https://github.com/RHsyseng/t5g-field-support-team-utils">t5g-field-support-team-utils</a>
       {% endblock %}
     </div>
-    <script>
-          var clipboard = new ClipboardJS('.btn');
-          clipboard.on('success', function (e) {
-              console.log(e);
-          });
-
-          clipboard.on('error', function (e) {
-              console.log(e);
-          });
-    </script>
   </body>
 </html>
