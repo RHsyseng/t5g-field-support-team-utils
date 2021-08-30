@@ -10,9 +10,9 @@ from . import libtelco5g
 import json
 import sys
 
-def get_new_cases():
-    """get new cases created since X days ago"""
-    # Set the default configuration values
+
+def set_cfg():
+        # Set the default configuration values
     cfg = libtelco5g.set_defaults()
 
     # Override the defaults and configuration file settings 
@@ -24,8 +24,27 @@ def get_new_cases():
     # Fix some of the settings so they are easier to use
     cfg['labels'] = cfg['labels'].split(',')
 
-    offline_token=os.environ.get('offline_token')
-    token=libtelco5g.get_token(offline_token)
+    cfg['offline_token'] = os.environ.get('offline_token')
+    cfg['jira_user'] = os.environ.get('jira_user')
+    cfg['jira_pass'] = os.environ.get('jira_pass')
+    cfg['accounts'] = json.loads(os.environ.get('accounts'))
+    cfg['options'] = { 'server': cfg['server'] }
+
+    return cfg
+
+def get_new_cases():
+    """get new cases created since X days ago"""
+    # Set the default configuration values
+    cfg = set_cfg()
+
+    try:
+        conn = jira.JIRA(cfg['options'], basic_auth=(cfg['jira_user'], cfg['jira_pass']))
+    except jira.exceptions as e:
+        if e.status_code == 401:
+            print("Login to JIRA failed. Check your username and password")
+            exit (1)
+    
+    token=libtelco5g.get_token(cfg['offline_token'])
     cases=libtelco5g.get_cases_json(token,cfg['query'],cfg['fields'])
     interval = 7
     new_cases = []
@@ -42,35 +61,19 @@ def get_new_cases():
 def get_new_comments():
 
     # Set the default configuration values
-    cfg = libtelco5g.set_defaults()
-
-    # Override the defaults and configuration file settings 
-    # with any environmental settings
-    trcfg = libtelco5g.read_env_config(cfg.keys())
-    for key in trcfg:
-        cfg[key] = trcfg[key]
-
-    # Fix some of the settings so they are easier to use
-    cfg['labels'] = cfg['labels'].split(',')
-
-    offline_token = os.environ.get('offline_token')
-    jira_user = os.environ.get('jira_user')
-    jira_pass = os.environ.get('jira_pass')
-    accounts = json.loads(os.environ.get('accounts'))
-    options = { 'server': cfg['server'] }
+    cfg = set_cfg()
 
     try:
-        conn = jira.JIRA(options, basic_auth=(jira_user, jira_pass))
+        conn = jira.JIRA(cfg['options'], basic_auth=(cfg['jira_user'], cfg['jira_pass']))
     except jira.exceptions as e:
-        if e.status_code ==401:
+        if e.status_code == 401:
             print("Login to JIRA failed. Check your username and password")
             exit (1)
-
     board = libtelco5g.get_board_id(conn, cfg['board'])
     sprint = libtelco5g.get_latest_sprint(conn, board.id, cfg['sprintname'])
     cards = conn.search_issues("sprint=" + str(sprint.id) + " AND updated >= '-7d'")
 
-    token=libtelco5g.get_token(offline_token)
+    token=libtelco5g.get_token(cfg['offline_token'])
 
     cases_json=libtelco5g.get_cases_json(token,cfg['query'],cfg['fields'], exclude_closed= False)
     cases=libtelco5g.get_cases(cases_json)
@@ -105,6 +108,7 @@ def get_new_comments():
             if len(detailed_cards[card_name]['comments']) == 0:
                 detailed_cards.pop(card_name)
     # Grouping Cards by Account
+    accounts = cfg['accounts']
     for i in detailed_cards:
         for account in accounts:
             for status in accounts[account]:
@@ -120,25 +124,10 @@ def get_new_comments():
 
 def get_cnv():
     # Set the default configuration values
-    cfg = libtelco5g.set_defaults()
-
-    # Override the defaults and configuration file settings 
-    # with any environmental settings
-    trcfg = libtelco5g.read_env_config(cfg.keys())
-    for key in trcfg:
-        cfg[key] = trcfg[key]
-
-    # Fix some of the settings so they are easier to use
-    cfg['labels'] = cfg['labels'].split(',')
-
-    offline_token = os.environ.get('offline_token')
-    jira_user = os.environ.get('jira_user')
-    jira_pass = os.environ.get('jira_pass')
-    accounts = {"CNV": {"To Do":{}, "In Progress": {}, "Code Review": {}, "QE Review": {}, "Done": {}}}
-    options = { 'server': cfg['server'] }
-
+    cfg = set_cfg()
+    
     try:
-        conn = jira.JIRA(options, basic_auth=(jira_user, jira_pass))
+        conn = jira.JIRA(cfg['options'], basic_auth=(cfg['jira_user'], cfg['jira_pass']))
     except jira.exceptions as e:
         if e.status_code ==401:
             print("Login to JIRA failed. Check your username and password")
@@ -148,7 +137,7 @@ def get_cnv():
     sprint = libtelco5g.get_latest_sprint(conn, board.id, cfg['sprintname'])
     cards = conn.search_issues("sprint=" + str(sprint.id) + " AND updated >= '-7d'")
 
-    token=libtelco5g.get_token(offline_token)
+    token=libtelco5g.get_token(cfg['offline_token'])
 
     cases_json=libtelco5g.get_cases_json(token,"case_summary:*cnv,* OR case_tags:*cnv*",cfg['fields'], exclude_closed= False)
     cases=libtelco5g.get_cases(cases_json)
@@ -182,7 +171,8 @@ def get_cnv():
             detailed_cards[card_name] = {'case': case_num, 'summary': issue.fields.summary, "account": cases[case_num]['account'], "card_status": issue.fields.status.name, "comments": [comment.body for comment in issue.fields.comment.comments if (time_now - datetime.strptime(comment.updated, '%Y-%m-%dT%H:%M:%S.%f%z')).days < 7], "assignee": issue.fields.assignee }
             if len(detailed_cards[card_name]['comments']) == 0:
                 detailed_cards.pop(card_name)
-# # Grouping Cards by Account
+    # Grouping Cards by Account
+    accounts = cfg['accounts']
     for i in detailed_cards:
         for account in accounts:
             for status in accounts[account]:
@@ -198,29 +188,11 @@ def get_cnv():
     return accounts
 
 def plots():
-    cfg = libtelco5g.set_defaults()
-    if len(sys.argv) > 1:
-        if os.path.isfile(sys.argv[1]):
-            tfcfg = libtelco5g.read_config(sys.argv[1])
-            for key in tfcfg:
-                cfg[key] = tfcfg[key]
-        else:
-            print("File", sys.argv[1], "does not exist")
-            exit(1)
-    trcfg = libtelco5g.read_env_config(cfg.keys())
-    for key in trcfg:
-        cfg[key] = trcfg[key]
-    cfg['labels'] = cfg['labels'].split(',')
-    if cfg['debug'].lower() == 'true':
-        cfg['debug'] = True
-    else:
-        cfg['debug'] = False
-    jira_user = os.environ.get('jira_user')
-    jira_pass = os.environ.get('jira_pass')
-    options = { 'server': cfg['server'] }
+    # Set the default configuration values
+    cfg = set_cfg()
 
     try:
-        conn = jira.JIRA(options, basic_auth=(jira_user, jira_pass))
+        conn = jira.JIRA(cfg['options'], basic_auth=(cfg['jira_user'], cfg['jira_pass']))
     except jira.exceptions as e:
         if e.status_code ==401:
             print("Login to JIRA failed. Check your username and password")
