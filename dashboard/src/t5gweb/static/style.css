@@ -78,6 +78,14 @@ ul li {
   height: 800px;
 }
 
+ul.highlight:hover {
+  background-color: #eee;
+  /* border: thin dashed #f66; */
+  border-radius: 5px;
+  box-shadow: 0 0 0 1px rgba(0, 0, 0, 0.2);
+  transition: all 200ms ease-out;  
+}
+
 .right         { text-align: right; }
 .left         { text-align: left; float: left; }
 

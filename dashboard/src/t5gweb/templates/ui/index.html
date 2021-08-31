@@ -5,7 +5,7 @@
   <h1>{{ new_cases | length }} Cases Opened in the Last 7 Days:</h1>
 
   <div>
-    <table class="new-cases">
+    <table class="new-cases table table-borderless table-hover">
       <th>case#</th><th>severity</th><th>summary</th>
 
       {% for case in new_cases %}
@@ -18,9 +18,11 @@
     </table>
   </div>
   <hr class="divide">
+  <a role="button" class="btn btn-outline-dark btn-lg" href="{{ url_for('ui.updates') }}">New Card Updates</a>
   <a href="{{ url_for('ui.updates') }}">
+
   <div class="chart-container">
-   <canvas id="myChart" width="20" height="20"></canvas>
+   <canvas id="myChart" width="600px" height="800px"></canvas>
    <script>
        var ctx = document.getElementById('myChart').getContext('2d');
        var myChart = new Chart(ctx, {
@@ -67,6 +69,7 @@
        }
 });
    </script>
+
 </div>
 </a>
   {% endblock %}
