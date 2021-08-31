@@ -1,35 +1,48 @@
 <!doctype html>
 <html>
-  <head>
-    {% block head %}
-    <link rel=stylesheet type=text/css href="{{ url_for('static', filename='style.css') }}">
 
-    <!-- Include ClipboardJS-->
-    <script src="https://cdn.jsdelivr.net/npm/clipboard@2.0.8/dist/clipboard.min.js"></script>
+<head>
+  {% block head %}
+  <!-- Include Bootstrap -->
+  <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.1.0/dist/css/bootstrap.min.css" rel="stylesheet"
+    integrity="sha384-KyZXEAg3QhqLMpG8r+8fhAXLRk2vvoC2f3B09zVXn8CA5QIVfZOJ3BCsw2P0p/We" crossorigin="anonymous">
 
-    <!-- Include ChartJS -->
-    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
-    
-    <title>t5gweb://{% block title %}{% endblock %}</title>
-    {% endblock %}
-  </head>
-  <body>
-    <div class="header">
-      <div class="left">
+  <!-- Include CSS -->
+  <link rel=stylesheet type=text/css href="{{ url_for('static', filename='style.css') }}">
+
+  <!-- Include ClipboardJS-->
+  <script src="https://cdn.jsdelivr.net/npm/clipboard@2.0.8/dist/clipboard.min.js"></script>
+
+  <!-- Include ChartJS -->
+  <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+
+  <title>t5gweb://{% block title %}{% endblock %}</title>
+  {% endblock %}
+</head>
+
+<body>
+  <div class="header">
+    <div class="left">
       <b><a href="https://github.com/RHsyseng/t5g-field-support-team-utils">t5g-field-support-team-utils</a></b>
-      </div>
-      <div class="right">new telco5g cases report
-      </div>
     </div>
+    <div class="right">new telco5g cases report
+    </div>
+  </div>
 
-    <div class="content">{% block content %}{% endblock %}</div>
-    <div class="footer">
-      {% block footer %}
+  <div class="content">{% block content %}{% endblock %}</div>
+  <div class="footer">
+    {% block footer %}
     <div class=left>
-          generated on: {{ now }} | <a href="{{ url_for('ui.refresh') }}">refresh</a>
+      generated on: {{ now }} | <a href="{{ url_for('ui.refresh') }}">refresh</a>
     </div>
-      <a href="https://github.com/RHsyseng/t5g-field-support-team-utils">t5g-field-support-team-utils</a>
-      {% endblock %}
-    </div>
-  </body>
+    <a href="https://github.com/RHsyseng/t5g-field-support-team-utils">t5g-field-support-team-utils</a>
+    {% endblock %}
+  </div>
+
+  <!-- Include Bootstrap JS Bundle -->
+  <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.1.0/dist/js/bootstrap.bundle.min.js"
+    integrity="sha384-U1DAWAznBHeqEIlVSCgzq+c9gqGAJn5c/t99JyeKa9xxaYpSvHU5awsuZVVFIhvj"
+    crossorigin="anonymous"></script>
+</body>
+
 </html>

@@ -1,11 +1,11 @@
 {% extends "skeleton.html" %}
 {% block content %}
-<button
-class="btn"
-data-clipboard-target=".copy"
->
-Copy to clipboard
-</button>
+<div class="btn-toolbar mb-2 p-2 mb-md-0">
+   <div class="btn-group me-2">
+      <a role="button" class="btn btn-outline-dark btn-lg" href="{{ url_for('ui.index') }}">Home</a>
+      <button type="button" class="btn btn-outline-dark btn-lg" data-clipboard-target=".copy">Copy to Clipboard</button>
+   </div>
+</div>
 <h1> New Card Updates </h1>
 <div class="copy">
    {% for account in new_comments %}
