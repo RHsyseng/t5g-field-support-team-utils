@@ -125,7 +125,7 @@ def get_new_comments():
 def get_cnv():
     # Set the default configuration values
     cfg = set_cfg()
-    
+    cfg['accounts'] = {"CNV": {"To Do":{}, "In Progress": {}, "Code Review": {}, "QE Review": {}, "Done": {}}}
     try:
         conn = jira.JIRA(cfg['options'], basic_auth=(cfg['jira_user'], cfg['jira_pass']))
     except jira.exceptions as e:
