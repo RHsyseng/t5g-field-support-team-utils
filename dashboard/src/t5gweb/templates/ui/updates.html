@@ -11,86 +11,134 @@
    <button class="btn btn-outline-dark p-2" v-on:click="fontSize += 2">Font+</button>
    <button class="btn btn-outline-dark p-2" v-on:click="fontSize -= 2">Font-</button>
    <button class="btn btn-outline-dark p-2" v-on:click="fontSize = 16">Font Reset</button>
-   <div class="copy" v-bind:style="{ fontSize: fontSize + 'px' }">
-      {% for account in new_comments %}
-      <ul>
-      <li><span class = "account">{{ account }}</span></li>
-      {% if new_comments[account] != "No Updates" %}
-         {% for status in new_comments[account] %}
-         {% if new_comments[account][status] | length > 0 %}
-         <ul>
-            {% if status == "Code Review" %}
-            <li><span class = "status">Waiting On Engineering</span></li>
-            {% elif status == "QE Review" %}
-            <li><span class = "status">Waiting On Customer</span></li>
-            {% else %}
-            <li><span class = "status">{{ status }}</span></li>
-            {% endif %}
-               {% for details in new_comments[account][status] %}
-                  <ul class=highlight>
-                     <li class="header"><a href=https://access.redhat.com/support/cases/#/case/{{new_comments[account][status][details]['case'] }}>{{new_comments[account][status][details]['case'] }}</a> <span class="case">{{new_comments[account][status][details]['summary']}}</span> (<a href=https://issues.redhat.com/browse/{{ details }}>{{ details }}</a> / {{new_comments[account][status][details]['assignee'] }})</li>
-                     {% for comment in new_comments[account][status][details]['comments'] %}
-                        <ul>
-                           <li>{{ comment }}</li>
+   <div class="container pt-2 ms-0 ">
+      <div class="row">
+         <div class="col-2">
+                     <!-- Sidebar Derived from https://getbootstrap.com/docs/5.1/examples/#snippets -->
+            <div class="flex-shrink-0 p-3 bg-white sticky-top">
+               <ul class="list-unstyled ps-0">
+                  <li class="mb-1">               
+                  {% for account in new_comments %}
+                     <button class="btn btn-toggle align-items-center rounded collapsed" data-bs-toggle="collapse" data-bs-target="#{{account}}-collapse" aria-expanded="false">
+                        {{account}}
+                     </button>
+                     <div class="collapse" id="{{account}}-collapse">
+                        <ul class="btn-toggle-nav list-unstyled fw-normal pb-1 small">
+                           {% if new_comments[account] != "No Updates" %}
+                              {% for status in new_comments[account] %}
+                                 {% for details in new_comments[account][status] %}
+                                    <li><a href=#{{ new_comments[account][status][details]['case']  }} class="link-dark rounded">{{ new_comments[account][status][details]['case'] }}: {{ new_comments[account][status][details]['summary'] }}</a></li>
+                                 {% endfor %}
+                              {% endfor %}
+                           {% else %}
+                           <li><a href=#{{ account }}-no-update class="link-dark rounded">No Updates</a></li>
+                           {% endif %}
                         </ul>
-                     {% endfor %}
-                     <!-- <hr class="divide"> -->
-                  </ul>
-               {% endfor %}
-         </ul>
-         {% endif %}
-         {% endfor %}
-         {% else %}
-         <ul>
-            <li>{{ new_comments[account] }}</li>
-         </ul>
-         {% endif %}
-      </ul>
-      {% endfor %}
-      {% for cnv in new_cnv %}
-      <ul>
-      <li><span class = "account">{{ cnv }}</span></li>
-      {% if new_cnv[cnv] != "No Updates" %}
-         {% for status in new_cnv[cnv] %}
-         {% if new_cnv[cnv][status] | length > 0 %}
-         <ul>
-            {% if status == "Code Review" %}
-            <li><span class = "status">Waiting On Engineering</span></li>
-            {% elif status == "QE Review" %}
-            <li><span class = "status">Waiting On Customer</span></li>
-            {% else %}
-            <li><span class = "status">{{ status }}</span></li>
-            {% endif %}
-               {% for details in new_cnv[cnv][status] %}
-                  <ul class="highlight">
-                  <li class="header"><a href=https://access.redhat.com/support/cases/#/case/{{ new_cnv[cnv][status][details]['case'] }}>{{new_cnv[cnv][status][details]['case'] }}</a> <span class="case">{{new_cnv[cnv][status][details]['summary']}}</span> (<a href=https://issues.redhat.com/browse/{{ details }}>{{ details }}</a> / {{ new_cnv[cnv][status][details]['assignee'] }})</li>
-                  {% for comment in new_cnv[cnv][status][details]['comments'] %}
-                     <ul>
-                        <li>{{ comment }}</li>
-                     </ul>
+                     </div>
+                  </li> 
+                  {% endfor %}   
+                  {% for cnv in new_cnv %}  
+                     <button class="btn btn-toggle align-items-center rounded collapsed" data-bs-toggle="collapse" data-bs-target="#{{cnv}}-collapse" aria-expanded="false">
+                        {{cnv}}
+                     </button>
+                     <div class="collapse" id="{{cnv}}-collapse">
+                        <ul class="btn-toggle-nav list-unstyled fw-normal pb-1 small">
+                           {% for status in new_cnv[cnv] %}
+                              {% for details in new_cnv[cnv][status] %}
+                                 <li><a href=#{{ new_cnv[cnv][status][details]['case']  }} class="link-dark rounded">{{ new_cnv[cnv][status][details]['case'] }}: {{ new_cnv[cnv][status][details]['summary'] }}</a></li>
+                              {% endfor %}
+                           {% endfor %}
+                        </ul>
+                     </div>
+                  </li> 
                   {% endfor %}
-                  <!-- <hr class="divide"> -->
+               </ul>
+            </div>
+         </div>
+         <div class="col">      
+            <div class="copy" v-bind:style="{ fontSize: fontSize + 'px' }">
+               {% for account in new_comments %}
+                  <ul>
+                  <li><span class = "account">{{ account }}</span></li>
+                  {% if new_comments[account] != "No Updates" %}
+                     {% for status in new_comments[account] %}
+                        {% if new_comments[account][status] | length > 0 %}
+                        <ul>
+                           {% if status == "Code Review" %}
+                              <li><span class = "status">Waiting On Engineering</span></li>
+                           {% elif status == "QE Review" %}
+                              <li><span class = "status">Waiting On Customer</span></li>
+                           {% else %}
+                              <li><span class = "status">{{ status }}</span></li>
+                           {% endif %}
+                              {% for details in new_comments[account][status] %}
+                                 <ul class=highlight>
+                                    <li class="header" id = {{new_comments[account][status][details]['case'] }}><a href=https://access.redhat.com/support/cases/#/case/{{new_comments[account][status][details]['case'] }}>{{new_comments[account][status][details]['case'] }}</a> <span class="case">{{new_comments[account][status][details]['summary']}}</span> (<a href=https://issues.redhat.com/browse/{{ details }}>{{ details }}</a> / {{new_comments[account][status][details]['assignee'] }})</li>
+                                    {% for comment in new_comments[account][status][details]['comments'] %}
+                                       <ul>
+                                          <li>{{ comment }}</li>
+                                       </ul>
+                                    {% endfor %}
+                                    <!-- <hr class="divide"> -->
+                                 </ul>
+                              {% endfor %}
+                        </ul>
+                        {% endif %}
+                     {% endfor %}
+                  {% else %}
+                     <ul>
+                        <li id={{account}}-no-update>{{ new_comments[account] }}</li>
+                     </ul>
+                  {% endif %}
                   </ul>
                {% endfor %}
-         </ul>
-         {% endif %}
-         {% endfor %}
-         {% else %}
-         <ul>
-            <li>{{ new_cnv[cnv] }}</li>
-         </ul>
-         {% endif %}
-      </ul>
-      {% endfor %}
+               {% for cnv in new_cnv %}
+                  <ul>
+                  <li><span class = "account">{{ cnv }}</span></li>
+                  {% if new_cnv[cnv] != "No Updates" %}
+                     {% for status in new_cnv[cnv] %}
+                        {% if new_cnv[cnv][status] | length > 0 %}
+                           <ul>
+                              {% if status == "Code Review" %}
+                                 <li><span class = "status">Waiting On Engineering</span></li>
+                              {% elif status == "QE Review" %}
+                                 <li><span class = "status">Waiting On Customer</span></li>
+                              {% else %}
+                                 <li><span class = "status">{{ status }}</span></li>
+                              {% endif %}
+                              {% for details in new_cnv[cnv][status] %}
+                                 <ul class="highlight">
+                                 <li class="header" id = {{new_cnv[cnv][status][details]['case'] }}><a href=https://access.redhat.com/support/cases/#/case/{{ new_cnv[cnv][status][details]['case'] }}>{{new_cnv[cnv][status][details]['case'] }}</a> <span class="case">{{new_cnv[cnv][status][details]['summary']}}</span> (<a href=https://issues.redhat.com/browse/{{ details }}>{{ details }}</a> / {{ new_cnv[cnv][status][details]['assignee'] }})</li>
+                                 {% for comment in new_cnv[cnv][status][details]['comments'] %}
+                                    <ul>
+                                       <li>{{ comment }}</li>
+                                    </ul>
+                                 {% endfor %}
+                                 <!-- <hr class="divide"> -->
+                                 </ul>
+                              {% endfor %}
+                           </ul>
+                        {% endif %}
+                     {% endfor %}
+                  {% else %}
+                     <ul>
+                        <li>{{ new_cnv[cnv] }}</li>
+                     </ul>
+                  {% endif %}
+                  </ul>
+               {% endfor %}
+            </div>
+            <script>
+               new Vue({
+                  el: '#font_buttons',
+                  data: {
+                     fontSize: 16
+                  }
+               });
+            </script>
+         </div>
+      </div>
    </div>
-   <script>
-      new Vue({
-          el: '#font_buttons',
-          data: {
-              fontSize: 16
-          }
-      });
-  </script>
 </div>
 <script>
     var clipboard = new ClipboardJS('.btn');
