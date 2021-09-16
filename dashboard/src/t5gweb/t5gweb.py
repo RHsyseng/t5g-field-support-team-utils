@@ -62,7 +62,7 @@ def get_new_comments():
 
     # Set the default configuration values
     cfg = set_cfg()
-
+    cfg['query'] = "case_summary:*webscale* OR case_tags:*shift_telco5g* OR case_summary:*cnv,* OR case_tags:*cnv*"    
     try:
         conn = jira.JIRA(cfg['options'], basic_auth=(cfg['jira_user'], cfg['jira_pass']))
     except jira.exceptions as e:
@@ -76,7 +76,7 @@ def get_new_comments():
     token=libtelco5g.get_token(cfg['offline_token'])
 
     cases_json=libtelco5g.get_cases_json(token,cfg['query'],cfg['fields'], exclude_closed= False)
-    cases=libtelco5g.get_cases(cases_json)
+    cases=libtelco5g.get_cases(cases_json, include_tags=True)
 
 
     cards_dict = {}
@@ -104,7 +104,7 @@ def get_new_comments():
         issue = conn.issue(card_name) 
         case_num = linked_cards[card_name]
         if linked_cards[card_name] in cases: #check if casenum exists in cases
-            detailed_cards[card_name] = {'case': case_num, 'summary': issue.fields.summary, "account": cases[case_num]['account'], "card_status": issue.fields.status.name, "comments": [comment.body for comment in issue.fields.comment.comments if (time_now - datetime.strptime(comment.updated, '%Y-%m-%dT%H:%M:%S.%f%z')).days < 7], "assignee": issue.fields.assignee }
+            detailed_cards[card_name] = {'case': case_num, 'summary': issue.fields.summary, "account": cases[case_num]['account'], "card_status": issue.fields.status.name, "comments": [comment.body for comment in issue.fields.comment.comments if (time_now - datetime.strptime(comment.updated, '%Y-%m-%dT%H:%M:%S.%f%z')).days < 7], "assignee": issue.fields.assignee, "tags": cases[case_num]['tags'] }
             if len(detailed_cards[card_name]['comments']) == 0:
                 detailed_cards.pop(card_name)
     # Grouping Cards by Account
@@ -114,6 +114,12 @@ def get_new_comments():
             for status in accounts[account]:
                 if account.lower() in detailed_cards[i]['account'].lower() and status == detailed_cards[i]['card_status']:
                     accounts[account][status].update({i: detailed_cards[i]})
+                if "cnv" in detailed_cards[i]['summary'].lower() and status == detailed_cards[i]['card_status'] and account == "CNV":
+                    accounts[account][status].update({i: detailed_cards[i]})
+                else:
+                    for k in detailed_cards[i]['tags']:
+                        if "cnv" in k.lower() and status == detailed_cards[i]['card_status'] and account == "CNV":
+                            accounts[account][status].update({i: detailed_cards[i]})
 
     # If an account has no updated cards, replace its empty dictionary with "No Updates"
     for account in accounts:

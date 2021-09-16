@@ -530,7 +530,7 @@ def get_cases_json(token, query, fields, num_cases=1000, exclude_closed=True):
   return cases_json
 
 
-def get_cases(cases_json):
+def get_cases(cases_json, include_tags=False):
   cases = {}
   for case in cases_json:
     #print(case)
@@ -547,6 +547,10 @@ def get_cases(cases_json):
     # Sometimes there is no BZ attached to the case
     if "case_bugzillaNumber" in case:
         cases[case["case_number"]]["bug"] = case["case_bugzillaNumber"]
+
+    # Sometimes there is no tag attached to the case
+    if "case_tags" in case and include_tags:
+        cases[case["case_number"]]["tags"] = case["case_tags"]
 
   return cases
 

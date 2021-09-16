@@ -8,7 +8,7 @@ from . import cache
 from t5gweb.t5gweb import (
     get_new_cases,
     get_new_comments,
-    get_cnv,
+    # get_cnv,
     plots
 )
 
@@ -38,6 +38,6 @@ def refresh():
 def updates():
     """Retrieves summary data and creates Chart.JS plot"""
     new_comments = get_new_comments()
-    new_cnv = get_cnv()
+    # new_cnv = get_cnv()
     now = datetime.datetime.utcnow()
-    return render_template('ui/updates.html', now=now, new_comments=new_comments, new_cnv=new_cnv)
+    return render_template('ui/updates.html', now=now, new_comments=new_comments)#, new_cnv=new_cnv)
