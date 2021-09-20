@@ -137,3 +137,6 @@ ul.highlight:hover {
   background-color: #eee;
 }
 
+.link-dark {
+  overflow-wrap: anywhere;
+}

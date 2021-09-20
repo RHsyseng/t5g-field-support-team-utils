@@ -71,7 +71,7 @@ def get_new_comments():
             exit (1)
     board = libtelco5g.get_board_id(conn, cfg['board'])
     sprint = libtelco5g.get_latest_sprint(conn, board.id, cfg['sprintname'])
-    cards = conn.search_issues("sprint=" + str(sprint.id) + " AND updated >= '-7d'")
+    cards = conn.search_issues("sprint=" + str(sprint.id) + " AND updated >= '-7d'", maxResults=1000)
 
     token=libtelco5g.get_token(cfg['offline_token'])
 
@@ -135,7 +135,7 @@ def get_cnv():
 
     board = libtelco5g.get_board_id(conn, cfg['board'])
     sprint = libtelco5g.get_latest_sprint(conn, board.id, cfg['sprintname'])
-    cards = conn.search_issues("sprint=" + str(sprint.id) + " AND updated >= '-7d'")
+    cards = conn.search_issues("sprint=" + str(sprint.id) + " AND updated >= '-7d'", maxResults=1000)
 
     token=libtelco5g.get_token(cfg['offline_token'])
 
