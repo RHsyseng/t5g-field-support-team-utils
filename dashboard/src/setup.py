@@ -13,6 +13,7 @@ setup(
         'jira',
         'requests',
         'slack_sdk',
-        'flask_caching'
+        #'flask_caching',
+        'flask_apscheduler'
     ],
 )
