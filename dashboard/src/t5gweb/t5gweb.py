@@ -107,6 +107,9 @@ def get_new_comments():
             detailed_cards[card_name] = {'case': case_num, 'summary': issue.fields.summary, "account": cases[case_num]['account'], "card_status": issue.fields.status.name, "comments": [comment.body for comment in issue.fields.comment.comments if (time_now - datetime.strptime(comment.updated, '%Y-%m-%dT%H:%M:%S.%f%z')).days < 7], "assignee": issue.fields.assignee, "tags": cases[case_num]['tags'] }
             if len(detailed_cards[card_name]['comments']) == 0:
                 detailed_cards.pop(card_name)
+    for card in detailed_cards:
+        for comment in range(len(detailed_cards[card]["comments"])):
+            detailed_cards[card]["comments"][comment] = re.sub(r'\[([\s\w!"#$%&\'()*+,-.\/:;<=>?@[^_`{|}~]*?\s*?)\|\s*?((http|ftp|https):\/\/([\w_-]+(?:(?:\.[\w_-]+)+))([\w.,@?^=%&:\/~+#-]*[\w@?^=%&\/~+#-])?[\s]*)\]',"<a href=\""+r'\2'+"\">"+r'\1'+"</a>", detailed_cards[card]["comments"][comment])
     # Grouping Cards by Account
     accounts = cfg['accounts']
     for i in detailed_cards:
