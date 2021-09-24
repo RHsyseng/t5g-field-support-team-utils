@@ -109,6 +109,7 @@ def get_new_comments():
                 detailed_cards.pop(card_name)
     for card in detailed_cards:
         for comment in range(len(detailed_cards[card]["comments"])):
+            detailed_cards[card]["comments"][comment] = re.sub(r'(?<!\||\s)\s*?((http|ftp|https):\/\/([\w_-]+(?:(?:\.[\w_-]+)+))([\w.,@?^=%&:\/~+#-]*[\w@?^=%&\/~+#-])?)',"<a href=\""+r'\g<0>'+"\">"+r'\g<0>'"</a>", detailed_cards[card]["comments"][comment])
             detailed_cards[card]["comments"][comment] = re.sub(r'\[([\s\w!"#$%&\'()*+,-.\/:;<=>?@[^_`{|}~]*?\s*?)\|\s*?((http|ftp|https):\/\/([\w_-]+(?:(?:\.[\w_-]+)+))([\w.,@?^=%&:\/~+#-]*[\w@?^=%&\/~+#-])?[\s]*)\]',"<a href=\""+r'\2'+"\">"+r'\1'+"</a>", detailed_cards[card]["comments"][comment])
     # Grouping Cards by Account
     accounts = cfg['accounts']
