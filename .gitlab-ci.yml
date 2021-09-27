@@ -74,7 +74,7 @@ k8s_deploy:
   - sed -i '/portal-to-jira-sync:/! s/portal-to-jira-sync/portal-to-jira-sync-cnv/g' k8s/yaml/cronjob.yml
   - kubectl apply -f k8s/yaml/ -n $NAMESPACE 
   - kubectl apply -f dashboard/yaml/04_t5gweb-app-deployment.yml
-  - kubectl apply -f dashboard/yaml/06_t5gweb-route.yml
+  - oc apply -f dashboard/yaml/06_t5gweb-route.yml
   rules:
   - if: '$CI_COMMIT_BRANCH == "master"'
   - if: '$CI_PIPELINE_SOURCE == "schedule"'
