@@ -37,21 +37,6 @@
                      </div>
                   </li> 
                   {% endfor %}   
-                  <!-- {% for cnv in new_cnv %}  
-                     <button class="btn btn-toggle align-items-center rounded collapsed" data-bs-toggle="collapse" data-bs-target="#{{cnv}}-collapse" aria-expanded="false">
-                        {{cnv}}
-                     </button>
-                     <div class="collapse" id="{{cnv}}-collapse">
-                        <ul class="btn-toggle-nav list-unstyled fw-normal pb-1 small">
-                           {% for status in new_cnv[cnv] %}
-                              {% for details in new_cnv[cnv][status] %}
-                                 <li><a href=#{{ new_cnv[cnv][status][details]['case']  }} class="link-dark rounded">{{ new_cnv[cnv][status][details]['case'] }}: {{ new_cnv[cnv][status][details]['summary'] }}</a></li>
-                              {% endfor %}
-                           {% endfor %}
-                        </ul>
-                     </div>
-                  </li> 
-                  {% endfor %} -->
                </ul>
             </div>
          </div>
@@ -79,7 +64,6 @@
                                           <li>{{ comment | safe }}</li>
                                        </ul>
                                     {% endfor %}
-                                    <!-- <hr class="divide"> -->
                                  </ul>
                               {% endfor %}
                         </ul>
@@ -92,40 +76,6 @@
                   {% endif %}
                   </ul>
                {% endfor %}
-               <!-- {% for cnv in new_cnv %}
-                  <ul>
-                  <li><span class = "account">{{ cnv }}</span></li>
-                  {% if new_cnv[cnv] != "No Updates" %}
-                     {% for status in new_cnv[cnv] %}
-                        {% if new_cnv[cnv][status] | length > 0 %}
-                           <ul>
-                              {% if status == "Code Review" %}
-                                 <li><span class = "status">Waiting On Engineering</span></li>
-                              {% elif status == "QE Review" %}
-                                 <li><span class = "status">Waiting On Customer</span></li>
-                              {% else %}
-                                 <li><span class = "status">{{ status }}</span></li>
-                              {% endif %}
-                              {% for details in new_cnv[cnv][status] %}
-                                 <ul class="highlight">
-                                 <li class="header" id = {{new_cnv[cnv][status][details]['case'] }}><a href=https://access.redhat.com/support/cases/#/case/{{ new_cnv[cnv][status][details]['case'] }}>{{new_cnv[cnv][status][details]['case'] }}</a> <span class="case">{{new_cnv[cnv][status][details]['summary']}}</span> (<a href=https://issues.redhat.com/browse/{{ details }}>{{ details }}</a> / {{ new_cnv[cnv][status][details]['assignee'] }})</li>
-                                 {% for comment in new_cnv[cnv][status][details]['comments'] %}
-                                    <ul>
-                                       <li>{{ comment }}</li>
-                                    </ul>
-                                 {% endfor %}
-                                 </ul>
-                              {% endfor %}
-                           </ul>
-                        {% endif %}
-                     {% endfor %}
-                  {% else %}
-                     <ul>
-                        <li>{{ new_cnv[cnv] }}</li>
-                     </ul>
-                  {% endif %}
-                  </ul>
-               {% endfor %} -->
             </div>
             <script>
                new Vue({
