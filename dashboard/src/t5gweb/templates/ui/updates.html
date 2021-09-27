@@ -73,10 +73,10 @@
                            {% endif %}
                               {% for details in new_comments[account][status] %}
                                  <ul class=highlight>
-                                    <li class="header" id = {{new_comments[account][status][details]['case'] }}><a href=https://access.redhat.com/support/cases/#/case/{{new_comments[account][status][details]['case'] }}>{{new_comments[account][status][details]['case'] }}</a> <span class="case">{{new_comments[account][status][details]['summary']}}</span> (<a href=https://issues.redhat.com/browse/{{ details }}>{{ details }}</a> / {{new_comments[account][status][details]['assignee'] }})</li>
+                                    <li class="header" id = {{new_comments[account][status][details]['case'] }}><a href=https://access.redhat.com/support/cases/#/case/{{new_comments[account][status][details]['case'] }} target="_blank">{{new_comments[account][status][details]['case'] }}</a> <span class="case">{{new_comments[account][status][details]['summary']}}</span> (<a href=https://issues.redhat.com/browse/{{ details }} target="_blank">{{ details }}</a> / {{new_comments[account][status][details]['assignee'] }})</li>
                                     {% for comment in new_comments[account][status][details]['comments'] %}
                                        <ul>
-                                          <li>{{ comment }}</li>
+                                          <li>{{ comment | safe }}</li>
                                        </ul>
                                     {% endfor %}
                                     <!-- <hr class="divide"> -->

@@ -39,6 +39,7 @@ def index():
 def refresh():
     """Forces an update to the dashboard"""
     # cache.clear()
+    load_data()
     return redirect(url_for("ui.updates"))
 
 
