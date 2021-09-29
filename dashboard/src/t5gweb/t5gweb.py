@@ -43,6 +43,9 @@ def get_new_cases():
         if e.status_code == 401:
             print("Login to JIRA failed. Check your username and password")
             exit (1)
+        if e.status_code == 503:
+            print("JIRA is down.")
+            exit (1)
     
     token=libtelco5g.get_token(cfg['offline_token'])
     cases=libtelco5g.get_cases_json(token,cfg['query'],cfg['fields'])
