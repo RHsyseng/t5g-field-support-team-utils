@@ -7,10 +7,7 @@
    </div>
 </div>
 <h1> New Card Updates </h1>
-<div id="font_buttons">
-   <button class="btn btn-outline-dark p-2" v-on:click="fontSize += 2">Font+</button>
-   <button class="btn btn-outline-dark p-2" v-on:click="fontSize -= 2">Font-</button>
-   <button class="btn btn-outline-dark p-2" v-on:click="fontSize = 16">Font Reset</button>
+
    <div class="container pt-2 ms-0 ">
       <div class="row">
          <div class="col-2">
@@ -88,7 +85,6 @@
          </div>
       </div>
    </div>
-</div>
 <script>
     var clipboard = new ClipboardJS('.btn');
     clipboard.on('success', function (e) {
