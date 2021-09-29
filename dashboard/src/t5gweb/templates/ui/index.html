@@ -21,8 +21,8 @@
   <a role="button" class="btn btn-outline-dark btn-lg" href="{{ url_for('ui.updates') }}">New Card Updates</a>
   <a href="{{ url_for('ui.updates') }}">
 
-  <div class="chart-container">
-   <canvas id="myChart" width="600px" height="800px"></canvas>
+   <div class="chart-container">
+   <canvas id="myChart" width="1475px" height="800px"></canvas>
    <script>
        var ctx = document.getElementById('myChart').getContext('2d');
        var myChart = new Chart(ctx, {
@@ -30,44 +30,59 @@
            data: {
                labels: ["Backlog", "In Progress", "Waiting on Engineering", "Waiting on Customer", "Done"],
                datasets: [{
-                   label: '# of Cards',
-                   data: {{ values | safe }},
-           backgroundColor: [
-           'rgba(255, 255, 255, 1)',
-           'rgba(255, 255, 255, 1)',
-           'rgba(255, 255, 255, 1)',
-           'rgba(255, 255, 255, 1)',
-           'rgba(255, 255, 255, 1)'
-       ],
-           borderColor: [
-           'rgba(255, 99, 132, 1)',
-           'rgba(54, 162, 235, 1)',
-           'rgba(255, 206, 86, 1)',
-           'rgba(75, 192, 192, 1)',
-           'rgba(153, 102, 255, 1)'
-       ],
-           borderWidth: 3,
-           borderRadius: 5,
-  }]
-},
-       options: {
-           scales: {
-               y: {
-                   beginAtZero: true
-               }
-           },
-           plugins: {
-               title: {
-                   display: true,
-                       text: "Number of Cards in Each Category",
-                           font: {
-                       size: 18
-                   }
-
-               }
-           }
-       }
-});
+                    data: {{ values | safe }},
+                    backgroundColor: [
+                    'rgba(255, 255, 255, 1)',
+                    'rgba(255, 255, 255, 1)',
+                    'rgba(255, 255, 255, 1)',
+                    'rgba(255, 255, 255, 1)',
+                    'rgba(255, 255, 255, 1)'
+                    ],
+                    borderColor: [
+                    'rgba(255, 99, 132, 1)',
+                    'rgba(54, 162, 235, 1)',
+                    'rgba(255, 206, 86, 1)',
+                    'rgba(75, 192, 192, 1)',
+                    'rgba(153, 102, 255, 1)'
+                    ],
+                    borderWidth: 3,
+                    borderRadius: 5,
+                }]
+        },
+        options: {
+            scales: {
+                y: {
+                    beginAtZero: true,
+                    ticks: {
+                        color: "black",
+                    },
+                },
+                x: {
+                    beginAtZero: true,
+                    ticks: {
+                        color: "black",
+                        font: {
+                            size: 18
+                        }
+                    }                   
+                }
+            },
+            plugins: {
+                title: {
+                    display: true,
+                    text: "Number of Cards in Each Category",
+                    color: "black",
+                    font: {
+                        size: 22,
+                        weight: "normal"
+                    }
+                },
+                legend: {
+                    display: false
+                }
+            }
+        }
+    });
    </script>
 
 </div>

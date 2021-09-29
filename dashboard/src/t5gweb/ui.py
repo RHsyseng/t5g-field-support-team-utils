@@ -4,11 +4,10 @@ import datetime
 from flask import (
     Blueprint, redirect, render_template, request, url_for, make_response, send_file
 )
-from . import scheduler#, cache
+from . import scheduler
 from t5gweb.t5gweb import (
     get_new_cases,
     get_new_comments,
-    # get_cnv,
     plots
 )
 
@@ -25,32 +24,22 @@ def load_data():
 
 
 @BP.route('/')
-# @cache.cached(timeout=14400)
 def index():
     """list new cases"""
-    # new_cases = get_new_cases()
-    # plot_data = plots()
-    # y = list(plot_data.values())
-    # now = datetime.datetime.utcnow()
     return render_template('ui/index.html', new_cases=load_data.new_cases, values=load_data.y, now=load_data.now)
 
 
 @BP.route('/refresh')
 def refresh():
     """Forces an update to the dashboard"""
-    # cache.clear()
     load_data()
     return redirect(url_for("ui.updates"))
 
 
 @BP.route('/updates')
-# @cache.cached(timeout=14400)
 def updates():
     """Retrieves summary data and creates Chart.JS plot"""
-    # new_comments = get_new_comments()
-    # new_cnv = get_cnv()
-    # now = datetime.datetime.utcnow()
-    return render_template('ui/updates.html', now=load_data.now, new_comments=load_data.new_comments)#, new_cnv=new_cnv)
+    return render_template('ui/updates.html', now=load_data.now, new_comments=load_data.new_comments)
 
 # Start scheduler and load data for first run
 scheduler.start()

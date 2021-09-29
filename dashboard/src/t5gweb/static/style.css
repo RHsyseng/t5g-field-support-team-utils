@@ -74,11 +74,6 @@ ul li {
   padding: 5px 0px; 
 }
 
-.chart-container {
-  width: 600px;
-  height: 800px;
-}
-
 ul.highlight:hover {
   background-color: #eee;
   /* border: thin dashed #f66; */
