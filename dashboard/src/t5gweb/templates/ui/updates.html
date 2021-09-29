@@ -38,7 +38,7 @@
             </div>
          </div>
          <div class="col">      
-            <div class="copy" v-bind:style="{ fontSize: fontSize + 'px' }">
+            <div class="copy">
                {% for account in new_comments %}
                   <ul>
                   <li><span class = "account">{{ account }}</span></li>
@@ -74,14 +74,6 @@
                   </ul>
                {% endfor %}
             </div>
-            <script>
-               new Vue({
-                  el: '#font_buttons',
-                  data: {
-                     fontSize: 16
-                  }
-               });
-            </script>
          </div>
       </div>
    </div>
