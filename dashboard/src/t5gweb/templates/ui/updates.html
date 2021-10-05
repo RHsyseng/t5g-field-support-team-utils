@@ -1,90 +1,143 @@
-{% extends "skeleton.html" %}
-{% block content %}
-<div class="btn-toolbar mb-2 p-2 mb-md-0">
-   <div class="btn-group me-2">
-      <a role="button" class="btn btn-outline-dark btn-lg" href="{{ url_for('ui.index') }}">Home</a>
-      <button type="button" class="btn btn-outline-dark btn-lg" data-clipboard-target=".copy">Copy to Clipboard</button>
-   </div>
-</div>
-<h1> New Card Updates </h1>
+<!doctype html>
+<html>
 
-   <div class="container pt-2 ms-0 ">
-      <div class="row">
-         <div class="col-2">
-                     <!-- Sidebar Derived from https://getbootstrap.com/docs/5.1/examples/#snippets -->
-            <div class="flex-shrink-0 p-3 bg-white sticky-top">
-               <ul class="list-unstyled ps-0">
-                  <li class="mb-1">               
-                  {% for account in new_comments %}
-                     <button class="btn btn-toggle align-items-center rounded collapsed" data-bs-toggle="collapse" data-bs-target="#{{account}}-collapse" aria-expanded="false">
-                        {{account}}
-                     </button>
-                     <div class="collapse" id="{{account}}-collapse">
-                        <ul class="btn-toggle-nav list-unstyled fw-normal pb-1 small">
-                           {% if new_comments[account] != "No Updates" %}
-                              {% for status in new_comments[account] %}
-                                 {% for details in new_comments[account][status] %}
-                                    <li><a href=#{{ new_comments[account][status][details]['case']  }} class="link-dark rounded">{{ new_comments[account][status][details]['case'] }}: {{ new_comments[account][status][details]['summary'] }}</a></li>
-                                 {% endfor %}
-                              {% endfor %}
-                           {% else %}
-                           <li><a href=#{{ account }}-no-update class="link-dark rounded">No Updates</a></li>
-                           {% endif %}
-                        </ul>
-                     </div>
-                  </li> 
-                  {% endfor %}   
+<head>
+  <!-- Include Bootstrap -->
+  <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.1.0/dist/css/bootstrap.min.css" rel="stylesheet"
+    integrity="sha384-KyZXEAg3QhqLMpG8r+8fhAXLRk2vvoC2f3B09zVXn8CA5QIVfZOJ3BCsw2P0p/We" crossorigin="anonymous">
+
+  <!-- Include CSS -->
+  <link rel=stylesheet type=text/css href="{{ url_for('static', filename='style.css') }}">
+
+  <!-- Include ClipboardJS-->
+  <script src="https://cdn.jsdelivr.net/npm/clipboard@2.0.8/dist/clipboard.min.js"></script>
+
+  <title>New Card Updates</title>
+   <header>
+      <nav class="navbar navbar-expand-md navbar-dark fixed-top bg-dark">
+         <div class="container-fluid">
+            <a class="navbar-brand" href="#top">New Card Updates</a>
+            <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbarCollapse"
+               aria-controls="navbarCollapse" aria-expanded="false" aria-label="Toggle navigation">
+               <span class="navbar-toggler-icon"></span>
+            </button>
+            <div class="collapse navbar-collapse" id="navbarCollapse">
+               <ul class="navbar-nav  mb-2 mb-md-0">
+                  <li class="nav-item ms-2">
+                     <a role="button" class="btn btn-dark" href="{{ url_for('ui.index') }}">Home</a>
+                  </li>
+                  <li class="nav-item ms-2">
+                     <button type="button" class="btn btn-dark" data-clipboard-target=".copy">Copy to Clipboard</button>
+                  </li>
+                  <li class="nav-item ms-2 me-2">
+                     <a role="button" class="btn btn-dark" href="{{ url_for('ui.refresh') }}">Refresh</a>
+                  </li>
                </ul>
+               <span class="navbar-text">
+                  Last generated on {{ now }} UTC
+               </span>
+               <ul class="navbar-nav ms-auto">
+                  <li class="nav-item">
+                     <a role = "button" class="btn btn-dark btn-lg" href="https://github.com/RHsyseng/t5g-field-support-team-utils"><svg alt="github" xmlns="http://www.w3.org/2000/svg" width="28" height="28" fill="currentColor" class="bi bi-github" viewBox="0 0 16 16">
+                        <path d="M8 0C3.58 0 0 3.58 0 8c0 3.54 2.29 6.53 5.47 7.59.4.07.55-.17.55-.38 0-.19-.01-.82-.01-1.49-2.01.37-2.53-.49-2.69-.94-.09-.23-.48-.94-.82-1.13-.28-.15-.68-.52-.01-.53.63-.01 1.08.58 1.23.82.72 1.21 1.87.87 2.33.66.07-.52.28-.87.51-1.07-1.78-.2-3.64-.89-3.64-3.95 0-.87.31-1.59.82-2.15-.08-.2-.36-1.02.08-2.12 0 0 .67-.21 2.2.82.64-.18 1.32-.27 2-.27.68 0 1.36.09 2 .27 1.53-1.04 2.2-.82 2.2-.82.44 1.1.16 1.92.08 2.12.51.56.82 1.27.82 2.15 0 3.07-1.87 3.75-3.65 3.95.29.25.54.73.54 1.48 0 1.07-.01 1.93-.01 2.2 0 .21.15.46.55.38A8.012 8.012 0 0 0 16 8c0-4.42-3.58-8-8-8z"/>
+                      </svg></a>
+                  </li>
+            </ul>
             </div>
          </div>
-         <div class="col">      
-            <div class="copy">
-               {% for account in new_comments %}
-                  <ul>
-                  <li><span class = "account">{{ account }}</span></li>
-                  {% if new_comments[account] != "No Updates" %}
-                     {% for status in new_comments[account] %}
-                        {% if new_comments[account][status] | length > 0 %}
-                        <ul>
-                           {% if status == "Code Review" %}
-                              <li><span class = "status">Waiting On Engineering</span></li>
-                           {% elif status == "QE Review" %}
-                              <li><span class = "status">Waiting On Customer</span></li>
-                           {% else %}
-                              <li><span class = "status">{{ status }}</span></li>
-                           {% endif %}
-                              {% for details in new_comments[account][status] %}
-                                 <ul class=highlight>
-                                    <li class="header" id = {{new_comments[account][status][details]['case'] }}><a href=https://access.redhat.com/support/cases/#/case/{{new_comments[account][status][details]['case'] }} target="_blank">{{new_comments[account][status][details]['case'] }}</a> <span class="case">{{new_comments[account][status][details]['summary']}}</span> (<a href=https://issues.redhat.com/browse/{{ details }} target="_blank">{{ details }}</a> / {{new_comments[account][status][details]['assignee'] }})</li>
-                                    {% for comment in new_comments[account][status][details]['comments'] %}
-                                       <ul>
-                                          <li>{{ comment | safe }}</li>
-                                       </ul>
+      </nav>
+   </header>
+</head>
+
+<body>
+   <a id="top"></a>
+   <div class="content" style="border-radius: 5px; border-width: 0px 1px 1px 1px;">
+      <div class="container pt-2 ms-0">
+         <div class="row">
+            <div class="col-2">
+                        <!-- Sidebar Derived from https://getbootstrap.com/docs/5.1/examples/#snippets -->
+               <div class="flex-shrink-0 p-3 bg-white sticky-top sb">
+                  <ul class="list-unstyled ps-0">
+                     <li class="mb-1">               
+                     {% for account in new_comments %}
+                        <button class="btn btn-toggle align-items-center rounded collapsed" data-bs-toggle="collapse" data-bs-target="#{{account}}-collapse" aria-expanded="false">
+                           {{account}}
+                        </button>
+                        <div class="collapse" id="{{account}}-collapse">
+                           <ul class="btn-toggle-nav list-unstyled fw-normal pb-1 small">
+                              {% if new_comments[account] != "No Updates" %}
+                                 {% for status in new_comments[account] %}
+                                    {% for details in new_comments[account][status] %}
+                                       <li><a href=#{{ new_comments[account][status][details]['case']  }} class="link-dark rounded">{{ new_comments[account][status][details]['case'] }}: {{ new_comments[account][status][details]['summary'] }}</a></li>
                                     {% endfor %}
-                                 </ul>
-                              {% endfor %}
-                        </ul>
-                        {% endif %}
-                     {% endfor %}
-                  {% else %}
-                     <ul>
-                        <li id={{account}}-no-update>{{ new_comments[account] }}</li>
-                     </ul>
-                  {% endif %}
+                                 {% endfor %}
+                              {% else %}
+                              <li><a href=#{{ account }}-no-update class="link-dark rounded">No Updates</a></li>
+                              {% endif %}
+                           </ul>
+                        </div>
+                     </li> 
+                     {% endfor %}   
                   </ul>
-               {% endfor %}
+               </div>
+            </div>
+            <div class="col">      
+               <div class="copy">
+                  {% for account in new_comments %}
+                     <ul>
+                     <li><span class = "account">{{ account }}</span></li>
+                     {% if new_comments[account] != "No Updates" %}
+                        {% for status in new_comments[account] %}
+                           {% if new_comments[account][status] | length > 0 %}
+                           <ul>
+                              {% if status == "Code Review" %}
+                                 <li><span class = "status">Waiting On Engineering</span></li>
+                              {% elif status == "QE Review" %}
+                                 <li><span class = "status">Waiting On Customer</span></li>
+                              {% else %}
+                                 <li><span class = "status">{{ status }}</span></li>
+                              {% endif %}
+                                 {% for details in new_comments[account][status] %}
+                                    <span class="anchor" id={{ new_comments[account][status][details]['case'] }}></span>
+                                    <ul class=highlight>
+                                       <li class="header" id = {{new_comments[account][status][details]['case'] }}><a href=https://access.redhat.com/support/cases/#/case/{{new_comments[account][status][details]['case'] }} target="_blank">{{new_comments[account][status][details]['case'] }}</a> <span class="case">{{new_comments[account][status][details]['summary']}}</span> (<a href=https://issues.redhat.com/browse/{{ details }} target="_blank">{{ details }}</a> / {{new_comments[account][status][details]['assignee'] }})</li>
+                                       {% for comment in new_comments[account][status][details]['comments'] %}
+                                          <ul>
+                                             <li>{{ comment | safe }}</li>
+                                          </ul>
+                                       {% endfor %}
+                                    </ul>
+                                 {% endfor %}
+                           </ul>
+                           {% endif %}
+                        {% endfor %}
+                     {% else %}
+                     <span class="anchor" id={{account}}-no-update></span>
+                        <ul class="highlight">
+                           <li id={{account}}-no-update>{{ new_comments[account] }}</li>
+                        </ul>
+                     {% endif %}
+                     </ul>
+                  {% endfor %}
+               </div>
             </div>
          </div>
       </div>
    </div>
-<script>
-    var clipboard = new ClipboardJS('.btn');
-    clipboard.on('success', function (e) {
-        console.log(e);
-    });
+   <script>
+      var clipboard = new ClipboardJS('.btn');
+      clipboard.on('success', function (e) {
+         console.log(e);
+      });
 
-    clipboard.on('error', function (e) {
-        console.log(e);
-    });
-</script>
-{% endblock %}
+      clipboard.on('error', function (e) {
+         console.log(e);
+      });
+   </script>
+  <!-- Include Bootstrap JS Bundle -->
+   <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.1.0/dist/js/bootstrap.bundle.min.js"
+    integrity="sha384-U1DAWAznBHeqEIlVSCgzq+c9gqGAJn5c/t99JyeKa9xxaYpSvHU5awsuZVVFIhvj"
+    crossorigin="anonymous"></script>
+</body>
+
+</html>

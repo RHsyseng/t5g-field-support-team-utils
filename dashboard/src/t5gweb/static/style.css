@@ -135,3 +135,25 @@ ul.highlight:hover {
 .link-dark {
   overflow-wrap: anywhere;
 }
+
+/* Moves Sidebar under Navbar */
+.sb  {
+  top: 75px;
+  overflow: auto;
+  height: calc(100vh - 7rem);
+  padding-top: 50px;
+}
+
+/* Makes sure Navbar doesn't cover content */
+.copy {
+  padding-top: 40px;
+}
+
+/* Makes sure content isn't covered by Navbar when Sidebar links are used */
+span.anchor {
+  margin-top: -75px;
+  display: block;
+  height: 75px;
+  visibility: hidden;
+  position: relative;
+}
