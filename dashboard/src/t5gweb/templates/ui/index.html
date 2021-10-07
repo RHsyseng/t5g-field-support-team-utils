@@ -2,89 +2,101 @@
 {% block title %}{% endblock %}
 {% block content %}
 
-  <h1>{{ new_cases | length }} Cases Opened in the Last 7 Days:</h1>
+<a id="top"></a>
+<div class="new-cases">
+    <h1>{{ new_cases | length }} Cases Opened in the Last 7 Days:</h1>
+    <div class="copy">
+        <table class="table table-borderless table-hover">
+        <th>case#</th><th>severity</th><th>summary</th>
 
-  <div>
-    <table class="new-cases table table-borderless table-hover">
-      <th>case#</th><th>severity</th><th>summary</th>
+        {% for case in new_cases %}
+        <tr>
+            <td><a href=https://access.redhat.com/support/cases/#/case/{{ case.case_number }} target="_blank">{{ case.case_number }}</a></td>
+            <td>{{ case.case_severity }}</td>
+            <td>{{ case.case_summary }}</td>
+        </tr>
+        {% endfor %}
+        </table>
+    </div>
+    <hr class="divide">
+    <a role="button" class="btn btn-outline-dark btn-lg" href="{{ url_for('ui.updates') }}">New Card Updates</a>
+    <a href="{{ url_for('ui.updates') }}">
 
-      {% for case in new_cases %}
-      <tr>
-        <td><a href=https://access.redhat.com/support/cases/#/case/{{ case.case_number }} target="_blank">{{ case.case_number }}</a></td>
-        <td>{{ case.case_severity }}</td>
-        <td>{{ case.case_summary }}</td>
-      </tr>
-      {% endfor %}
-    </table>
-  </div>
-  <hr class="divide">
-  <a role="button" class="btn btn-outline-dark btn-lg" href="{{ url_for('ui.updates') }}">New Card Updates</a>
-  <a href="{{ url_for('ui.updates') }}">
-
-   <div class="chart-container">
-   <canvas id="myChart" width="1475px" height="800px"></canvas>
-   <script>
-       var ctx = document.getElementById('myChart').getContext('2d');
-       var myChart = new Chart(ctx, {
-           type: 'bar',
-           data: {
-               labels: ["Backlog", "In Progress", "Waiting on Engineering", "Waiting on Customer", "Done"],
-               datasets: [{
-                    data: {{ values | safe }},
-                    backgroundColor: [
-                    'rgba(255, 255, 255, 1)',
-                    'rgba(255, 255, 255, 1)',
-                    'rgba(255, 255, 255, 1)',
-                    'rgba(255, 255, 255, 1)',
-                    'rgba(255, 255, 255, 1)'
-                    ],
-                    borderColor: [
-                    'rgba(255, 99, 132, 1)',
-                    'rgba(54, 162, 235, 1)',
-                    'rgba(255, 206, 86, 1)',
-                    'rgba(75, 192, 192, 1)',
-                    'rgba(153, 102, 255, 1)'
-                    ],
-                    borderWidth: 3,
-                    borderRadius: 5,
-                }]
-        },
-        options: {
-            scales: {
-                y: {
-                    beginAtZero: true,
-                    ticks: {
-                        color: "black",
-                    },
-                },
-                x: {
-                    beginAtZero: true,
-                    ticks: {
-                        color: "black",
-                        font: {
-                            size: 18
-                        }
-                    }                   
-                }
+    <div class="chart-container">
+        <canvas id="myChart" width="1475px" height="800px"></canvas>
+        <script>
+            var ctx = document.getElementById('myChart').getContext('2d');
+            var myChart = new Chart(ctx, {
+                type: 'bar',
+                data: {
+                    labels: ["Backlog", "In Progress", "Waiting on Engineering", "Waiting on Customer", "Done"],
+                    datasets: [{
+                        data: {{ values | safe }},
+                        backgroundColor: [
+                        'rgba(255, 255, 255, 1)',
+                        'rgba(255, 255, 255, 1)',
+                        'rgba(255, 255, 255, 1)',
+                        'rgba(255, 255, 255, 1)',
+                        'rgba(255, 255, 255, 1)'
+                        ],
+                        borderColor: [
+                        'rgba(255, 99, 132, 1)',
+                        'rgba(54, 162, 235, 1)',
+                        'rgba(255, 206, 86, 1)',
+                        'rgba(75, 192, 192, 1)',
+                        'rgba(153, 102, 255, 1)'
+                        ],
+                        borderWidth: 3,
+                        borderRadius: 5,
+                    }]
             },
-            plugins: {
-                title: {
-                    display: true,
-                    text: "Number of Cards in Each Category",
-                    color: "black",
-                    font: {
-                        size: 22,
-                        weight: "normal"
+            options: {
+                scales: {
+                    y: {
+                        beginAtZero: true,
+                        ticks: {
+                            color: "black",
+                        },
+                    },
+                    x: {
+                        beginAtZero: true,
+                        ticks: {
+                            color: "black",
+                            font: {
+                                size: 18
+                            }
+                        }                   
                     }
                 },
-                legend: {
-                    display: false
+                plugins: {
+                    title: {
+                        display: true,
+                        text: "Number of Cards in Each Category",
+                        color: "black",
+                        font: {
+                            size: 22,
+                            weight: "normal"
+                        }
+                    },
+                    legend: {
+                        display: false
+                    }
                 }
             }
-        }
-    });
-   </script>
+            });
+        </script>
 
+    </div>
+    </a>
+    <script>
+        var clipboard = new ClipboardJS('.btn');
+        clipboard.on('success', function (e) {
+        console.log(e);
+        });
+
+        clipboard.on('error', function (e) {
+        console.log(e);
+        });
+    </script>
 </div>
-</a>
   {% endblock %}

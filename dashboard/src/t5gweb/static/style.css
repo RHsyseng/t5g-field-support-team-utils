@@ -144,11 +144,6 @@ ul.highlight:hover {
   padding-top: 50px;
 }
 
-/* Makes sure Navbar doesn't cover content */
-.copy {
-  padding-top: 40px;
-}
-
 /* Makes sure content isn't covered by Navbar when Sidebar links are used */
 span.anchor {
   margin-top: -75px;
@@ -156,4 +151,9 @@ span.anchor {
   height: 75px;
   visibility: hidden;
   position: relative;
+}
+
+/* Makes sure Navbar doesn't cover content */
+.new-cases {
+  padding-top: 70px;
 }
