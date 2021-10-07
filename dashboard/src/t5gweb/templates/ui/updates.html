@@ -1,18 +1,12 @@
 {% extends "skeleton.html" %}
+{% block title %}{% endblock %}
 {% block content %}
-<div class="btn-toolbar mb-2 p-2 mb-md-0">
-   <div class="btn-group me-2">
-      <a role="button" class="btn btn-outline-dark btn-lg" href="{{ url_for('ui.index') }}">Home</a>
-      <button type="button" class="btn btn-outline-dark btn-lg" data-clipboard-target=".copy">Copy to Clipboard</button>
-   </div>
-</div>
-<h1> New Card Updates </h1>
-
-   <div class="container pt-2 ms-0 ">
+   <a id="top"></a>
+   <div class="container pt-2 ms-0">
       <div class="row">
          <div class="col-2">
                      <!-- Sidebar Derived from https://getbootstrap.com/docs/5.1/examples/#snippets -->
-            <div class="flex-shrink-0 p-3 bg-white sticky-top">
+            <div class="flex-shrink-0 p-3 bg-white sticky-top sb">
                <ul class="list-unstyled ps-0">
                   <li class="mb-1">               
                   {% for account in new_comments %}
@@ -38,7 +32,7 @@
             </div>
          </div>
          <div class="col">      
-            <div class="copy">
+            <div class="copy pt-5">
                {% for account in new_comments %}
                   <ul>
                   <li><span class = "account">{{ account }}</span></li>
@@ -54,6 +48,7 @@
                               <li><span class = "status">{{ status }}</span></li>
                            {% endif %}
                               {% for details in new_comments[account][status] %}
+                                 <span class="anchor" id={{ new_comments[account][status][details]['case'] }}></span>
                                  <ul class=highlight>
                                     <li class="header" id = {{new_comments[account][status][details]['case'] }}><a href=https://access.redhat.com/support/cases/#/case/{{new_comments[account][status][details]['case'] }} target="_blank">{{new_comments[account][status][details]['case'] }}</a> <span class="case">{{new_comments[account][status][details]['summary']}}</span> (<a href=https://issues.redhat.com/browse/{{ details }} target="_blank">{{ details }}</a> / {{new_comments[account][status][details]['assignee'] }})</li>
                                     {% for comment in new_comments[account][status][details]['comments'] %}
@@ -67,7 +62,8 @@
                         {% endif %}
                      {% endfor %}
                   {% else %}
-                     <ul>
+                  <span class="anchor" id={{account}}-no-update></span>
+                     <ul class="highlight">
                         <li id={{account}}-no-update>{{ new_comments[account] }}</li>
                      </ul>
                   {% endif %}
@@ -77,14 +73,14 @@
          </div>
       </div>
    </div>
-<script>
-    var clipboard = new ClipboardJS('.btn');
-    clipboard.on('success', function (e) {
-        console.log(e);
-    });
+   <script>
+      var clipboard = new ClipboardJS('.btn');
+      clipboard.on('success', function (e) {
+         console.log(e);
+      });
 
-    clipboard.on('error', function (e) {
-        console.log(e);
-    });
-</script>
+      clipboard.on('error', function (e) {
+         console.log(e);
+      });
+   </script>
 {% endblock %}
