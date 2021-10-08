@@ -10,10 +10,10 @@
                <ul class="list-unstyled ps-0">
                   <li class="mb-1">               
                   {% for account in new_comments %}
-                     <button class="btn btn-toggle align-items-center rounded collapsed" data-bs-toggle="collapse" data-bs-target="#{{account | replace(" ", "-") }}-collapse" aria-expanded="false">
+                     <button class="btn btn-toggle align-items-center text-start rounded collapsed" data-bs-toggle="collapse" data-bs-target="#{{ account | replace(" ", "-") }}-collapse" aria-expanded="false">
                         {{account}}
                      </button>
-                     <div class="collapse" id="{{account | replace(" ", "-" )}}-collapse">
+                     <div class="collapse" id="{{ account | replace(" ", "-" ) }}-collapse">
                         <ul class="btn-toggle-nav list-unstyled fw-normal pb-1 small">
                            {% if new_comments[account] != "No Updates" %}
                               {% for status in new_comments[account] %}
