@@ -7,9 +7,9 @@
          <div class="col-2">
                      <!-- Sidebar Derived from https://getbootstrap.com/docs/5.1/examples/#snippets -->
             <div class="flex-shrink-0 p-3 bg-white sticky-top sb">
-               <ul class="list-unstyled ps-0">
-                  <li class="mb-1">               
+               <ul class="list-unstyled ps-0">           
                   {% for account in new_comments %}
+                  <li class="mb-1">    
                      <button class="btn btn-toggle align-items-center text-start rounded collapsed" data-bs-toggle="collapse" data-bs-target="#{{ account | replace(" ", "-") }}-collapse" aria-expanded="false">
                         {{account}}
                      </button>
