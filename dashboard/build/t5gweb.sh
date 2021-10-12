@@ -10,7 +10,7 @@ NS=t5g-web
 
 echo building $IMAGE:$TAG
 
-container=$(buildah from registry.access.redhat.com/ubi8/python-38)
+container=$(buildah from registry.access.redhat.com/ubi8/python-39)
 echo "building container with id $container"
 buildah config --label maintainer="David Critch <dcritch@redhat.com.com>" $container
 buildah copy $container ../src/ /srv/
