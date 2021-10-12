@@ -4,9 +4,25 @@ variables:
   TAG: "latest" #$CI_PIPELINE_IID
 
 stages:
-  - build
   - sync
+  - build
   - deploy
+
+github_sync:
+  stage: sync
+  script:
+  - git config --global user.email "${GL_USER_EMAIL}"
+  - git config --global user.name "${GL_USER}"
+  - git clone https://$GL_USER:$GL_PASS@$CI_SERVER_HOST/$CI_PROJECT_PATH.git 
+  - cd t5g-field-support-team-utils
+  - git remote add upstream https://$GH_USER:$GH_PASS@github.com/RHsyseng/t5g-field-support-team-utils.git 
+  - git fetch upstream
+  - git checkout master
+  - git merge upstream/main --allow-unrelated-histories
+  - git push origin master
+  - echo "Sync has completed"
+  rules:
+  - if: '$CI_PIPELINE_SOURCE == "schedule"'
 
 build_push_sync_container:
   stage: build
@@ -32,22 +48,6 @@ build_push_dashboard_container:
   - ./t5gweb.sh latest true
   rules:
   - if: '$CI_COMMIT_BRANCH == "master"'
-
-github_sync:
-  stage: sync
-  script:
-  - git config --global user.email "${GL_USER_EMAIL}"
-  - git config --global user.name "${GL_USER}"
-  - git clone https://$GL_USER:$GL_PASS@$CI_SERVER_HOST/$CI_PROJECT_PATH.git 
-  - cd t5g-field-support-team-utils
-  - git remote add upstream https://$GH_USER:$GH_PASS@github.com/RHsyseng/t5g-field-support-team-utils.git 
-  - git fetch upstream
-  - git checkout master
-  - git merge upstream/main --allow-unrelated-histories
-  - git push origin master
-  - echo "Sync has completed"
-  rules:
-  - if: '$CI_PIPELINE_SOURCE == "schedule"'
 
 k8s_deploy:
   stage: deploy
