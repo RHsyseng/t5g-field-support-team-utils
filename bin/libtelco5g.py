@@ -439,7 +439,7 @@ def set_defaults():
     defaults['to']          = ''
     defaults['alert_to'] = 'dcritch@redhat.com'
     defaults['subject']     = 'New Card(s) Have Been Created to Track Webscale Issues'
-    defaults['sprintname']  = 'Labs and Field Sprint' 
+    defaults['sprintname']  = 'T5GFE' #Previous Sprintname: 'Labs and Field Sprint' 
     defaults['server']      = 'https://issues.redhat.com'
     defaults['project']     = 'KNIECO'
     defaults['component']   = 'KNI Labs & Field'
