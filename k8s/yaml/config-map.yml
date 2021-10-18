@@ -11,7 +11,7 @@ data:
     project       : KNIECO
     component     : KNI Labs & Field
     board         : KNI-ECO Labs & Field
-    sprintname    : Labs and Field Sprint
+    sprintname    : T5GFE
     to            : rh-telco5g-field-support@redhat.com
     team          : Team
     user        	: Jira_User

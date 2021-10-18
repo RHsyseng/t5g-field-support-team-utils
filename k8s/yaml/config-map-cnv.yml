@@ -11,7 +11,7 @@ data:
     project       : KNIECO
     component     : KNI Labs & Field
     board         : KNI-ECO Labs & Field
-    sprintname    : Labs and Field Sprint
+    sprintname    : T5GFE
     to          	: EMAIL@EXAMPLE.COM
     team         : [{"jira_user": "kgershon", "name": "Kobi Gershon", "accounts": []}]
     user        	: Jira_User
