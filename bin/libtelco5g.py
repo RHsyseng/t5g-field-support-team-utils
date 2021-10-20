@@ -39,6 +39,9 @@ def jira_connection(options, cfg):
         if e.status_code ==401:
             print("Login to JIRA failed. Check your username and password")
             exit (1)
+        if e.status_code == 503:
+            print("JIRA is down.")
+            exit (1)
     return conn
 
 def get_project_id(conn, name):
