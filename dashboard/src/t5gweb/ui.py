@@ -8,6 +8,7 @@ from . import scheduler
 from t5gweb.t5gweb import (
     get_new_cases,
     get_new_comments,
+    get_trending_cards,
     plots
 )
 
@@ -20,6 +21,7 @@ def load_data():
     plot_data = plots()
     load_data.y = list(plot_data.values())
     load_data.new_comments = get_new_comments()
+    load_data.trending_cards = get_trending_cards()
     load_data.now = datetime.datetime.utcnow()
 
 
@@ -38,8 +40,14 @@ def refresh():
 
 @BP.route('/updates')
 def updates():
-    """Retrieves summary data and creates Chart.JS plot"""
+    """Retrieves cards that have been updated within the last week and creates report"""
     return render_template('ui/updates.html', now=load_data.now, new_comments=load_data.new_comments)
+
+@BP.route('/trends')
+def trends():
+    """Retrieves cards that have been labeled with 'Trends' within the previous quarter and creates report"""
+    return render_template('ui/updates.html', now=load_data.now, new_comments=load_data.trending_cards)
+
 
 # Start scheduler and load data for first run
 scheduler.start()

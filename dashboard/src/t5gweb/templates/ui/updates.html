@@ -62,9 +62,9 @@
                         {% endif %}
                      {% endfor %}
                   {% else %}
-                  <span class="anchor" id={{account}}-no-update></span>
+                  <span class="anchor" id={{ account | replace(" ", "-") }}-no-update></span>
                      <ul class="highlight">
-                        <li id={{account}}-no-update>{{ new_comments[account] }}</li>
+                        <li id={{ account | replace(" ", "-") }}-no-update>{{ new_comments[account] }}</li>
                      </ul>
                   {% endif %}
                   </ul>
