@@ -12,8 +12,8 @@ data:
     component     : KNI Labs & Field
     board         : KNI-ECO Labs & Field
     sprintname    : T5GFE
-    to          	: EMAIL@EXAMPLE.COM
-    team         : [{"jira_user": "kgershon", "name": "Kobi Gershon", "accounts": []}]
+    to          	: kgershon@redhat.com
+    team         : [{"jira_user": "kgershon@redhat.com", "name": "Kobi Gershon", "accounts": []}]
     user        	: Jira_User
     password    	: Jira_Pass
     offline_token : Offline_token
