@@ -3,7 +3,7 @@ data:
   t5g.cfg: |+
     card_action 	: create
     debug       	: true
-    subject       : New Card(s) Have Been Created to Track Webscale Issues
+    subject       : New Card(s) Have Been Created to Track Telco5G Issues
     labels        : field, no-qe, no-doc
     priority      : High
     type          : Story
