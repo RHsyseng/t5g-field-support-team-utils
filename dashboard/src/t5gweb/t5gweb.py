@@ -157,22 +157,59 @@ def add_case_number(conn, cards):
 def organize_cards(cfg, detailed_cards):
     """Group cards by account"""
     accounts = cfg['accounts']
+    account_list = []
     for i in detailed_cards:
+        if "shift_telco5g" in detailed_cards[i]['tags']:
+            account_list.append(detailed_cards[i]['account'])
+    account_list = set(account_list)
+
+    #print(account_list)
+
+    accounts_dict = {}
+    states = {"To Do":{}, "In Progress": {}, "Code Review": {},"QE Review": {}, "Done": {}}
+    for account in account_list:
+        accounts_dict[account] = states
+    accounts_dict["CNV"] = states
+    print("new dict")
+    print(accounts_dict)
+    print(type(accounts_dict))
+    print("end dict")
+    print("old dict")
+    print(accounts)
+    print(type(accounts))
+    print("end old dict")
+    #accounts = accounts_dict
+    
+    
+    for i in detailed_cards:
+        print("card: %s" % i)
         for account in accounts:
+            #print("account: %s" % account)
             for status in accounts[account]:
+                #print("status: %s" % status)
                 if account.lower() in detailed_cards[i]['account'].lower() and status == detailed_cards[i]['card_status']:
+                    print("account: %s card account: %s" % (account.lower(), detailed_cards[i]['account'].lower()))
                     accounts[account][status].update({i: detailed_cards[i]})
-                if "cnv" in detailed_cards[i]['summary'].lower() and status == detailed_cards[i]['card_status'] and account == "CNV":
+                elif "cnv" in detailed_cards[i]['summary'].lower() and status == detailed_cards[i]['card_status'] and account == "CNV":
+                    accounts[account][status].update({i: detailed_cards[i]})
+                    print("cnv account: %s card account: %s" % (account.lower(), detailed_cards[i]['account'].lower()))
+                elif "cnv" in detailed_cards[i]['tags'] and account == "CNV": 
                     accounts[account][status].update({i: detailed_cards[i]})
                 else:
-                    for k in detailed_cards[i]['tags']:
-                        if "cnv" in k.lower() and status == detailed_cards[i]['card_status'] and account == "CNV":
-                            accounts[account][status].update({i: detailed_cards[i]})
+                    if account == "Other":
+                        accounts[account][status].update({i: detailed_cards[i]})
+
+                    
+                    
+               # print("now what?")
+                #print(accounts)
 
     # If an account has no updated cards, replace its empty dictionary with "No Updates"
     for account in accounts:
         if sum([len(accounts[account][status]) for status in accounts[account]])==0:
             accounts[account] = "No Updates"
+    
+    
     return accounts
 
 def get_previous_quarter():
