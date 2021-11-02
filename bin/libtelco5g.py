@@ -346,13 +346,6 @@ def create_cases(conn, ini, sid, cases, needed, team, action='none'):
             + '\r\n\r\n'
             + '*Description:* \r\n\r\n'
             + cases[case]['description']
-            + '\r\n\r\n'
-            + '*Goal:* \r\n\r\n'
-            + '*Problem:* \r\n\r\n'
-            + '*Why is this important:* \r\n\r\n',
-            'customfield_12315940': '- The issue is solved'
-            + '\r\n'
-            + '- The customer is happy with the solution and we can move forward'
             + '\r\n'
             }
 
@@ -367,7 +360,7 @@ def create_cases(conn, ini, sid, cases, needed, team, action='none'):
             new_card = conn.create_issue(fields=card_info)
             print('  - Created', new_card.key)
 
-            email_content.append( f"A JIRA issue (https://issues.redhat.com/browse/{new_card}) has been created for a new Webscale case:\nCase #: {case} (https://access.redhat.com/support/cases/{case})\nAccount: {cases[case]['account']}\nSummary: {cases[case]['problem']}\nSeverity: {cases[case]['severity']}\nDescription: {cases[case]['description']}\n\nIt is initially being tracked by {assignee['name']}.\n")
+            email_content.append( f"A JIRA issue (https://issues.redhat.com/browse/{new_card}) has been created for a new Telco5G case:\nCase #: {case} (https://access.redhat.com/support/cases/{case})\nAccount: {cases[case]['account']}\nSummary: {cases[case]['problem']}\nSeverity: {cases[case]['severity']}\nDescription: {cases[case]['description']}\n\nIt is initially being tracked by {assignee['name']}.\n")
 
             # Add newly create card to the sprint
             print('  - Moving card to sprint (', sid, ')')
@@ -441,7 +434,7 @@ def set_defaults():
     defaults['from']        = 't5g_jira@redhat.com'
     defaults['to']          = ''
     defaults['alert_to'] = 'dcritch@redhat.com'
-    defaults['subject']     = 'New Card(s) Have Been Created to Track Webscale Issues'
+    defaults['subject']     = 'New Card(s) Have Been Created to Track Telco5G Issues'
     defaults['sprintname']  = 'T5GFE' #Previous Sprintname: 'Labs and Field Sprint' 
     defaults['server']      = 'https://issues.redhat.com'
     defaults['project']     = 'KNIECO'
