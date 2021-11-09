@@ -15,6 +15,7 @@ import sys
 import os
 import getpass
 import pprint
+import json
 
 def main():
     print('Generating sprint summary')
@@ -45,6 +46,8 @@ def main():
         cfg['debug'] = True
     else:
         cfg['debug'] = False
+    
+    cfg['team'] = json.loads(cfg['team'])
 
     # Check for the password
     if len(cfg['password']) <= 0:
@@ -93,6 +96,7 @@ def main():
     if cfg['debug']:
         print('\nDEBUG: Sprint')
         dpp.pprint(vars(sprint))
+    
     
     print('\nFetching sprint summary')
     sprint_summary = libtelco5g.get_sprint_summary(conn, board.id, cfg['sprintname'], cfg['team'])

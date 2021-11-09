@@ -126,7 +126,8 @@ def get_last_sprint(conn, bid, sprintname):
     sprint_number = re.search('\d*$', this_sprint.name)[0]
     last_sprint_number = int(sprint_number) - 1
     board = conn.sprints(bid, state="active") # still seems to return everything?
-    last_sprint_name = sprintname + " " + str(last_sprint_number)
+    last_sprint_name = sprintname + ".*" + str(last_sprint_number)
+    
     for b in board:
         if re.search(last_sprint_name, b.name):
             return b
@@ -157,10 +158,12 @@ def get_sprint_summary(conn, bid, sprintname, team):
     
     for member in team:
         user = member['jira_user']
+        user = user.replace('@', '\\u0040')
         completed_cards = conn.search_issues('sprint=' + str(sid) + ' and assignee = ' + str(user) + ' and status = "DONE"', 0, 250).iterable
         print("%s completed %d cards" % (member['name'], len(completed_cards)))
     # kobi
-    user = 'kgershon'
+    user = 'kgershon@redhat.com'
+    user = user.replace('@', '\\u0040')
     name = 'Kobi Gershon'
     completed_cards = conn.search_issues('sprint=' + str(sid) + ' and assignee = ' + str(user) + ' and status = "DONE"', 0, 250).iterable
     print("%s completed %d cards" % (name, len(completed_cards)))
