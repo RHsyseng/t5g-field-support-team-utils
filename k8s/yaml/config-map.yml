@@ -7,7 +7,7 @@ data:
     labels        : field, no-qe, no-doc
     priority      : High
     type          : Story
-    query         : case_summary:*webscale* OR case_tags:*shift_telco5g*
+    query         : case_summary:*webscale* OR case_tags:*shift_telco5g* OR case_summary:*far edge* OR case_summary:*faredge*
     project       : KNIECO
     component     : KNI Labs & Field
     board         : KNI-ECO Labs & Field
