@@ -22,6 +22,8 @@ def main():
     cfg = libtelco5g.set_defaults()
     dpp = pprint.PrettyPrinter(indent=2)
 
+
+    user = None
     # Override the defaults with the setting from the configuration file
     if len(sys.argv) > 1:
         if os.path.isfile(sys.argv[1]):
@@ -31,6 +33,9 @@ def main():
         else:
             print("File", sys.argv[1], "does not exist")
             exit(1)
+    if len(sys.argv) > 2:
+        user = sys.argv[2]
+    
 
     # Override the defaults and configuration file settings 
     # with any environmental settings
@@ -95,7 +100,7 @@ def main():
         dpp.pprint(vars(sprint))
     
     print('\nFetching cards in latest sprint')
-    existing_cards = libtelco5g.get_cards(conn, sprint.id)
+    existing_cards = libtelco5g.get_cards(conn, sprint.id, user=user, include_closed=False)
     print('    Cards:', len(existing_cards))
 
     if cfg['debug']:

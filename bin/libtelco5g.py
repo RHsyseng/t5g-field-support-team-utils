@@ -133,7 +133,7 @@ def get_last_sprint(conn, bid, sprintname):
             return b
 
 
-def get_cards(conn, sid):
+def get_cards(conn, sid, user=None, include_closed=True):
     ''' Gets a list of cards in the latest sprint
     sid    - sprint id
 
@@ -142,8 +142,18 @@ def get_cards(conn, sid):
     '''
 
     returnlist = []
-    cards = conn.search_issues('sprint=' + str(sid), 0, 250).iterable
-
+    if user is not None and include_closed is False:
+        user = user.replace('@', '\\u0040')
+        if include_closed is False:
+            cards = conn.search_issues('sprint=' + str(sid) + ' and assignee = ' + str(user) + ' and status != "DONE"', 0, 250).iterable
+        else:
+            cards = conn.search_issues('sprint=' + str(sid) + ' and assignee = ' + str(user), 0, 250).iterable
+    else:
+        if include_closed is False:
+            cards = conn.search_issues('sprint=' + str(sid) + ' and assignee = ' + str(user) + ' and status != "DONE"', 0, 250).iterable
+        else:
+            cards = conn.search_issues('sprint=' + str(sid), 0, 250).iterable
+    
     for item in cards:
         returnlist.append(str(item))
     return returnlist
