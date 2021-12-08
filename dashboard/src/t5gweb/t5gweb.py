@@ -72,7 +72,13 @@ def get_new_comments():
         issue = conn.issue(card_name) 
         case_num = linked_cards[card_name]
         if linked_cards[card_name] in cases: # Check if casenum exists in cases
-            detailed_cards[card_name] = {'case': case_num, 'summary': issue.fields.summary, "account": cases[case_num]['account'], "card_status": issue.fields.status.name, "comments": [comment.body for comment in issue.fields.comment.comments if (time_now - datetime.strptime(comment.updated, '%Y-%m-%dT%H:%M:%S.%f%z')).days < 7], "assignee": issue.fields.assignee, "tags": cases[case_num]['tags'] }
+            case_tags = None
+            if 'tags' in cases[case_num]:
+                case_tags = cases[case_num]['tags']
+            else:
+                case_tags = "none"
+            #detailed_cards[card_name] = {'case': case_num, 'summary': issue.fields.summary, "account": cases[case_num]['account'], "card_status": issue.fields.status.name, "comments": [comment.body for comment in issue.fields.comment.comments if (time_now - datetime.strptime(comment.updated, '%Y-%m-%dT%H:%M:%S.%f%z')).days < 7], "assignee": issue.fields.assignee}
+            detailed_cards[card_name] = {'case': case_num, 'summary': issue.fields.summary, "account": cases[case_num]['account'], "card_status": issue.fields.status.name, "comments": [comment.body for comment in issue.fields.comment.comments if (time_now - datetime.strptime(comment.updated, '%Y-%m-%dT%H:%M:%S.%f%z')).days < 7], "assignee": issue.fields.assignee, "tags": case_tags }
             if len(detailed_cards[card_name]['comments']) == 0:
                 detailed_cards.pop(card_name)
 
