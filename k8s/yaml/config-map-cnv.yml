@@ -14,7 +14,6 @@ data:
     sprintname    : T5GFE
     to          	: kgershon@redhat.com
     team         : [{"jira_user": "kgershon@redhat.com", "name": "Kobi Gershon", "accounts": []}]
-    user        	: Jira_User
     password    	: Jira_Pass
     offline_token : Offline_token
 kind: ConfigMap

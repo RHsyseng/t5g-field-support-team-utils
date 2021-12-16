@@ -25,10 +25,8 @@ def set_cfg():
     cfg['labels'] = cfg['labels'].split(',')
 
     cfg['offline_token'] = os.environ.get('offline_token')
-    cfg['user'] = os.environ.get('jira_user')
     cfg['password'] = os.environ.get('jira_pass')
     cfg['accounts'] = json.loads(os.environ.get('accounts'))
-    cfg['options'] = { 'server': cfg['server'] }
 
     return cfg
 
@@ -56,7 +54,7 @@ def get_new_comments():
     cfg = set_cfg()
 
     cfg['query'] = "case_summary:*webscale* OR case_tags:*shift_telco5g* OR case_summary:*cnv,* OR case_tags:*cnv*"   
-    conn = libtelco5g.jira_connection(cfg['options'], cfg)
+    conn = libtelco5g.jira_connection(cfg)
     board = libtelco5g.get_board_id(conn, cfg['board'])
     sprint = libtelco5g.get_latest_sprint(conn, board.id, cfg['sprintname'])
     cards = conn.search_issues("sprint=" + str(sprint.id) + " AND updated >= '-7d'", maxResults=1000)
@@ -91,7 +89,7 @@ def get_trending_cards():
     cfg = set_cfg()
     
     cfg['query'] = "case_summary:*webscale* OR case_tags:*shift_telco5g* OR case_summary:*cnv,* OR case_tags:*cnv*"    
-    conn = libtelco5g.jira_connection(cfg['options'], cfg)
+    conn = libtelco5g.jira_connection(cfg)
     board = libtelco5g.get_board_id(conn, cfg['board'])
     query_range = get_previous_quarter()
     cards = conn.search_issues('component = "KNI Labs & Field" AND (project = KNIECO OR project = KNIP AND issuetype = Epic AND status != Obsolete) AND labels = "Trends" AND ' + query_range + ' ORDER BY Rank ASC', maxResults=1000)
@@ -118,7 +116,7 @@ def get_trending_cards():
 def plots():
     # Set the default configuration values
     cfg = set_cfg()
-    conn =libtelco5g.jira_connection(cfg['options'], cfg)
+    conn = libtelco5g.jira_connection(cfg)
     project = libtelco5g.get_project_id(conn, cfg['project'])
     component = libtelco5g.get_component_id(conn, project.id, cfg['component'])
     board = libtelco5g.get_board_id(conn, cfg['board'])

@@ -14,7 +14,6 @@ data:
     sprintname    : T5GFE
     to            : rh-telco5g-field-support@redhat.com
     team          : Team
-    user        	: Jira_User
     password    	: Jira_Pass
     offline_token : Offline_token
     slack_token		: Slack_token

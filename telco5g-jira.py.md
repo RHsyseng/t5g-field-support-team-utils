@@ -17,11 +17,8 @@ The script take an optional, but recommended, single option that specifies a con
 There is a sample file under the cfg directory.
 See the sample.cfg file for the default settings in the script.
 
-#### Jira User
-If the Jira user is not set using either the ***user*** key or the environment variable t5g_user, then the user will default to the currently logged in user.
-
-#### Jira Password
-The jira password can be specified multiple ways.
+#### Jira Personal Access Token (PAT)
+The jira PAT can be specified multiple ways.
  - password key in the configuration file
  - t5g_password environment variable
  - passwd via stdin to the command (echo passwd | telco5g-jira.py)

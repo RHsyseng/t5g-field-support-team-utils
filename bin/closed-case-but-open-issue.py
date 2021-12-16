@@ -51,17 +51,16 @@ def main():
     else:
         cfg['debug'] = False
 
-    # Check for the password
+    # Check for the Jira PAT
     if len(cfg['password']) <= 0:
         if sys.stdin.isatty():
-            cfg['password'] = getpass.getpass('Enter the Jira password: ')
+            cfg['password'] = getpass.getpass('Enter the Jira PAT: ')
         else:
             cfg['password'] = sys.stdin.readline().rstrip()
 
     print('Connecting to Jira instance')
-    options = { 'server': cfg['server'] }
-
-    conn = libtelco5g.jira_connection(options, cfg)
+    
+    conn = libtelco5g.jira_connection(cfg)
     
     if cfg['debug']:
         print('\nDEBUG: Connection')
