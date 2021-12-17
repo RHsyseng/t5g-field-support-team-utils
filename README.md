@@ -14,6 +14,6 @@ Link to script usage: [telco5g-jira.py readme](https://github.com/RHsyseng/t5g-f
 This project has a CI that is triggered on every push. 
 
 Note: There are some environment variables which needed to be set in the GitLab:
-Jira_User & Jira_Pass - The Jira details to Connect to the board
+Jira_Pass - The Jira details to Connect to the board
 OCP_USER & OCP_PASS - Connection detilas to our LAB OCP 
 Offline_token - API token to connect to customer protal 

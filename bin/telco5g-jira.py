@@ -52,10 +52,10 @@ def main():
     else:
         cfg['debug'] = False
 
-    # Check for the password
+    # Check for the Jira PAT
     if len(cfg['password']) <= 0:
         if sys.stdin.isatty():
-            cfg['password'] = getpass.getpass('Enter the Jira password: ')
+            cfg['password'] = getpass.getpass('Enter the Jira PAT: ')
         else:
             cfg['password'] = sys.stdin.readline().rstrip()
 
@@ -71,13 +71,12 @@ def main():
         dpp.pprint(cases)
     
     print('Connecting to Jira instance')
-    options = { 'server': cfg['server'] }
 
     try:
-        conn = libtelco5g.jira_connection(options, cfg)
+        conn = libtelco5g.jira_connection(cfg)
     except jira.exceptions as e:
         if e.status_code ==401:
-            print("Login to JIRA failed. Check your username and password")
+            print("Login to JIRA failed. Check your PAT")
             exit (1)
 
     if cfg['debug']:

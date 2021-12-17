@@ -26,8 +26,6 @@ spec:
         env:
         - name: offline_token
           value: Offline_token
-        - name: jira_user
-          value: Jira_User
         - name: jira_pass
           value: Jira_Pass
         - name: accounts

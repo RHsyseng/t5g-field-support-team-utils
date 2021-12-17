@@ -32,12 +32,14 @@ portal2jira_sevs = {
 }
 
 
-def jira_connection(options, cfg):
+def jira_connection(cfg):
     try:
-        conn = jira.JIRA(options, basic_auth=(cfg['user'], cfg['password']))
+        headers = jira.JIRA.DEFAULT_OPTIONS["headers"].copy()
+        headers["Authorization"] = f"Bearer {cfg['password']}"
+        conn=jira.JIRA(server=cfg['server'], options={"headers": headers})
     except jira.exceptions as e:
         if e.status_code ==401:
-            print("Login to JIRA failed. Check your username and password")
+            print("Login to JIRA failed. Check your credentials")
             exit (1)
         if e.status_code == 503:
             print("JIRA is down.")
@@ -446,7 +448,7 @@ def set_defaults():
     defaults['smtp']        = 'smtp.corp.redhat.com'
     defaults['from']        = 't5g_jira@redhat.com'
     defaults['to']          = ''
-    defaults['alert_to'] = 'dcritch@redhat.com'
+    defaults['alert_to']    = 'dcritch@redhat.com'
     defaults['subject']     = 'New Card(s) Have Been Created to Track Telco5G Issues'
     defaults['sprintname']  = 'T5GFE' #Previous Sprintname: 'Labs and Field Sprint' 
     defaults['server']      = 'https://issues.redhat.com'
@@ -458,12 +460,11 @@ def set_defaults():
     defaults['labels']      = 'field, no-qe, no-doc'
     defaults['priority']    = 'High'
     defaults['points']      = 3
-    defaults['user']        = os.getenv('user', getpass.getuser())
     defaults['password']    = ''
     defaults['card_action'] = 'none'
     defaults['debug']       = 'False'
     defaults['sheet_id']    = '1I-Sw3qBCDv3jHon7J_H3xgPU2-mJ8c-9E1h5DeVZUbk'
-    defaults['range_name']       = 'webscale - knieco field eng!A2:J'
+    defaults['range_name']  = 'webscale - knieco field eng!A2:J'
     #defaults['team']        = [
     #    {"user": "dcritch", "name": "David Critch"},
     #    {"user": "rhn-support-pibanezr", "name": "Pedro Ibanez Requena"},
