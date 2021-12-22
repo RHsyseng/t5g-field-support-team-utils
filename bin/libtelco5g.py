@@ -147,14 +147,14 @@ def get_cards(conn, sid, user=None, include_closed=True):
     if user is not None and include_closed is False:
         user = user.replace('@', '\\u0040')
         if include_closed is False:
-            cards = conn.search_issues('sprint=' + str(sid) + ' and assignee = ' + str(user) + ' and status != "DONE"', 0, 250).iterable
+            cards = conn.search_issues('sprint=' + str(sid) + ' and assignee = ' + str(user) + ' and status != "DONE"', 0, 1000).iterable
         else:
-            cards = conn.search_issues('sprint=' + str(sid) + ' and assignee = ' + str(user), 0, 250).iterable
+            cards = conn.search_issues('sprint=' + str(sid) + ' and assignee = ' + str(user), 0, 1000).iterable
     else:
         if include_closed is False:
-            cards = conn.search_issues('sprint=' + str(sid) + ' and assignee = ' + str(user) + ' and status != "DONE"', 0, 250).iterable
+            cards = conn.search_issues('sprint=' + str(sid) + ' and assignee = ' + str(user) + ' and status != "DONE"', 0, 1000).iterable
         else:
-            cards = conn.search_issues('sprint=' + str(sid), 0, 250).iterable
+            cards = conn.search_issues('sprint=' + str(sid), 0, 1000).iterable
     
     for item in cards:
         returnlist.append(str(item))
@@ -171,22 +171,22 @@ def get_sprint_summary(conn, bid, sprintname, team):
     for member in team:
         user = member['jira_user']
         user = user.replace('@', '\\u0040')
-        completed_cards = conn.search_issues('sprint=' + str(sid) + ' and assignee = ' + str(user) + ' and status = "DONE"', 0, 250).iterable
+        completed_cards = conn.search_issues('sprint=' + str(sid) + ' and assignee = ' + str(user) + ' and status = "DONE"', 0, 1000).iterable
         print("%s completed %d cards" % (member['name'], len(completed_cards)))
     # kobi
     user = 'kgershon@redhat.com'
     user = user.replace('@', '\\u0040')
     name = 'Kobi Gershon'
-    completed_cards = conn.search_issues('sprint=' + str(sid) + ' and assignee = ' + str(user) + ' and status = "DONE"', 0, 250).iterable
+    completed_cards = conn.search_issues('sprint=' + str(sid) + ' and assignee = ' + str(user) + ' and status = "DONE"', 0, 1000).iterable
     print("%s completed %d cards" % (name, len(completed_cards)))
 
 
 def get_card_summary(conn, sid):
-    backlog = conn.search_issues('sprint=' + str(sid) + ' and status = "Backlog" and labels in ("field")', 0, 250).iterable
-    in_progress = conn.search_issues('sprint=' + str(sid) + ' and status = "In Progress" and labels in ("field")', 0, 250).iterable
-    code_review = conn.search_issues('sprint=' + str(sid) + ' and status = "Code Review" and labels in ("field")', 0, 250).iterable
-    qe_review = conn.search_issues('sprint=' + str(sid) + ' and status = "QE Review" and labels in ("field")', 0, 250).iterable
-    done = conn.search_issues('sprint=' + str(sid) + ' and status = "Done" and labels in ("field")', 0, 250).iterable
+    backlog = conn.search_issues('sprint=' + str(sid) + ' and status = "Backlog" and labels in ("field")', 0, 1000).iterable
+    in_progress = conn.search_issues('sprint=' + str(sid) + ' and status = "In Progress" and labels in ("field")', 0, 1000).iterable
+    code_review = conn.search_issues('sprint=' + str(sid) + ' and status = "Code Review" and labels in ("field")', 0, 1000).iterable
+    qe_review = conn.search_issues('sprint=' + str(sid) + ' and status = "QE Review" and labels in ("field")', 0, 1000).iterable
+    done = conn.search_issues('sprint=' + str(sid) + ' and status = "Done" and labels in ("field")', 0, 1000).iterable
     summary = {}
     summary['backlog'] = len(backlog)
     summary['in_progress'] = len(in_progress)
@@ -480,6 +480,7 @@ def set_defaults():
     #defaults['query']       = 'case_tags:shift_telco5g'
     defaults['slack_token']   = ''
     defaults['slack_channel'] = ''
+    defaults['max_jira_results'] = 500
     return defaults
 
 def read_config(file):
