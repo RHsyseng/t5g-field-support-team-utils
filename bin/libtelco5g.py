@@ -528,7 +528,7 @@ def get_token(offline_token):
   return(token)
 
 
-def get_cases_json(token, query, fields, num_cases=1000, exclude_closed=True):
+def get_cases_json(token, query, fields, num_cases=5000, exclude_closed=True):
   # https://source.redhat.com/groups/public/hydra/hydra_integration_platform_cee_integration_wiki/hydras_api_layer
   fl = ",".join(fields)
   query = "({})".format(query)

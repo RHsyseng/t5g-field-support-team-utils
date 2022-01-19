@@ -58,10 +58,13 @@ def get_new_comments():
     board = libtelco5g.get_board_id(conn, cfg['board'])
     sprint = libtelco5g.get_latest_sprint(conn, board.id, cfg['sprintname'])
     cards = conn.search_issues("sprint=" + str(sprint.id) + " AND updated >= '-7d'", maxResults=1000)
+    logging.warning("found %d JIRA cards" % (len(cards)))
     token=libtelco5g.get_token(cfg['offline_token'])
     cases_json=libtelco5g.get_cases_json(token,cfg['query'],cfg['fields'], exclude_closed = False)
     cases=libtelco5g.get_cases(cases_json, include_tags=True)
     linked_cards = add_case_number(conn, cards)
+    logging.warning("got %d linked cards" % (len(linked_cards)))
+    logging.warning("got %d cases" % (len(cases)))
     time_now = datetime.now(timezone.utc)
 
     # Add other details to dictionary, like case number and comments on card that were made in the last seven days
@@ -78,9 +81,12 @@ def get_new_comments():
             #detailed_cards[card_name] = {'case': case_num, 'summary': issue.fields.summary, "account": cases[case_num]['account'], "card_status": issue.fields.status.name, "comments": [comment.body for comment in issue.fields.comment.comments if (time_now - datetime.strptime(comment.updated, '%Y-%m-%dT%H:%M:%S.%f%z')).days < 7], "assignee": issue.fields.assignee}
             detailed_cards[card_name] = {'case': case_num, 'summary': issue.fields.summary, "account": cases[case_num]['account'], "card_status": issue.fields.status.name, "comments": [comment.body for comment in issue.fields.comment.comments if (time_now - datetime.strptime(comment.updated, '%Y-%m-%dT%H:%M:%S.%f%z')).days < 7], "assignee": issue.fields.assignee, "tags": case_tags }
             if len(detailed_cards[card_name]['comments']) == 0:
+                logging.warning("no comments found for %s" % card_name)
                 detailed_cards.pop(card_name)
 
+    
     detailed_cards = replace_links(detailed_cards)
+    logging.warning("found %d detailed cards" % (len(detailed_cards)))
     accounts = organize_cards(cfg, detailed_cards)
     return accounts
 
@@ -154,6 +160,7 @@ def add_case_number(conn, cards):
 
 def organize_cards(cfg, detailed_cards):
     """Group cards by account"""
+    
     accounts = cfg['accounts']
     for i in detailed_cards:
         for account in accounts:

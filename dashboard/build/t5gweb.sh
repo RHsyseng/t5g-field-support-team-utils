@@ -5,7 +5,6 @@ set -ex
 IMAGE=t5gweb
 TAG=${1:-latest}
 PUSH=${2:-false}
-REGISTRY=${REGISTRY:-$(oc get route/default-route -n openshift-image-registry -o json | jq -r .spec.host)}
 NS=t5g-web
 
 echo building $IMAGE:$TAG
@@ -23,6 +22,7 @@ buildah commit --format docker $container $IMAGE:$TAG
 
 
 if [[ $PUSH == "true" ]]; then
+  REGISTRY=${REGISTRY:-$(oc get route/default-route -n openshift-image-registry -o json | jq -r .spec.host)}
   echo pushing to $REGISTRY
   buildah tag $IMAGE:$TAG $REGISTRY/$NS/$IMAGE:$TAG
   buildah login -u $(oc whoami) -p $(oc whoami -t) --tls-verify=false $REGISTRY
