@@ -9,6 +9,7 @@ from werkzeug.exceptions import abort
 from . import libtelco5g
 import json
 import sys
+from copy import deepcopy
 
 
 def set_cfg():
@@ -67,8 +68,12 @@ def get_new_comments():
     logging.warning("got %d cases" % (len(cases)))
     time_now = datetime.now(timezone.utc)
 
+
+
     # Add other details to dictionary, like case number and comments on card that were made in the last seven days
     detailed_cards= {}
+    telco_account_list = []
+    cnv_account_list = []
     for card_name in linked_cards:
         issue = conn.issue(card_name) 
         case_num = linked_cards[card_name]
@@ -78,17 +83,22 @@ def get_new_comments():
                 case_tags = cases[case_num]['tags']
             else:
                 case_tags = "none"
-            #detailed_cards[card_name] = {'case': case_num, 'summary': issue.fields.summary, "account": cases[case_num]['account'], "card_status": issue.fields.status.name, "comments": [comment.body for comment in issue.fields.comment.comments if (time_now - datetime.strptime(comment.updated, '%Y-%m-%dT%H:%M:%S.%f%z')).days < 7], "assignee": issue.fields.assignee}
             detailed_cards[card_name] = {'case': case_num, 'summary': issue.fields.summary, "account": cases[case_num]['account'], "card_status": issue.fields.status.name, "comments": [comment.body for comment in issue.fields.comment.comments if (time_now - datetime.strptime(comment.updated, '%Y-%m-%dT%H:%M:%S.%f%z')).days < 7], "assignee": issue.fields.assignee, "tags": case_tags }
             if len(detailed_cards[card_name]['comments']) == 0:
                 logging.warning("no comments found for %s" % card_name)
                 detailed_cards.pop(card_name)
+            else:
+                if "shift_telco5g" in detailed_cards[card_name]['tags'] and detailed_cards[card_name]['account'] not in telco_account_list:
+                    telco_account_list.append(detailed_cards[card_name]['account'])
+                if "cnv" in detailed_cards[card_name]['tags'] and detailed_cards[card_name]['account'] not in cnv_account_list:
+                    cnv_account_list.append(detailed_cards[card_name]['account'])
 
-    
+    telco_account_list.sort()
+    cnv_account_list.sort()
     detailed_cards = replace_links(detailed_cards)
     logging.warning("found %d detailed cards" % (len(detailed_cards)))
-    accounts = organize_cards(cfg, detailed_cards)
-    return accounts
+    telco_accounts, cnv_accounts = organize_cards(cfg, detailed_cards, telco_account_list, cnv_account_list)
+    return telco_accounts, cnv_accounts
 
 def get_trending_cards():
     # Set the default configuration values
@@ -107,15 +117,18 @@ def get_trending_cards():
 
     # Add other details to dictionary, like case number and comments on card
     detailed_cards= {}
+    telco_account_list = []
     for card_name in linked_cards:
         issue = conn.issue(card_name) 
         case_num = linked_cards[card_name]
         if linked_cards[card_name] in cases: # Check if casenum exists in cases
             detailed_cards[card_name] = {'case': case_num, 'summary': issue.fields.summary, "account": cases[case_num]['account'], "card_status": issue.fields.status.name, "comments": [comment.body for comment in issue.fields.comment.comments], "assignee": issue.fields.assignee, "tags": cases[case_num]['tags'] }
+            telco_account_list.append(cases[case_num]['account'])
+
 
     detailed_cards = replace_links(detailed_cards)
-    accounts = organize_cards(cfg, detailed_cards)
-    trends = {k:v for k,v in accounts.items() if accounts[k]!="No Updates"}
+    telco_accounts, cnv_accounts = organize_cards(cfg, detailed_cards, telco_account_list)
+    trends = {k:v for k,v in telco_accounts.items() if telco_accounts[k]!="No Updates"}
     return trends
     
 
@@ -158,27 +171,31 @@ def add_case_number(conn, cards):
     linked_cards = {card: case for card, case in cards_dict.items() if case is not None}
     return linked_cards
 
-def organize_cards(cfg, detailed_cards):
+def organize_cards(cfg, detailed_cards, telco_account_list, cnv_account_list=None):
     """Group cards by account"""
     
-    accounts = cfg['accounts']
-    for i in detailed_cards:
-        for account in accounts:
-            for status in accounts[account]:
-                if account.lower() in detailed_cards[i]['account'].lower() and status == detailed_cards[i]['card_status']:
-                    accounts[account][status].update({i: detailed_cards[i]})
-                if "cnv" in detailed_cards[i]['summary'].lower() and status == detailed_cards[i]['card_status'] and account == "CNV":
-                    accounts[account][status].update({i: detailed_cards[i]})
-                else:
-                    for k in detailed_cards[i]['tags']:
-                        if "cnv" in k.lower() and status == detailed_cards[i]['card_status'] and account == "CNV":
-                            accounts[account][status].update({i: detailed_cards[i]})
+    telco_accounts = {}
+    cnv_accounts = {}
 
-    # If an account has no updated cards, replace its empty dictionary with "No Updates"
-    for account in accounts:
-        if sum([len(accounts[account][status]) for status in accounts[account]])==0:
-            accounts[account] = "No Updates"
-    return accounts
+    states = {"To Do":{}, "In Progress": {}, "Code Review": {},"QE Review": {}, "Done": {}}
+    
+    for account in telco_account_list:
+        telco_accounts[account] = deepcopy(states)
+    if cnv_account_list:
+        for account in cnv_account_list:
+            cnv_accounts[account] = deepcopy(states)
+    
+    for i in detailed_cards.keys():
+        status = detailed_cards[i]['card_status']
+        tags =  detailed_cards[i]['tags']
+        account = detailed_cards[i]['account']
+        logging.warning("card: %s\tstatus: %s\ttags: %s\taccount: %s" % (i, status, tags, account))
+        if "shift_telco5g" in tags:
+            telco_accounts[account][status][i] = detailed_cards[i]
+        if cnv_account_list and "cnv" in tags:
+            cnv_accounts[account][status][i] = detailed_cards[i]
+  
+    return telco_accounts, cnv_accounts
 
 def get_previous_quarter():
     """Creates JIRA query to get cards from previous quarter"""
