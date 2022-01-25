@@ -50,7 +50,7 @@ def cnv():
 @BP.route('/trends')
 def trends():
     """Retrieves cards that have been labeled with 'Trends' within the previous quarter and creates report"""
-    return render_template('ui/updates.html', now=load_data.now, new_comments=load_data.trending_cards, page_title='trends'))
+    return render_template('ui/updates.html', now=load_data.now, new_comments=load_data.trending_cards, page_title='trends')
 
 # Start scheduler and load data for first run
 scheduler.start()
