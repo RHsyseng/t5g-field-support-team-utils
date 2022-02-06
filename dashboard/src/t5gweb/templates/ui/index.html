@@ -11,9 +11,9 @@
 
         {% for case in new_cases %}
         <tr>
-            <td><a href=https://access.redhat.com/support/cases/#/case/{{ case.case_number }} target="_blank">{{ case.case_number }}</a></td>
-            <td>{{ case.case_severity }}</td>
-            <td>{{ case.case_summary }}</td>
+            <td><a href=https://access.redhat.com/support/cases/#/case/{{ case.number }} target="_blank">{{ case.number }}</a></td>
+            <td>{{ case.severity }}</td>
+            <td>{{ case.problem }}</td>
         </tr>
         {% endfor %}
         </table>

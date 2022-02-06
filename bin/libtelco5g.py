@@ -12,7 +12,9 @@ Setting set in the environment override the ones in the configuration file.
 from __future__ import print_function
 import os
 import getpass
-import jira
+from jira import JIRA
+from jira.client import ResultList
+from jira.resources import Issue
 import re
 import pprint
 import requests
@@ -21,7 +23,10 @@ import smtplib
 from email.message import EmailMessage
 import random
 from slack_sdk import WebClient
-
+import redis
+import json
+import logging
+import time
 
 # for portal to jira mapping
 portal2jira_sevs = {
@@ -33,18 +38,13 @@ portal2jira_sevs = {
 
 
 def jira_connection(cfg):
-    try:
-        headers = jira.JIRA.DEFAULT_OPTIONS["headers"].copy()
-        headers["Authorization"] = f"Bearer {cfg['password']}"
-        conn=jira.JIRA(server=cfg['server'], options={"headers": headers})
-    except jira.exceptions as e:
-        if e.status_code ==401:
-            print("Login to JIRA failed. Check your credentials")
-            exit (1)
-        if e.status_code == 503:
-            print("JIRA is down.")
-            exit (1)
-    return conn
+
+    jira = JIRA(
+        server = cfg['server'],
+        token_auth = cfg['password']
+    )
+
+    return jira
 
 def get_project_id(conn, name):
     ''' Take a project name and return its id
@@ -99,10 +99,8 @@ def get_board_id(conn, name):
             KNI ECO Labs & Field
     '''
 
-    boards = conn.boards()
-    for item in boards.iterable:
-        if name in item.name:
-            return item
+    boards = conn.boards(name=name)
+    return boards[0]
 
 
 def get_latest_sprint(conn, bid, sprintname):
@@ -117,11 +115,9 @@ def get_latest_sprint(conn, bid, sprintname):
             ECO Labs & Field Sprint 188
     '''
 
-    board = conn.sprints(bid, state="active") # still seems to return everything?
-    for b in board:
-        if b.state == "ACTIVE" and re.search(sprintname, b.name):
-            return b
-    return None
+    sprints = conn.sprints(bid, state="active")
+    return sprints[0]
+
 
 def get_last_sprint(conn, bid, sprintname):
     this_sprint = get_latest_sprint(conn, bid, sprintname)
@@ -181,12 +177,14 @@ def get_sprint_summary(conn, bid, sprintname, team):
     print("%s completed %d cards" % (name, len(completed_cards)))
 
 
-def get_card_summary(conn, sid):
-    backlog = conn.search_issues('sprint=' + str(sid) + ' and status = "Backlog" and labels in ("field")', 0, 1000).iterable
-    in_progress = conn.search_issues('sprint=' + str(sid) + ' and status = "In Progress" and labels in ("field")', 0, 1000).iterable
-    code_review = conn.search_issues('sprint=' + str(sid) + ' and status = "Code Review" and labels in ("field")', 0, 1000).iterable
-    qe_review = conn.search_issues('sprint=' + str(sid) + ' and status = "QE Review" and labels in ("field")', 0, 1000).iterable
-    done = conn.search_issues('sprint=' + str(sid) + ' and status = "Done" and labels in ("field")', 0, 1000).iterable
+def get_card_summary():
+
+    cards = redis_get('cards')
+    backlog = [card for card in cards if cards[card]['card_status'] == 'Backlog']
+    in_progress = [card for card in cards if cards[card]['card_status'] == 'In Progress']
+    code_review = [card for card in cards if cards[card]['card_status'] == 'Code Review']
+    qe_review = [card for card in cards if cards[card]['card_status'] == 'QE Review']
+    done = [card for card in cards if cards[card]['card_status'] == 'Done']
     summary = {}
     summary['backlog'] = len(backlog)
     summary['in_progress'] = len(in_progress)
@@ -465,22 +463,12 @@ def set_defaults():
     defaults['debug']       = 'False'
     defaults['sheet_id']    = '1I-Sw3qBCDv3jHon7J_H3xgPU2-mJ8c-9E1h5DeVZUbk'
     defaults['range_name']  = 'webscale - knieco field eng!A2:J'
-    #defaults['team']        = [
-    #    {"user": "dcritch", "name": "David Critch"},
-    #    {"user": "rhn-support-pibanezr", "name": "Pedro Ibanez Requena"},
-    #    {"user": "gwest", "name": "Glenn West"},
-    #    {"user": "eminguez", "name": "Eduardo Minguez"}
-    #]
-    #defaults['team']        = [
-    #    {"user": "kgershon", "name": "Kobi gershon"}
-    #]
     defaults['fields']      =  ["case_account_name","case_summary","case_number","case_status","case_owner","case_severity","case_createdDate","case_lastModifiedDate","case_bugzillaNumber","case_description","case_tags"]
-    defaults['query']       = 'case_summary:*webscale* OR case_tags:*shift_telco5g*'
-    #defaults['query']       = 'case_tags:cnv'
-    #defaults['query']       = 'case_tags:shift_telco5g'
+    defaults['query']       = "case_summary:*webscale* OR case_tags:*shift_telco5g* OR case_summary:*cnv,* OR case_tags:*cnv*"
     defaults['slack_token']   = ''
     defaults['slack_channel'] = ''
     defaults['max_jira_results'] = 500
+    defaults['max_portal_results'] = 5000
     return defaults
 
 def read_config(file):
@@ -526,6 +514,130 @@ def get_token(offline_token):
   # It returns 'application/x-www-form-urlencoded'
   token = r.json()['access_token']
   return(token)
+
+def redis_set(key, value):
+
+    logging.warning("syncing {}..".format(key))
+    r_cache = redis.Redis(host='redis')
+    r_cache.mset({key: value})
+    logging.warning("{}....synced".format(key))
+
+def redis_get(key):
+
+    logging.warning("fetching {}..".format(key))
+    r_cache = redis.Redis(host='redis')
+    data = r_cache.get(key)
+    data = json.loads(data.decode("utf-8"))
+    logging.warning("{} ....fetched".format(key))
+
+    return data
+
+def cache_cases(cfg):
+
+  token = get_token(cfg['offline_token'])
+  query = cfg['query']
+  fields = ",".join(cfg['fields'])
+  query = "({})".format(query)
+  num_cases = cfg['max_portal_results']
+  payload = {"q": query, "partnerSearch": "false", "rows": num_cases, "fl": fields}
+  headers = {"Accept": "application/json", "Authorization": "Bearer " + token}
+  url = "https://access.redhat.com/hydra/rest/search/cases"
+
+  logging.warning("searching the portal for cases")
+  start = time.time()
+  r = requests.get(url, headers=headers, params=payload)
+  cases_json = r.json()['response']['docs']
+  end = time.time()
+  logging.warning("found {} cases in {} seconds".format(len(cases_json), (end-start)))
+  cases = {}
+  for case in cases_json:
+    cases[case["case_number"]] = {
+        "owner": case["case_owner"],
+        "severity": case["case_severity"],
+        "account": case["case_account_name"],
+        "problem": case["case_summary"],
+        "status": case["case_status"],
+        "createdate": case["case_createdDate"],
+        "last_update": case["case_lastModifiedDate"],
+        "description": case["case_description"],
+    }
+    # Sometimes there is no BZ attached to the case
+    if "case_bugzillaNumber" in case:
+        cases[case["case_number"]]["bug"] = case["case_bugzillaNumber"]
+    # Sometimes there is no tag attached to the case
+    if "case_tags" in case:
+        cases[case["case_number"]]["tags"] = case["case_tags"]
+
+  redis_set('cases', json.dumps(cases))
+
+def cache_cards(cfg):
+
+    logging.warning("fetching cases")
+    cases = redis_get('cases')
+    logging.warning("attempting to connect to jira...")
+    jira_conn = jira_connection(cfg)
+    max_cards = cfg['max_jira_results']
+    start = time.time()
+    project = get_project_id(jira_conn, cfg['project'])
+    logging.warning("project: {}".format(project))
+    component = get_component_id(jira_conn, project.id, cfg['component'])
+    logging.warning("component: {}".format(component))
+    board = get_board_id(jira_conn, cfg['board'])
+    logging.warning("board: {}".format(board))
+    sprint = get_latest_sprint(jira_conn, board.id, cfg['sprintname'])
+    logging.warning("sprint: {}".format(sprint))
+
+    logging.warning("pulling cards from jira")
+
+    jira_query = 'sprint=' + str(sprint.id) + ' AND (labels = "field" OR labels = "cnv")'
+    card_list = jira_conn.search_issues(jira_query, 0, max_cards).iterable
+
+    jira_cards = {}
+    for card in card_list:
+        issue = jira_conn.issue(card)
+        comments = jira_conn.comments(issue)
+        card_comments = []
+        for comment in comments:
+            body = comment.body
+            body = re.sub(r'(?<!\||\s)\s*?((http|ftp|https):\/\/([\w_-]+(?:(?:\.[\w_-]+)+))([\w.,@?^=%&:\/~+#-]*[\w@?^=%&\/~+#-])?)',"<a href=\""+r'\g<0>'+"\" target='_blank'>"+r'\g<0>'"</a>", body)
+            body = re.sub(r'\[([\s\w!"#$%&\'()*+,-.\/:;<=>?@[^_`{|}~]*?\s*?)\|\s*?((http|ftp|https):\/\/([\w_-]+(?:(?:\.[\w_-]+)+))([\w.,@?^=%&:\/~+#-]*[\w@?^=%&\/~+#-])?[\s]*)\]',"<a href=\""+r'\2'+"\" target='_blank'>"+r'\1'+"</a>", body)
+            tstamp = comment.updated
+            card_comments.append((body, tstamp))
+        case_number = get_case_from_link(jira_conn, card)
+        if not case_number or case_number not in cases.keys():
+            logging.warning("card isn't associated with a case. discarding ({})".format(card))
+            continue
+        assignee = {
+            "displayName": issue.fields.assignee.displayName,
+            "key": issue.fields.assignee.key,
+            "name": issue.fields.assignee.name
+        }
+        jira_cards[card.key] = {
+            "card_status": issue.fields.status.name,
+            "account": cases[case_number]['account'],
+            "summary": cases[case_number]['problem'],
+            "description": cases[case_number]['description'],
+            "comments": card_comments,
+            "assignee": assignee,
+            "case_number": case_number,
+            "tags": cases[case_number]['tags'],
+            "labels": issue.fields.labels
+        }
+
+    end = time.time()
+    logging.warning("got {} cards in {} seconds".format(len(jira_cards), (end - start)))
+    redis_set('cards', json.dumps(jira_cards))
+
+def get_case_from_link(jira_conn, card):
+
+    links = jira_conn.remote_links(card)
+    for link in links:
+        t = jira_conn.remote_link(card, link)
+        if t.raw['object']['title'] == "Support Case":
+            case_number = get_case_number(t.raw['object']['url'])
+            if len(case_number) > 0:
+                return case_number
+    return None
 
 
 def get_cases_json(token, query, fields, num_cases=5000, exclude_closed=True):

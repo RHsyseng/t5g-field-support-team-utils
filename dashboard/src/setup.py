@@ -10,9 +10,10 @@ setup(
         'flask==2.0.2',
         'matplotlib==3.4.3',
         'gunicorn==20.1.0',
-        'jira==3.0.1',
+        'jira==3.1.1',
         'requests==2.26.0',
         'slack_sdk==3.11.2',
-        'flask_apscheduler==1.12.2'
+        'flask_apscheduler==1.12.2',
+        'redis'
     ],
 )
