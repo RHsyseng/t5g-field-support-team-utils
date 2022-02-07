@@ -1,6 +1,7 @@
 """UI views for t5gweb"""
 import logging
 import datetime
+
 from flask import (
     Blueprint, redirect, render_template, request, url_for, make_response, send_file
 )
@@ -9,7 +10,12 @@ from t5gweb.t5gweb import (
     get_new_cases,
     get_new_comments,
     get_trending_cards,
-    plots
+    plots,
+    set_cfg
+)
+from t5gweb.libtelco5g import(
+    cache_cases,
+    cache_cards
 )
 
 BP = Blueprint('ui', __name__, url_prefix='/')
@@ -17,6 +23,13 @@ BP = Blueprint('ui', __name__, url_prefix='/')
 @scheduler.task('interval', id='do_job_1', seconds=3600)
 def load_data():
     """Load data for dashboard in background every 1 hr"""
+    cfg = set_cfg()
+
+    # update redis cache
+    cache_cases(cfg)
+    cache_cards(cfg)
+
+    # update page views
     load_data.new_cases = get_new_cases()
     plot_data = plots()
     load_data.y = list(plot_data.values())
@@ -25,6 +38,7 @@ def load_data():
     load_data.cnv_comments = cnv_accounts
     load_data.trending_cards = get_trending_cards()
     load_data.now = datetime.datetime.utcnow()
+
 
 @BP.route('/')
 def index():
@@ -35,7 +49,7 @@ def index():
 def refresh():
     """Forces an update to the dashboard"""
     load_data()
-    return redirect(url_for("ui.updates"))
+    return redirect(url_for("ui.telco5g"))
 
 @BP.route('/telco5g')
 def telco5g():
@@ -51,6 +65,14 @@ def cnv():
 def trends():
     """Retrieves cards that have been labeled with 'Trends' within the previous quarter and creates report"""
     return render_template('ui/updates.html', now=load_data.now, new_comments=load_data.trending_cards, page_title='trends')
+
+@BP.route('/cache')
+def refresh_cache():
+    cfg = set_cfg()
+    cache_cases(cfg)
+    cache_cards(cfg)
+    return render_template('ui/index.html', new_cases=load_data.new_cases, values=load_data.y, now=load_data.now)
+
 
 # Start scheduler and load data for first run
 scheduler.start()

@@ -11,7 +11,6 @@ import json
 import sys
 from copy import deepcopy
 
-
 def set_cfg():
         # Set the default configuration values
     cfg = libtelco5g.set_defaults()
@@ -27,120 +26,82 @@ def set_cfg():
 
     cfg['offline_token'] = os.environ.get('offline_token')
     cfg['password'] = os.environ.get('jira_pass')
-    cfg['accounts'] = json.loads(os.environ.get('accounts'))
 
     return cfg
 
 def get_new_cases():
     """get new cases created since X days ago"""
-    # Set the default configuration values
-    cfg = set_cfg()
-    token=libtelco5g.get_token(cfg['offline_token'])
-    cases=libtelco5g.get_cases_json(token,cfg['query'],cfg['fields'])
+
+    # get cases from cache
+    cases = libtelco5g.redis_get("cases")
+
     interval = 7
     new_cases = []
-    logging.warning("new cases opened in the last %d days:" % interval)
-    for case in sorted(cases, key = lambda i: i['case_severity']):
-        create_date = datetime.strptime(case['case_createdDate'], '%Y-%m-%dT%H:%M:%SZ')
+    for case in sorted(cases.items(), key = lambda i: i[1]['severity']):
+        create_date = datetime.strptime(case[1]['createdate'], '%Y-%m-%dT%H:%M:%SZ')
         time_diff = datetime.now() - create_date
         if time_diff.days < 7:
-            case['case_severity'] = re.sub('\(|\)| |[0-9]', '', case['case_severity'])
-            logging.warning("https://access.redhat.com/support/cases/#/case/%s\t%s\t%s" % (case['case_number'], case['case_severity'], case['case_summary']))
-            new_cases.append(case)
+            case[1]['severity'] = re.sub('\(|\)| |[0-9]', '', case[1]['severity'])
+            case[1]['number'] = case[0]
+            new_cases.append(case[1])
     return new_cases
 
 def get_new_comments():
 
-    # Set the default configuration values
-    cfg = set_cfg()
-
-    cfg['query'] = "case_summary:*webscale* OR case_tags:*shift_telco5g* OR case_summary:*cnv,* OR case_tags:*cnv*"   
-    conn = libtelco5g.jira_connection(cfg)
-    board = libtelco5g.get_board_id(conn, cfg['board'])
-    sprint = libtelco5g.get_latest_sprint(conn, board.id, cfg['sprintname'])
-    cards = conn.search_issues("sprint=" + str(sprint.id) + " AND updated >= '-7d'", maxResults=1000)
+    # fetch cards from redis cache
+    cards = libtelco5g.redis_get('cards')
     logging.warning("found %d JIRA cards" % (len(cards)))
-    token=libtelco5g.get_token(cfg['offline_token'])
-    cases_json=libtelco5g.get_cases_json(token,cfg['query'],cfg['fields'], exclude_closed = False)
-    cases=libtelco5g.get_cases(cases_json, include_tags=True)
-    linked_cards = add_case_number(conn, cards)
-    logging.warning("got %d linked cards" % (len(linked_cards)))
-    logging.warning("got %d cases" % (len(cases)))
     time_now = datetime.now(timezone.utc)
 
-
-
-    # Add other details to dictionary, like case number and comments on card that were made in the last seven days
+    # filter cards for comments created in the last week
+    # and sort between telco and cnv
     detailed_cards= {}
     telco_account_list = []
     cnv_account_list = []
-    for card_name in linked_cards:
-        issue = conn.issue(card_name) 
-        case_num = linked_cards[card_name]
-        if linked_cards[card_name] in cases: # Check if casenum exists in cases
-            case_tags = None
-            if 'tags' in cases[case_num]:
-                case_tags = cases[case_num]['tags']
-            else:
-                case_tags = "none"
-            detailed_cards[card_name] = {'case': case_num, 'summary': issue.fields.summary, "account": cases[case_num]['account'], "card_status": issue.fields.status.name, "comments": [comment.body for comment in issue.fields.comment.comments if (time_now - datetime.strptime(comment.updated, '%Y-%m-%dT%H:%M:%S.%f%z')).days < 7], "assignee": issue.fields.assignee, "tags": case_tags }
-            if len(detailed_cards[card_name]['comments']) == 0:
-                logging.warning("no comments found for %s" % card_name)
-                detailed_cards.pop(card_name)
-            else:
-                if "shift_telco5g" in detailed_cards[card_name]['tags'] and detailed_cards[card_name]['account'] not in telco_account_list:
-                    telco_account_list.append(detailed_cards[card_name]['account'])
-                if "cnv" in detailed_cards[card_name]['tags'] and detailed_cards[card_name]['account'] not in cnv_account_list:
-                    cnv_account_list.append(detailed_cards[card_name]['account'])
-
+    for card in cards:
+        comments = [comment[0] for comment in cards[card]['comments'] if (time_now - datetime.strptime(comment[1], '%Y-%m-%dT%H:%M:%S.%f%z')).days < 7]
+        if len(comments) == 0:
+            #logging.warning("no recent updates for {}".format(card))
+            continue # no updates
+        else:
+            detailed_cards[card] = cards[card] #TODO right now will display all comments, even old ones... might be better?
+        if "shift_telco5g" in cards[card]['tags'] and cards[card]['account'] not in telco_account_list:
+            telco_account_list.append(cards[card]['account'])
+        if "cnv" in cards[card]['tags'] and cards[card]['account'] not in cnv_account_list:
+            cnv_account_list.append(cards[card]['account'])
     telco_account_list.sort()
     cnv_account_list.sort()
-    detailed_cards = replace_links(detailed_cards)
     logging.warning("found %d detailed cards" % (len(detailed_cards)))
-    telco_accounts, cnv_accounts = organize_cards(cfg, detailed_cards, telco_account_list, cnv_account_list)
+
+    # organize cards by status
+    telco_accounts, cnv_accounts = organize_cards(detailed_cards, telco_account_list, cnv_account_list)
     return telco_accounts, cnv_accounts
 
 def get_trending_cards():
-    # Set the default configuration values
-    cfg = set_cfg()
-    
-    cfg['query'] = "case_summary:*webscale* OR case_tags:*shift_telco5g* OR case_summary:*cnv,* OR case_tags:*cnv*"    
-    conn = libtelco5g.jira_connection(cfg)
-    board = libtelco5g.get_board_id(conn, cfg['board'])
-    query_range = get_previous_quarter()
-    cards = conn.search_issues('component = "KNI Labs & Field" AND (project = KNIECO OR project = KNIP AND issuetype = Epic AND status != Obsolete) AND labels = "Trends" AND ' + query_range + ' ORDER BY Rank ASC', maxResults=1000)
-    token=libtelco5g.get_token(cfg['offline_token'])
-    cases_json=libtelco5g.get_cases_json(token, cfg['query'], cfg['fields'], exclude_closed= False)
-    cases=libtelco5g.get_cases(cases_json, include_tags=True)
-    linked_cards = add_case_number(conn, cards)
+
+    # fetch cards from redis cache
+    cards = libtelco5g.redis_get('cards')
     time_now = datetime.now(timezone.utc)
 
-    # Add other details to dictionary, like case number and comments on card
-    detailed_cards= {}
+    # get a list of trending cards
+    trending_cards = [card for card in cards if 'Trends' in cards[card]['labels']]
+
+    #TODO: timeframe?
+    detailed_cards = {}
     telco_account_list = []
-    for card_name in linked_cards:
-        issue = conn.issue(card_name) 
-        case_num = linked_cards[card_name]
-        if linked_cards[card_name] in cases: # Check if casenum exists in cases
-            detailed_cards[card_name] = {'case': case_num, 'summary': issue.fields.summary, "account": cases[case_num]['account'], "card_status": issue.fields.status.name, "comments": [comment.body for comment in issue.fields.comment.comments], "assignee": issue.fields.assignee, "tags": cases[case_num]['tags'] }
-            telco_account_list.append(cases[case_num]['account'])
+    for card in trending_cards:
+        detailed_cards[card] = cards[card]
+        account = cards[card]['account']
+        if account not in telco_account_list:
+            telco_account_list.append(cards[card]['account'])
 
-
-    detailed_cards = replace_links(detailed_cards)
-    telco_accounts, cnv_accounts = organize_cards(cfg, detailed_cards, telco_account_list)
-    trends = {k:v for k,v in telco_accounts.items() if telco_accounts[k]!="No Updates"}
-    return trends
+    telco_accounts, cnv_accounts = organize_cards(detailed_cards, telco_account_list)
+    return telco_accounts
     
 
 def plots():
-    # Set the default configuration values
-    cfg = set_cfg()
-    conn = libtelco5g.jira_connection(cfg)
-    project = libtelco5g.get_project_id(conn, cfg['project'])
-    component = libtelco5g.get_component_id(conn, project.id, cfg['component'])
-    board = libtelco5g.get_board_id(conn, cfg['board'])
-    sprint = libtelco5g.get_latest_sprint(conn, board.id, cfg['sprintname'])
-    summary = libtelco5g.get_card_summary(conn, sprint.id)
+
+    summary = libtelco5g.get_card_summary()
     return summary
 
 def replace_links(detailed_cards):
@@ -171,7 +132,7 @@ def add_case_number(conn, cards):
     linked_cards = {card: case for card, case in cards_dict.items() if case is not None}
     return linked_cards
 
-def organize_cards(cfg, detailed_cards, telco_account_list, cnv_account_list=None):
+def organize_cards(detailed_cards, telco_account_list, cnv_account_list=None):
     """Group cards by account"""
     
     telco_accounts = {}
@@ -189,7 +150,7 @@ def organize_cards(cfg, detailed_cards, telco_account_list, cnv_account_list=Non
         status = detailed_cards[i]['card_status']
         tags =  detailed_cards[i]['tags']
         account = detailed_cards[i]['account']
-        logging.warning("card: %s\tstatus: %s\ttags: %s\taccount: %s" % (i, status, tags, account))
+        #logging.warning("card: %s\tstatus: %s\ttags: %s\taccount: %s" % (i, status, tags, account))
         if "shift_telco5g" in tags:
             telco_accounts[account][status][i] = detailed_cards[i]
         if cnv_account_list and "cnv" in tags:

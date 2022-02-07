@@ -1,0 +1,20 @@
+---
+kind: Deployment
+apiVersion: apps/v1
+metadata:
+  name: redis
+  namespace: t5g-web
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: redis
+  template:
+    metadata:
+      labels:
+        app: redis
+    spec:
+      containers:
+      - name: redis
+        image: registry.redhat.io/rhel8/redis-6
+        imagePullPolicy: IfNotPresent
