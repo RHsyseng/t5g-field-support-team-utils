@@ -46,7 +46,7 @@ def get_new_cases():
             new_cases.append(case[1])
     return new_cases
 
-def get_new_comments():
+def get_new_comments(new_comments_only=True):
 
     # fetch cards from redis cache
     cards = libtelco5g.redis_get('cards')
@@ -59,7 +59,10 @@ def get_new_comments():
     telco_account_list = []
     cnv_account_list = []
     for card in cards:
-        comments = [comment[0] for comment in cards[card]['comments'] if (time_now - datetime.strptime(comment[1], '%Y-%m-%dT%H:%M:%S.%f%z')).days < 7]
+        if new_comments_only:
+            comments = [comment[0] for comment in cards[card]['comments'] if (time_now - datetime.strptime(comment[1], '%Y-%m-%dT%H:%M:%S.%f%z')).days < 7]
+        else:
+            comments = [comment[0] for comment in cards[card]['comments']]
         if len(comments) == 0:
             #logging.warning("no recent updates for {}".format(card))
             continue # no updates

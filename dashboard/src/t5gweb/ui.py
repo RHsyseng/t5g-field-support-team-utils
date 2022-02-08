@@ -36,6 +36,9 @@ def load_data():
     telco_accounts, cnv_accounts = get_new_comments()
     load_data.telco_comments = telco_accounts
     load_data.cnv_comments = cnv_accounts
+    telco_accounts_all, cnv_accounts_all = get_new_comments(new_comments_only=False)
+    load_data.telco_comments_all = telco_accounts_all
+    load_data.cnv_comments_all = cnv_accounts_all
     load_data.trending_cards = get_trending_cards()
     load_data.now = datetime.datetime.utcnow()
 
@@ -56,10 +59,20 @@ def telco5g():
     """Retrieves cards that have been updated within the last week and creates report"""
     return render_template('ui/updates.html', now=load_data.now, new_comments=load_data.telco_comments, page_title='telco5g')
 
+@BP.route('/all_telco5g')
+def all_telco5g():
+    """Retrieves all cards and creates report"""
+    return render_template('ui/updates.html', now=load_data.now, new_comments=load_data.telco_comments_all, page_title='all-telco5g')
+
 @BP.route('/cnv')
 def cnv():
     """Retrieves cards that have been updated within the last week and creates report"""
     return render_template('ui/updates.html', now=load_data.now, new_comments=load_data.cnv_comments, page_title='cnv')
+
+@BP.route('/all_cnv')
+def all_cnv():
+    """Retrieves all cards and creates report"""
+    return render_template('ui/updates.html', now=load_data.now, new_comments=load_data.cnv_comments_all, page_title='all-cnv')
 
 @BP.route('/trends')
 def trends():
