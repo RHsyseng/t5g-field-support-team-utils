@@ -612,6 +612,11 @@ def cache_cards(cfg):
             "key": issue.fields.assignee.key,
             "name": issue.fields.assignee.name
         }
+        tags = []
+        if 'tags' in cases[case_number].keys():
+            tags = cases[case_number]['tags']
+        else: # assume telco
+            tags = ['shift_telco5g']
         jira_cards[card.key] = {
             "card_status": issue.fields.status.name,
             "account": cases[case_number]['account'],
@@ -620,7 +625,7 @@ def cache_cards(cfg):
             "comments": card_comments,
             "assignee": assignee,
             "case_number": case_number,
-            "tags": cases[case_number]['tags'],
+            "tags": tags,
             "labels": issue.fields.labels
         }
 
