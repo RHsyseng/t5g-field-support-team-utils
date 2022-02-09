@@ -67,7 +67,7 @@ def get_new_comments(new_comments_only=True):
             #logging.warning("no recent updates for {}".format(card))
             continue # no updates
         else:
-            detailed_cards[card] = cards[card] #TODO right now will display all comments, even old ones... might be better?
+            detailed_cards[card] = cards[card]
             detailed_cards[card]['comments'] = comments
         if "shift_telco5g" in cards[card]['tags'] and cards[card]['account'] not in telco_account_list:
             telco_account_list.append(cards[card]['account'])
