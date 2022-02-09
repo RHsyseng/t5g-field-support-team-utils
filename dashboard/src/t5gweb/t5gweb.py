@@ -60,14 +60,15 @@ def get_new_comments(new_comments_only=True):
     cnv_account_list = []
     for card in cards:
         if new_comments_only:
-            comments = [comment[0] for comment in cards[card]['comments'] if (time_now - datetime.strptime(comment[1], '%Y-%m-%dT%H:%M:%S.%f%z')).days < 7]
+            comments = [comment for comment in cards[card]['comments'] if (time_now - datetime.strptime(comment[1], '%Y-%m-%dT%H:%M:%S.%f%z')).days < 7]
         else:
-            comments = [comment[0] for comment in cards[card]['comments']]
+            comments = [comment for comment in cards[card]['comments']]
         if len(comments) == 0:
             #logging.warning("no recent updates for {}".format(card))
             continue # no updates
         else:
             detailed_cards[card] = cards[card] #TODO right now will display all comments, even old ones... might be better?
+            detailed_cards[card]['comments'] = comments
         if "shift_telco5g" in cards[card]['tags'] and cards[card]['account'] not in telco_account_list:
             telco_account_list.append(cards[card]['account'])
         if "cnv" in cards[card]['tags'] and cards[card]['account'] not in cnv_account_list:
