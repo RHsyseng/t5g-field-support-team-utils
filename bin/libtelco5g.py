@@ -617,6 +617,10 @@ def cache_cards(cfg):
             tags = cases[case_number]['tags']
         else: # assume telco
             tags = ['shift_telco5g']
+        if 'bug' in cases[case_number].keys():
+            bugzilla = cases[case_number]['bug']
+        else:
+            bugzilla = "None"
         jira_cards[card.key] = {
             "card_status": issue.fields.status.name,
             "account": cases[case_number]['account'],
@@ -626,7 +630,9 @@ def cache_cards(cfg):
             "assignee": assignee,
             "case_number": case_number,
             "tags": tags,
-            "labels": issue.fields.labels
+            "labels": issue.fields.labels,
+            "bugzilla": bugzilla,
+            "severity": cases[case_number]['severity']
         }
 
     end = time.time()
