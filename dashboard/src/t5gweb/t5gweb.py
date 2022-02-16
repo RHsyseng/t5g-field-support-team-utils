@@ -26,6 +26,7 @@ def set_cfg():
 
     cfg['offline_token'] = os.environ.get('offline_token')
     cfg['password'] = os.environ.get('jira_pass')
+    cfg['bz_key'] = os.environ.get('bz_key')
 
     return cfg
 

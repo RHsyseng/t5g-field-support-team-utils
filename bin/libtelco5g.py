@@ -27,6 +27,7 @@ import redis
 import json
 import logging
 import time
+import bugzilla
 
 # for portal to jira mapping
 portal2jira_sevs = {
@@ -570,10 +571,38 @@ def cache_cases(cfg):
 
   redis_set('cases', json.dumps(cases))
 
+def cache_bz(cfg):
+    
+    logging.warning("fetching cases")
+    cases = redis_get('cases')
+    bz_url = "bugzilla.redhat.com"
+    bz_api = bugzilla.Bugzilla(bz_url, api_key=cfg['bz_key'])
+    bz_dict = {}
+    token = get_token(cfg['offline_token'])
+    headers = {"Accept": "application/json", "Authorization": "Bearer " + token}
+
+    logging.warning("getting all bugzillas")
+    for case in cases:
+        if "bug" in cases[case] and cases[case]['status'] != "Closed":
+            bz_endpoint = "https://access.redhat.com/hydra/rest/v1/cases/" + case
+            r_bz = requests.get(bz_endpoint, headers=headers)
+            bz_dict[case] = r_bz.json()['bugzillas']
+
+    logging.warning("getting additional info via bugzilla API")
+    for case in bz_dict:
+        for bug in bz_dict[case]:
+            bugs = bz_api.getbug(bug['bugzillaNumber'])
+            bug['target_release'] = bugs.target_release
+            bug['assignee'] = bugs.assigned_to
+
+    redis_set('bugs', json.dumps(bz_dict))
+
 def cache_cards(cfg):
 
     logging.warning("fetching cases")
     cases = redis_get('cases')
+    logging.warning("fetching BZ info")
+    bugs = redis_get('bugs')
     logging.warning("attempting to connect to jira...")
     jira_conn = jira_connection(cfg)
     max_cards = cfg['max_jira_results']
@@ -617,8 +646,8 @@ def cache_cards(cfg):
             tags = cases[case_number]['tags']
         else: # assume telco
             tags = ['shift_telco5g']
-        if 'bug' in cases[case_number].keys():
-            bugzilla = cases[case_number]['bug']
+        if 'bug' in cases[case_number].keys() and case_number in bugs.keys():
+            bugzilla = bugs[case_number]
         else:
             bugzilla = "None"
         jira_cards[card.key] = {
@@ -632,7 +661,7 @@ def cache_cards(cfg):
             "tags": tags,
             "labels": issue.fields.labels,
             "bugzilla": bugzilla,
-            "severity": cases[case_number]['severity']
+            "severity": re.search(r'[a-zA-Z]+', cases[case_number]['severity']).group()
         }
 
     end = time.time()

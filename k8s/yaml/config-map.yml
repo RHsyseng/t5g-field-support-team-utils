@@ -18,6 +18,7 @@ data:
     offline_token : Offline_token
     slack_token		: Slack_token
     slack_channel : Slack_channel
+    bz_key        : BZ_key
 kind: ConfigMap
 metadata:
   name: portal-to-jira-sync-cm

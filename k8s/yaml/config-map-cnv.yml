@@ -16,6 +16,7 @@ data:
     team         : [{"jira_user": "kgershon@redhat.com", "name": "Kobi Gershon", "accounts": []}]
     password    	: Jira_Pass
     offline_token : Offline_token
+    bz_key        : BZ_key
 kind: ConfigMap
 metadata:
   name: portal-to-jira-sync-cnv-cm

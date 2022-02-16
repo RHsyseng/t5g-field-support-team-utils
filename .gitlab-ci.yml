@@ -58,14 +58,20 @@ k8s_deploy:
   - echo k8s/yaml/config-map.yml | awk -i inplace -v srch="Slack_token" -v repl="$Slack_token" '{ sub(srch,repl,$0); print $0 }' k8s/yaml/config-map.yml
   - echo k8s/yaml/config-map.yml | awk -i inplace -v srch="Slack_channel" -v repl="$Slack_channel" '{ sub(srch,repl,$0); print $0 }' k8s/yaml/config-map.yml
   - echo k8s/yaml/config-map.yml | awk -i inplace -v srch="Team" -v repl="$Team" '{ sub(srch,repl,$0); print $0 }' k8s/yaml/config-map.yml
+  - echo k8s/yaml/config-map.yml | awk -i inplace -v srch="BZ_key" -v repl="$BZ_key" '{ sub(srch,repl,$0); print $0 }' k8s/yaml/config-map.yml
+
   #CNV
   - sed -i 's/Jira_Pass/'"$Jira_Pass"'/g' k8s/yaml/config-map-cnv.yml
   - echo k8s/yaml/config-map-cnv.yml | awk -i inplace -v srch="Offline_token" -v repl="$Offline_token" '{ sub(srch,repl,$0); print $0 }' k8s/yaml/config-map-cnv.yml
+  - echo k8s/yaml/config-map-cnv.yml | awk -i inplace -v srch="BZ_key" -v repl="$BZ_key" '{ sub(srch,repl,$0); print $0 }' k8s/yaml/config-map-cnv.yml
+
   #Dashboard
   - sed -i 's/Jira_Pass/'"$Jira_Pass"'/g' dashboard/yaml/04_t5gweb-app-deployment.yml
   - echo dashboard/yaml/04_t5gweb-app-deployment.yml | awk -i inplace -v srch="Offline_token" -v repl="$Offline_token" '{ sub(srch,repl,$0); print $0 }' dashboard/yaml/04_t5gweb-app-deployment.yml
   - echo dashboard/yaml/04_t5gweb-app-deployment.yml | awk -i inplace -v srch="Accounts" -v repl="$Accounts" '{ sub(srch,repl,$0); print $0 }' dashboard/yaml/04_t5gweb-app-deployment.yml
   - echo dashboard/yaml/06_t5gweb-route.yml | awk -i inplace -v srch="URL" -v repl="$URL" '{ sub(srch,repl,$0); print $0 }' dashboard/yaml/06_t5gweb-route.yml
+  - echo dashboard/yaml/04_t5gweb-app-deployment.yml | awk -i inplace -v srch="BZ_key" -v repl="$BZ_key" '{ sub(srch,repl,$0); print $0 }' dashboard/yaml/04_t5gweb-app-deployment.yml
+
   script:
   - kubectl apply -f k8s/yaml/ -n $NAMESPACE 
   - sed -i '/portal-to-jira-sync:/! s/portal-to-jira-sync/portal-to-jira-sync-cnv/g' k8s/yaml/cronjob.yml
