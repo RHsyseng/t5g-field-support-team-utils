@@ -46,7 +46,7 @@ def load_data():
 @scheduler.task('interval', id="do_job_2", seconds=86400)
 def load_bz_data():
     cfg = set_cfg()
-    cache_bz(cfg)
+    cache_cases(cfg, get_bz=True)
 
 @BP.route('/')
 def index():

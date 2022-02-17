@@ -533,7 +533,7 @@ def redis_get(key):
 
     return data
 
-def cache_cases(cfg):
+def cache_cases(cfg, get_bz=False):
 
   token = get_token(cfg['offline_token'])
   query = cfg['query']
@@ -551,6 +551,10 @@ def cache_cases(cfg):
   end = time.time()
   logging.warning("found {} cases in {} seconds".format(len(cases_json), (end-start)))
   cases = {}
+  bz_url = "bugzilla.redhat.com"
+  bz_api = bugzilla.Bugzilla(bz_url, api_key=cfg['bz_key'])
+  bz_dict = {}
+  logging.warning("Building cases dictionary")
   for case in cases_json:
     cases[case["case_number"]] = {
         "owner": case["case_owner"],
@@ -562,40 +566,29 @@ def cache_cases(cfg):
         "last_update": case["case_lastModifiedDate"],
         "description": case["case_description"],
     }
+   
+   # Get BZ Details
+    if "case_bugzillaNumber" in case and get_bz==True and case["case_status"]!="Closed":
+        bz_endpoint = "https://access.redhat.com/hydra/rest/v1/cases/" + case["case_number"]
+        r_bz = requests.get(bz_endpoint, headers=headers)
+        bz_dict[case["case_number"]] = r_bz.json()['bugzillas']
+
+        for bug in bz_dict[case["case_number"]]:
+            bug_details = bz_api.getbug(bug['bugzillaNumber'])
+            bug['target_release'] = bug_details.target_release
+            bug['assignee'] = bug_details.assigned_to
+
     # Sometimes there is no BZ attached to the case
     if "case_bugzillaNumber" in case:
         cases[case["case_number"]]["bug"] = case["case_bugzillaNumber"]
+
     # Sometimes there is no tag attached to the case
     if "case_tags" in case:
         cases[case["case_number"]]["tags"] = case["case_tags"]
 
+  if get_bz:
+      redis_set('bugs', json.dumps(bz_dict))
   redis_set('cases', json.dumps(cases))
-
-def cache_bz(cfg):
-    
-    logging.warning("fetching cases")
-    cases = redis_get('cases')
-    bz_url = "bugzilla.redhat.com"
-    bz_api = bugzilla.Bugzilla(bz_url, api_key=cfg['bz_key'])
-    bz_dict = {}
-    token = get_token(cfg['offline_token'])
-    headers = {"Accept": "application/json", "Authorization": "Bearer " + token}
-
-    logging.warning("getting all bugzillas")
-    for case in cases:
-        if "bug" in cases[case] and cases[case]['status'] != "Closed":
-            bz_endpoint = "https://access.redhat.com/hydra/rest/v1/cases/" + case
-            r_bz = requests.get(bz_endpoint, headers=headers)
-            bz_dict[case] = r_bz.json()['bugzillas']
-
-    logging.warning("getting additional info via bugzilla API")
-    for case in bz_dict:
-        for bug in bz_dict[case]:
-            bugs = bz_api.getbug(bug['bugzillaNumber'])
-            bug['target_release'] = bugs.target_release
-            bug['assignee'] = bugs.assigned_to
-
-    redis_set('bugs', json.dumps(bz_dict))
 
 def cache_cards(cfg):
 
