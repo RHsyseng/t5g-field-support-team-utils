@@ -16,7 +16,6 @@ from t5gweb.t5gweb import (
 from t5gweb.libtelco5g import(
     cache_cases,
     cache_cards,
-    cache_bz
 )
 
 BP = Blueprint('ui', __name__, url_prefix='/')
