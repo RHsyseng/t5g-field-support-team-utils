@@ -143,7 +143,7 @@ def organize_cards(detailed_cards, telco_account_list, cnv_account_list=None):
     telco_accounts = {}
     cnv_accounts = {}
 
-    states = {"To Do":{}, "In Progress": {}, "Code Review": {},"QE Review": {}, "Done": {}}
+    states = {"To Do":{}, "In Progress": {}, "Code Review": {},"QE Review": {}, "Done": {}, "Won't Fix / Obsolete": {}}
     
     for account in telco_account_list:
         telco_accounts[account] = deepcopy(states)
