@@ -15,6 +15,14 @@ spec:
         app: t5gweb
     spec:
       containers:
+      - name: celery
+        image: image-registry.openshift-image-registry.svc.cluster.local:5000/t5g-web/t5gweb:latest
+        imagePullPolicy: Always
+        command: [
+          "/bin/sh",
+          "-c",
+          "celery -A t5gweb.t5gweb worker",
+          ]
       - name: t5gweb
         image: image-registry.openshift-image-registry.svc.cluster.local:5000/t5g-web/t5gweb:latest
         imagePullPolicy: Always

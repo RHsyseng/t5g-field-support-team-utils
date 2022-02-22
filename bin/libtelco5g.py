@@ -124,7 +124,7 @@ def get_last_sprint(conn, bid, sprintname):
     this_sprint = get_latest_sprint(conn, bid, sprintname)
     sprint_number = re.search('\d*$', this_sprint.name)[0]
     last_sprint_number = int(sprint_number) - 1
-    board = conn.sprints(bid, state="active") # still seems to return everything?
+    board = conn.sprints(bid) # still seems to return everything?
     last_sprint_name = sprintname + ".*" + str(last_sprint_number)
     
     for b in board:
@@ -317,20 +317,16 @@ def duplicate_cards(conn, cards, debug=False):
 def get_random_member(team):
     return random.choice(team)
 
-def create_cases(conn, ini, sid, cases, needed, team, action='none'):
+def create_cards(cfg, cases, needed, team, action='none'):
     '''
-    conn   - connection
-    ini    - ini configuration
-    sid    - sprint id
+    cfg    - configuration
     cases  - dictionary of all cases
     needed - list of cases that need a card created
     '''
 
     email_content = []
 
-
     for case in needed:
-        print('\n\n-----------')
         assignee = None
         for member in team:
             for account in member["accounts"]:
@@ -340,14 +336,14 @@ def create_cases(conn, ini, sid, cases, needed, team, action='none'):
             assignee = get_random_member(team)
         priority = portal2jira_sevs[cases[case]['severity']]
         card_info = {
-            'project': {'key': ini['project']},
-            'issuetype': {'name': ini['type']},
-            'components': [{'name': ini['component']}],
+            'project': {'key': cfg['project']},
+            'issuetype': {'name': cfg['type']},
+            'components': [{'name': cfg['component']}],
             'priority': {'name': priority},
-            'labels': ini['labels'],
+            'labels': cfg['labels'],
             'assignee': {'name': assignee['jira_user']},
-            'customfield_12310243': float(ini['points']),
-            'summary': cases[case]['problem'],
+            'customfield_12310243': float(cfg['points']),
+            'summary': case + ':' + cases[case]['problem'],
             'description': 'This card was automatically created from the "Telco5G open cases report".\r\n\r\n'
             + 'This card was created because it had a severity of '
             + cases[case]['severity']
@@ -363,36 +359,32 @@ def create_cases(conn, ini, sid, cases, needed, team, action='none'):
             + '\r\n'
             }
 
-        print('A card needs created for case', case)
-        print('Card data:')
-        pp = pprint.PrettyPrinter(indent=2)
-        pp.pprint(card_info)
-
-        if action == 'create':
-            print('\nCreating card for case', case)
+        logging.warning('A card needs created for case {}'.format(case))
+        logging.warning(card_info)
         
+        if action == 'create':
+            logging.warning('creating card for case', case)
             new_card = conn.create_issue(fields=card_info)
-            print('  - Created', new_card.key)
-
+            logging.warning('created {}'.format(new_card.key))
             email_content.append( f"A JIRA issue (https://issues.redhat.com/browse/{new_card}) has been created for a new Telco5G case:\nCase #: {case} (https://access.redhat.com/support/cases/{case})\nAccount: {cases[case]['account']}\nSummary: {cases[case]['problem']}\nSeverity: {cases[case]['severity']}\nDescription: {cases[case]['description']}\n\nIt is initially being tracked by {assignee['name']}.\n")
 
             # Add newly create card to the sprint
-            print('  - Moving card to sprint (', sid, ')')
+            logging.warning('moving card to sprint {}'.format(sid))
             conn.add_issues_to_sprint(sid, [new_card.key])
 
             # Move the card from backlog to the To Do column
-            print('  - Moving card from backlog to "To Do" column')
+            logging.warning('moving card from backlog to "To Do" column')
             conn.transition_issue(new_card.key, 'To Do')
 
             # Add links to case, etc
-            print('  - Adding link to support case', case)
+            logging.warning('adding link to support case {}'.format(case))
             conn.add_simple_link(new_card.key, { 
                 'url': 'https://access.redhat.com/support/cases/' + case, 
                 'title': 'Support Case'
                 })
 
             if 'bug' in cases[case]:
-                print('  - Adding link to BZ', cases[case]['bug'])
+                logging.warning('adding link to BZ {}'.format(cases[case]['bug']))
                 conn.add_simple_link(new_card.key, { 
                     'url': 'https://bugzilla.redhat.com/show_bug.cgi?id=' + cases[case]['bug'],
                     'title': 'BZ ' + cases[case]['bug'] })

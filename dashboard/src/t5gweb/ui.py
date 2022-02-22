@@ -19,6 +19,8 @@ from t5gweb.libtelco5g import(
     cache_bz
 )
 
+import t5gweb.taskmgr
+
 BP = Blueprint('ui', __name__, url_prefix='/')
 
 @scheduler.task('interval', id='do_job_1', seconds=3600)
@@ -27,8 +29,8 @@ def load_data():
     cfg = set_cfg()
 
     # update redis cache
-    cache_cases(cfg)
-    cache_cards(cfg)
+    #cache_cases(cfg)
+    #cache_cards(cfg)
 
     # update page views
     load_data.new_cases = get_new_cases()
@@ -89,6 +91,13 @@ def refresh_cache():
     cfg = set_cfg()
     cache_cases(cfg)
     cache_cards(cfg)
+    return render_template('ui/index.html', new_cases=load_data.new_cases, values=load_data.y, now=load_data.now)
+
+@BP.route('/jira_sync')
+def jira_sync():
+    result = t5gweb.taskmgr.portal_jira_sync.delay("telco5g")
+    while not result.ready():
+        logging.warning("not ready yet")
     return render_template('ui/index.html', new_cases=load_data.new_cases, values=load_data.y, now=load_data.now)
 
 
