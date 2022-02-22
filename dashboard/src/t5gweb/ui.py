@@ -15,7 +15,8 @@ from t5gweb.t5gweb import (
 )
 from t5gweb.libtelco5g import(
     cache_cases,
-    cache_cards
+    cache_cards,
+    cache_bz
 )
 
 BP = Blueprint('ui', __name__, url_prefix='/')
@@ -42,6 +43,10 @@ def load_data():
     load_data.trending_cards = get_trending_cards()
     load_data.now = datetime.datetime.utcnow()
 
+@scheduler.task('interval', id="do_job_2", seconds=86400)
+def load_bz_data():
+    cfg = set_cfg()
+    cache_bz(cfg)
 
 @BP.route('/')
 def index():
@@ -89,4 +94,5 @@ def refresh_cache():
 
 # Start scheduler and load data for first run
 scheduler.start()
+load_bz_data()
 load_data()

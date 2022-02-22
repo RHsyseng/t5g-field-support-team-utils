@@ -28,3 +28,5 @@ spec:
           value: Offline_token
         - name: jira_pass
           value: Jira_Pass
+        - name: bz_key
+          value: BZ_key

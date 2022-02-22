@@ -41,9 +41,9 @@
                      
                         {% if new_comments[account][status] | length > 0 %}
                         <ul>
-                           {% if status == "Code Review" %}
+                           {% if status == "Code Review" or status == "Review" %}
                               <li><span class = "status">Waiting On Engineering</span></li>
-                           {% elif status == "QE Review" %}
+                           {% elif status == "QE Review" or status == "Release Pending" %}
                               <li><span class = "status">Waiting On Customer</span></li>
                            {% else %}
                               <li><span class = "status">{{ status }}</span></li>
@@ -51,16 +51,26 @@
                               {% for details in new_comments[account][status] %}
                                  <span class="anchor" id={{ new_comments[account][status][details]['case_number'] }}></span>
                                  <ul class=highlight>
+                                    <li class="header" id = {{new_comments[account][status][details]['case_number'] }}><a href=https://access.redhat.com/support/cases/#/case/{{new_comments[account][status][details]['case_number'] }} target="_blank">{{new_comments[account][status][details]['case_number'] }}</a> | <span class="severity">Severity: {{ new_comments[account][status][details]['severity'] }}</span> | <span class="case">{{new_comments[account][status][details]['summary']}}</span> (Jira: <a href=https://issues.redhat.com/browse/{{ details }} target="_blank">{{ details }}</a> / {{new_comments[account][status][details]['assignee']['displayName'] }}) </li>
                                     {% if new_comments[account][status][details]['bugzilla'] != "None" %}
-                                    <li class="header" id = {{new_comments[account][status][details]['case_number'] }}><a href=https://access.redhat.com/support/cases/#/case/{{new_comments[account][status][details]['case_number'] }} target="_blank">{{new_comments[account][status][details]['case_number'] }}</a> | <span class="severity">Severity: {{ new_comments[account][status][details]['severity'] }}</span> | <span class="case">{{new_comments[account][status][details]['summary']}}</span> (Jira: <a href=https://issues.redhat.com/browse/{{ details }} target="_blank">{{ details }}</a> / {{new_comments[account][status][details]['assignee']['displayName'] }} / Bugzilla: <a href=https://bugzilla.redhat.com/show_bug.cgi?id={{new_comments[account][status][details]['bugzilla'] }} target="_blank">{{new_comments[account][status][details]['bugzilla'] }}</a>)</li>
-                                    {% else %}
-                                    <li class="header" id = {{new_comments[account][status][details]['case_number'] }}><a href=https://access.redhat.com/support/cases/#/case/{{new_comments[account][status][details]['case_number'] }} target="_blank">{{new_comments[account][status][details]['case_number'] }}</a> | <span class="severity">Severity: {{ new_comments[account][status][details]['severity'] }}</span> | <span class="case">{{new_comments[account][status][details]['summary']}}</span> (Jira: <a href=https://issues.redhat.com/browse/{{ details }} target="_blank">{{ details }}</a> / {{new_comments[account][status][details]['assignee']['displayName'] }} / Bugzilla: None)</li>
+                                       <ul>
+                                          <li> Bugzillas:
+                                             <ul>
+                                          {% for bug in new_comments[account][status][details]['bugzilla'] %}
+                                             <li><a href={{bug['bugzillaLink']}} target="_blank">{{bug['bugzillaNumber']}}</a> - Target Release: {{bug['target_release'][0]}} - Assignee: {{bug['assignee']}}</li>
+                                          {% endfor %}
+                                             </ul>
+                                          </li>
+                                       </ul>
                                     {% endif %}
+                                    <ul>
+                                       <li>Comments: </li>
                                     {% for comment in new_comments[account][status][details]['comments'] %}
                                        <ul>
                                           <li>{{ comment[0] | safe }}</li>
                                        </ul>
                                     {% endfor %}
+                                 </ul>
                                  </ul>
                               {% endfor %}
                         </ul>
