@@ -14,8 +14,8 @@ setup(
         'requests==2.26.0',
         'slack_sdk==3.11.2',
         'flask_apscheduler==1.12.2',
-        'redis',
+        'redis==4.1.4',
         'python_bugzilla==3.2.0',
-        'celery'
+        'celery==5.2.3'
     ],
 )
