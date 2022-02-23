@@ -568,7 +568,6 @@ def cache_cases(cfg):
 
 def cache_bz(cfg):
     
-    logging.warning("fetching cases")
     cases = redis_get('cases')
     bz_url = "bugzilla.redhat.com"
     bz_api = bugzilla.Bugzilla(bz_url, api_key=cfg['bz_key'])
@@ -594,9 +593,7 @@ def cache_bz(cfg):
 
 def cache_cards(cfg):
 
-    logging.warning("fetching cases")
     cases = redis_get('cases')
-    logging.warning("fetching BZ info")
     bugs = redis_get('bugs')
     logging.warning("attempting to connect to jira...")
     jira_conn = jira_connection(cfg)
@@ -674,7 +671,6 @@ def get_case_from_link(jira_conn, card):
                 return case_number
     return None
 
-
 def get_cases_json(token, query, fields, num_cases=5000, exclude_closed=True):
   # https://source.redhat.com/groups/public/hydra/hydra_integration_platform_cee_integration_wiki/hydras_api_layer
   fl = ",".join(fields)
@@ -689,7 +685,6 @@ def get_cases_json(token, query, fields, num_cases=5000, exclude_closed=True):
   cases_json = r.json()['response']['docs']
   
   return cases_json
-
 
 def get_cases(cases_json, include_tags=False):
   cases = {}
@@ -717,7 +712,6 @@ def get_cases(cases_json, include_tags=False):
 
 def main():
     print("libtelco5g")
-
 
 if __name__ == '__main__':
     main()
