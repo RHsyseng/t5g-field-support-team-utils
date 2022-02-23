@@ -44,6 +44,8 @@ spec:
           value: SLACK_TOKEN
         - name: slack_channel
           value: SLACK_CHANNEL
+        - name: max_to_create
+          value: 10
         volumeMounts:
         - mountPath: /celery
           name: task-vol

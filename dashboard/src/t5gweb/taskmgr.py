@@ -31,6 +31,7 @@ def portal_jira_sync(job_type):
     
     logging.warning("checking for new {} cases".format(job_type))
     cfg = t5gweb.set_cfg()
+    max_to_create = os.environ.get('max_to_create')
 
     start = time.time()
     
@@ -53,8 +54,8 @@ def portal_jira_sync(job_type):
     card_cases = [cards[card]['case_number'] for card in cards]
     new_cases = [case for case in open_cases if case not in card_cases]
 
-    if len(new_cases) > 2:
-        email_content = "Warning: more than 10 cases ({}) will be created, so refusing to proceed. Please check log output\n".format(len(new_cases))
+    if len(new_cases) > max_to_create:
+        email_content = "Warning: more than {} cases ({}) will be created, so refusing to proceed. Please check log output\n".format(max_to_create, len(new_cases))
         cfg['to'] = os.environ.get('alert_email')
         cfg['subject'] = 'High New Case Count Detected'
         libtelco5g.notify(cfg, email_content)
