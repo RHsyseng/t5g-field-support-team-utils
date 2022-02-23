@@ -11,14 +11,14 @@
                   {% for account in new_comments %}
                   <li class="mb-1">    
                      <button class="btn btn-toggle align-items-center text-start rounded collapsed" data-bs-toggle="collapse" data-bs-target='#{{ account | replace(" ", "-") | replace(",", "-") | replace(".", "-") | replace("(", "-") | replace(")", "-") }}-collapse' aria-expanded="false">
-                        {{account}}
+                        {{ account }}
                      </button>
                      <div class="collapse" id='{{ account | replace(" ", "-") | replace(",", "-") | replace(".", "-") | replace("(", "-") | replace(")", "-") }}-collapse'>
                         <ul class="btn-toggle-nav list-unstyled fw-normal pb-1 small">
                            {% if new_comments[account] != "No Updates" %}
                               {% for status in new_comments[account] %}
                                  {% for details in new_comments[account][status] %}
-                                    <li><a href=#{{ new_comments[account][status][details]['case_number']  }} class="link-dark rounded">{{ new_comments[account][status][details]['case_number'] }}: {{ new_comments[account][status][details]['summary'] }}</a></li>
+                                    <li><a href=#{{ new_comments[account][status][details]['case_number'] }} class="link-dark rounded">{{ new_comments[account][status][details]['case_number'] }}: {{ new_comments[account][status][details]['summary'] }}</a></li>
                                  {% endfor %}
                               {% endfor %}
                            {% else %}
@@ -51,13 +51,13 @@
                               {% for details in new_comments[account][status] %}
                                  <span class="anchor" id={{ new_comments[account][status][details]['case_number'] }}></span>
                                  <ul class=highlight>
-                                    <li class="header" id = {{new_comments[account][status][details]['case_number'] }}><a href=https://access.redhat.com/support/cases/#/case/{{new_comments[account][status][details]['case_number'] }} target="_blank">{{new_comments[account][status][details]['case_number'] }}</a> | <span class="severity">Severity: {{ new_comments[account][status][details]['severity'] }}</span> | <span class="case">{{new_comments[account][status][details]['summary']}}</span> (Jira: <a href=https://issues.redhat.com/browse/{{ details }} target="_blank">{{ details }}</a> / {{new_comments[account][status][details]['assignee']['displayName'] }}) </li>
+                                    <li class="header" id = {{ new_comments[account][status][details]['case_number'] }}><a href=https://access.redhat.com/support/cases/#/case/{{ new_comments[account][status][details]['case_number'] }} target="_blank">{{ new_comments[account][status][details]['case_number'] }}</a> | <span class="badge severity {{ new_comments[account][status][details]['severity'] | lower() }}">Severity: {{ new_comments[account][status][details]['severity'] }}</span> | <span class="case">{{ new_comments[account][status][details]['summary'] }}</span> (Jira: <a href=https://issues.redhat.com/browse/{{ details }} target="_blank">{{ details }}</a> / {{ new_comments[account][status][details]['assignee']['displayName'] }}) </li>
                                     {% if new_comments[account][status][details]['bugzilla'] != "None" %}
                                        <ul>
                                           <li> Bugzillas:
                                              <ul>
                                           {% for bug in new_comments[account][status][details]['bugzilla'] %}
-                                             <li><a href={{bug['bugzillaLink']}} target="_blank">{{bug['bugzillaNumber']}}</a> - Target Release: {{bug['target_release'][0]}} - Assignee: {{bug['assignee']}}</li>
+                                             <li><a href={{ bug['bugzillaLink'] }} target="_blank">{{ bug['bugzillaNumber'] }}</a> - Target Release: {{ bug['target_release'][0] }} - Assignee: {{ bug['assignee'] }}</li>
                                           {% endfor %}
                                              </ul>
                                           </li>
