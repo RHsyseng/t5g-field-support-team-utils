@@ -29,8 +29,8 @@ def load_data():
     cfg = set_cfg()
 
     # update redis cache
-    #cache_cases(cfg)
-    #cache_cards(cfg)
+    cache_cases(cfg)
+    cache_cards(cfg)
 
     # update page views
     load_data.new_cases = get_new_cases()

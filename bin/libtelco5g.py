@@ -103,7 +103,6 @@ def get_board_id(conn, name):
     boards = conn.boards(name=name)
     return boards[0]
 
-
 def get_latest_sprint(conn, bid, sprintname):
     ''' Take a board id and return the current sprint
     conn    - Jira connection object
@@ -119,7 +118,6 @@ def get_latest_sprint(conn, bid, sprintname):
     sprints = conn.sprints(bid, state="active")
     return sprints[0]
 
-
 def get_last_sprint(conn, bid, sprintname):
     this_sprint = get_latest_sprint(conn, bid, sprintname)
     sprint_number = re.search('\d*$', this_sprint.name)[0]
@@ -130,7 +128,6 @@ def get_last_sprint(conn, bid, sprintname):
     for b in board:
         if re.search(last_sprint_name, b.name):
             return b
-
 
 def get_cards(conn, sid, user=None, include_closed=True):
     ''' Gets a list of cards in the latest sprint
@@ -157,9 +154,6 @@ def get_cards(conn, sid, user=None, include_closed=True):
         returnlist.append(str(item))
     return returnlist
 
-
-
-
 def get_sprint_summary(conn, bid, sprintname, team):
     totals = {}
     last_sprint = get_last_sprint(conn, bid, sprintname)
@@ -176,7 +170,6 @@ def get_sprint_summary(conn, bid, sprintname, team):
     name = 'Kobi Gershon'
     completed_cards = conn.search_issues('sprint=' + str(sid) + ' and assignee = ' + str(user) + ' and status = "DONE"', 0, 1000).iterable
     print("%s completed %d cards" % (name, len(completed_cards)))
-
 
 def get_card_summary():
 
@@ -313,11 +306,10 @@ def duplicate_cards(conn, cards, debug=False):
                 else:
                     print("Duplicate card detected. issue %s is likely a dupe of %s" %(card, case2issue[t_case_number]))
 
-
 def get_random_member(team):
     return random.choice(team)
 
-def create_cards(cfg, cases, needed, team, action='none'):
+def create_cards(cfg, new_cases, team, action='none'):
     '''
     cfg    - configuration
     cases  - dictionary of all cases
@@ -326,7 +318,16 @@ def create_cards(cfg, cases, needed, team, action='none'):
 
     email_content = []
 
-    for case in needed:
+    logging.warning("attempting to connect to jira...")
+    jira_conn = jira_connection(cfg)
+    project = get_project_id(jira_conn, cfg['project'])
+    component = get_component_id(jira_conn, project.id, cfg['component'])
+    board = get_board_id(jira_conn, cfg['board'])
+    sprint = get_latest_sprint(jira_conn, board.id, cfg['sprintname'])
+    
+    cases = redis_get('cases')
+
+    for case in new_cases:
         assignee = None
         for member in team:
             for account in member["accounts"]:
@@ -343,8 +344,8 @@ def create_cards(cfg, cases, needed, team, action='none'):
             'labels': cfg['labels'],
             'assignee': {'name': assignee['jira_user']},
             'customfield_12310243': float(cfg['points']),
-            'summary': case + ':' + cases[case]['problem'],
-            'description': 'This card was automatically created from the "Telco5G open cases report".\r\n\r\n'
+            'summary': case + ': ' + cases[case]['problem'],
+            'description': 'This card was automatically created from the Field Engineering Sync Job.\r\n\r\n'
             + 'This card was created because it had a severity of '
             + cases[case]['severity']
             + '\r\n'
@@ -363,29 +364,29 @@ def create_cards(cfg, cases, needed, team, action='none'):
         logging.warning(card_info)
         
         if action == 'create':
-            logging.warning('creating card for case', case)
-            new_card = conn.create_issue(fields=card_info)
+            logging.warning('creating card for case {}'.format(case))
+            new_card = jira_conn.create_issue(fields=card_info)
             logging.warning('created {}'.format(new_card.key))
             email_content.append( f"A JIRA issue (https://issues.redhat.com/browse/{new_card}) has been created for a new Telco5G case:\nCase #: {case} (https://access.redhat.com/support/cases/{case})\nAccount: {cases[case]['account']}\nSummary: {cases[case]['problem']}\nSeverity: {cases[case]['severity']}\nDescription: {cases[case]['description']}\n\nIt is initially being tracked by {assignee['name']}.\n")
 
             # Add newly create card to the sprint
-            logging.warning('moving card to sprint {}'.format(sid))
-            conn.add_issues_to_sprint(sid, [new_card.key])
+            logging.warning('moving card to sprint {}'.format(sprint.id))
+            jira_conn.add_issues_to_sprint(sprint.id, [new_card.key])
 
             # Move the card from backlog to the To Do column
             logging.warning('moving card from backlog to "To Do" column')
-            conn.transition_issue(new_card.key, 'To Do')
+            jira_conn.transition_issue(new_card.key, 'To Do')
 
             # Add links to case, etc
             logging.warning('adding link to support case {}'.format(case))
-            conn.add_simple_link(new_card.key, { 
+            jira_conn.add_simple_link(new_card.key, { 
                 'url': 'https://access.redhat.com/support/cases/' + case, 
                 'title': 'Support Case'
                 })
 
             if 'bug' in cases[case]:
                 logging.warning('adding link to BZ {}'.format(cases[case]['bug']))
-                conn.add_simple_link(new_card.key, { 
+                jira_conn.add_simple_link(new_card.key, { 
                     'url': 'https://bugzilla.redhat.com/show_bug.cgi?id=' + cases[case]['bug'],
                     'title': 'BZ ' + cases[case]['bug'] })
     
@@ -457,7 +458,7 @@ def set_defaults():
     defaults['sheet_id']    = '1I-Sw3qBCDv3jHon7J_H3xgPU2-mJ8c-9E1h5DeVZUbk'
     defaults['range_name']  = 'webscale - knieco field eng!A2:J'
     defaults['fields']      =  ["case_account_name","case_summary","case_number","case_status","case_owner","case_severity","case_createdDate","case_lastModifiedDate","case_bugzillaNumber","case_description","case_tags"]
-    defaults['query']       = "case_summary:*webscale* OR case_tags:*shift_telco5g* OR case_summary:*cnv,* OR case_tags:*cnv*"
+    defaults['query']       = "case_summary:*webscale* OR case_tags:*shift_telco5g* OR case_tags:*cnv*"
     defaults['slack_token']   = ''
     defaults['slack_channel'] = ''
     defaults['max_jira_results'] = 500
@@ -560,6 +561,8 @@ def cache_cases(cfg):
     # Sometimes there is no tag attached to the case
     if "case_tags" in case:
         cases[case["case_number"]]["tags"] = case["case_tags"]
+    else: # assume. came from query, so probably telco
+        cases[case["case_number"]]["tags"] = ['shift_telco5g']
 
   redis_set('cases', json.dumps(cases))
 
