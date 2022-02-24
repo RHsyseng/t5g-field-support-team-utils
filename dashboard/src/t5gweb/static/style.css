@@ -82,23 +82,23 @@ ul.highlight:hover {
 .left         { text-align: left; float: left; }
 
 .severity.low {
-  background-color: #0dcaf0;
-  color: #111
+  background-color: var(--bs-cyan);
+  border-radius: 5px;
 }
 
 .severity.normal {
-  background-color: yellow;
-  color: #111
+  background-color: var(--bs-yellow);
+  border-radius: 5px;  
 }
 
 .severity.high {
-  background-color: orange;
-  color: #111
+  background-color: var(--bs-orange);
+  border-radius: 5px;
 }
 
 .severity.urgent {
   background-color: red;
-  color: #111
+  border-radius: 5px;
 }
 
 /* Sidebar*/
