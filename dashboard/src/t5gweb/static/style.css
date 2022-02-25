@@ -57,9 +57,6 @@ a {
 
 .case {
   font-weight: bold;
-  /* border: rgb(202, 199, 199);
-  border-width: 1px;
-  border-style: solid; */
 }
 
 hr.divide {
@@ -76,7 +73,6 @@ ul li {
 
 ul.highlight:hover {
   background-color: #eee;
-  /* border: thin dashed #f66; */
   border-radius: 5px;
   box-shadow: 0 0 0 1px rgba(0, 0, 0, 0.2);
   transition: all 200ms ease-out;  
@@ -84,6 +80,26 @@ ul.highlight:hover {
 
 .right         { text-align: right; }
 .left         { text-align: left; float: left; }
+
+.severity.low {
+  background-color: var(--bs-cyan);
+  border-radius: 5px;
+}
+
+.severity.normal {
+  background-color: var(--bs-yellow);
+  border-radius: 5px;  
+}
+
+.severity.high {
+  background-color: var(--bs-orange);
+  border-radius: 5px;
+}
+
+.severity.urgent {
+  background-color: red;
+  border-radius: 5px;
+}
 
 /* Sidebar*/
 /* Derived from https://getbootstrap.com/docs/5.1/examples/#snippets */
@@ -94,15 +110,12 @@ ul.highlight:hover {
   padding: .25rem .5rem;
   font-weight: 600;
   color: rgba(0, 0, 0, .85);
-  /* background-color: transparent; */
   border: 0;
 }
 .btn-toggle:hover,
 .btn-toggle:focus {
   color: rgba(0, 0, 0, .85);
   background-color: #eee;
-  /* color:rgb(255, 255, 255);
-  background-color: rgba(0, 0, 0, 0); */
 }
 
 .btn-toggle::before {
