@@ -47,7 +47,7 @@ def portal_jira_sync(job_type):
         cfg['team'] = json.loads(os.environ.get('cnv_team'))
         cfg['to'] = os.environ.get('cnv_email')
         cfg['subject'] = 'New Card(s) Have Been Created to Track CNV Issues'
-        cfg['labels'] = 'cnv, no-qe, no-doc'
+        cfg['labels'] = ['cnv', 'no-qe', 'no-doc']
     else:
         logging.warning("unknown team: {}".format(team))
         return None
