@@ -39,14 +39,15 @@ def portal_jira_sync(job_type):
     cards = libtelco5g.redis_get('cards')
     
     if job_type == 'telco5g':
-        team = json.loads(os.environ.get('telco_team'))
+        cfg['team'] = json.loads(os.environ.get('telco_team'))
         cfg['to'] = os.environ.get('telco_email')
         open_cases = [case for case in cases if cases[case]['status'] != 'Closed' and 'shift_telco5g' in cases[case]['tags']]
     elif job_type == 'cnv':
         open_cases = [case for case in cases if cases[case]['status'] != 'Closed' and 'cnv' in cases[case]['tags']]
-        team = json.loads(os.environ.get('cnv_team'))
+        cfg['team'] = json.loads(os.environ.get('cnv_team'))
         cfg['to'] = os.environ.get('cnv_email')
         cfg['subject'] = 'New Card(s) Have Been Created to Track CNV Issues'
+        cfg['labels'] = 'cnv, no-qe, no-doc'
     else:
         logging.warning("unknown team: {}".format(team))
         return None
@@ -63,7 +64,7 @@ def portal_jira_sync(job_type):
     logging.warning("need to create {} cases".format(len(new_cases)))
 
     if len(new_cases) > 0:
-        message_content = libtelco5g.create_cards(cfg, new_cases, team, action='create')
+        message_content = libtelco5g.create_cards(cfg, new_cases, action='create')
         cfg['slack_token'] = os.environ.get('slack_token')
         cfg['slack_channel'] = os.environ.get('slack_channel')
         if message_content:

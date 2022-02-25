@@ -309,7 +309,7 @@ def duplicate_cards(conn, cards, debug=False):
 def get_random_member(team):
     return random.choice(team)
 
-def create_cards(cfg, new_cases, team, action='none'):
+def create_cards(cfg, new_cases, action='none'):
     '''
     cfg    - configuration
     cases  - dictionary of all cases
@@ -329,12 +329,12 @@ def create_cards(cfg, new_cases, team, action='none'):
 
     for case in new_cases:
         assignee = None
-        for member in team:
+        for member in cfg['team']:
             for account in member["accounts"]:
                 if account.lower() in cases[case]['account'].lower():
                     assignee = member
         if assignee == None:
-            assignee = get_random_member(team)
+            assignee = get_random_member(cfg['team'])
         priority = portal2jira_sevs[cases[case]['severity']]
         card_info = {
             'project': {'key': cfg['project']},
