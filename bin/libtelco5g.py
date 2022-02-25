@@ -521,7 +521,10 @@ def redis_get(key):
     logging.warning("fetching {}..".format(key))
     r_cache = redis.Redis(host='redis')
     data = r_cache.get(key)
-    data = json.loads(data.decode("utf-8"))
+    if data is not None:
+        data = json.loads(data.decode("utf-8"))
+    else:
+        data = None
     logging.warning("{} ....fetched".format(key))
 
     return data
@@ -569,6 +572,10 @@ def cache_cases(cfg):
 def cache_bz(cfg):
     
     cases = redis_get('cases')
+    if cases is None:
+        redis_set('bugs', json.dumps(None))
+        return
+    
     bz_url = "bugzilla.redhat.com"
     bz_api = bugzilla.Bugzilla(bz_url, api_key=cfg['bz_key'])
     bz_dict = {}

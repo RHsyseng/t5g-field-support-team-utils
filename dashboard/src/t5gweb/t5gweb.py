@@ -2,6 +2,8 @@
 import logging
 import os
 import jira
+import click
+from flask.cli import with_appcontext
 from datetime import datetime, timezone, date
 import pkg_resources
 import re
@@ -175,3 +177,48 @@ def get_previous_quarter():
     elif 10 <= day.month <= 12:
         query_range = '((updated >= "{}-7-01" AND updated <= "{}-9-30") OR (created >= "{}-7-01" AND created <= "{}-9-30"))'.format(day.year, day.year, day.year, day.year)
     return query_range
+
+def cache_page_data():
+    
+    load_data = {}
+    load_data['new_cases'] = get_new_cases()
+    plot_data = plots()
+    load_data['y'] = list(plot_data.values())
+    telco_accounts, cnv_accounts = get_new_comments()
+    load_data['telco_comments'] = telco_accounts
+    load_data['cnv_comments'] = cnv_accounts
+    telco_accounts_all, cnv_accounts_all = get_new_comments(new_comments_only=False)
+    load_data['telco_comments_all'] = telco_accounts_all
+    load_data['cnv_comments_all'] = cnv_accounts_all
+    load_data['trending_cards'] = get_trending_cards()
+    load_data['now'] = datetime.utcnow()
+    libtelco5g.redis_set('page_data', json.dumps(load_data))
+
+@click.command('init-cache')
+@with_appcontext
+def init_cache():
+    cfg = set_cfg()
+    logging.warning("checking caches")
+    cases = libtelco5g.redis_get('cases')
+    cards = libtelco5g.redis_get('cards')
+    bugs = libtelco5g.redis_get('bugs')
+    page_data = libtelco5g.redis_get('page_data')
+    
+    if cases is None:
+        logging.warning("no cases found in cache. refreshing...")
+        libtelco5g.cache_cases(cfg)
+    if cards is None:
+        logging.warning("no cards found in cache. refreshing...")
+        libtelco5g.cache_cards(cfg)
+    if bugs is None:
+        logging.warning("no bugs found in cache. refreshing...")
+        libtelco5g.cache_bz(cfg)
+    if page_data is None:
+        logging.warning("no page data found in cache. refreshing...")
+        cache_page_data()
+
+    if cases and cards and bugs and page_data:
+        logging.warning("all required data found in cache")
+
+def init_app(app):
+    app.cli.add_command(init_cache)
