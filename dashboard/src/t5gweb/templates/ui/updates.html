@@ -67,7 +67,7 @@
                                        <li>Comments: </li>
                                     {% for comment in new_comments[account][status][details]['comments'] %}
                                        <ul>
-                                          <li>{{ comment[0] | safe }}</li>
+                                          <li> <span class="fw-bold fst-italic">{{ comment[1][:10] }}</span> - {{ comment[0] | safe }}</li>
                                        </ul>
                                     {% endfor %}
                                  </ul>
