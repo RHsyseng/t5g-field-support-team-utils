@@ -14,6 +14,21 @@ spec:
       labels:
         app: t5gweb
     spec:
+      initContainers:
+      - name: t5gweb-init
+        image: image-registry.openshift-image-registry.svc.cluster.local:5000/devt5gweb/devt5gweb:latest
+        command: [
+          "/bin/sh",
+          "-c",
+          "flask init-cache",
+        ]
+        env:
+        - name: offline_token
+          value: OFFLINE_TOKEN
+        - name: jira_pass
+          value: JIRA_PASS
+        - name: bz_key
+          value: BZ_KEY
       containers:
       - name: celery
         image: image-registry.openshift-image-registry.svc.cluster.local:5000/devt5gweb/devt5gweb:latest
