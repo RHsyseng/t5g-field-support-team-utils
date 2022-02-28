@@ -1,5 +1,4 @@
 #! /usr/bin/python -W ignore
-# #! /usr/bin/python -W ignore
 
 '''
 This script takes a configuration file name as its only argument.
@@ -12,6 +11,7 @@ Setting set in the environment override the ones in the configuration file.
 from __future__ import print_function
 import os
 import getpass
+import datetime
 from jira import JIRA
 from jira.client import ResultList
 from jira.resources import Issue
@@ -666,6 +666,7 @@ def cache_cards(cfg):
     end = time.time()
     logging.warning("got {} cards in {} seconds".format(len(jira_cards), (end - start)))
     redis_set('cards', json.dumps(jira_cards))
+    redis_set('timestamp', json.dumps(str(datetime.datetime.utcnow())))
 
 def get_case_from_link(jira_conn, card):
 

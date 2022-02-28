@@ -15,30 +15,35 @@ mgr = Celery('t5gweb', broker='redis://redis:6379/0', backend='redis://redis:637
 @mgr.on_after_configure.connect
 def setup_scheduled_tasks(sender, **kwargs):
 
-    #sender.add_periodic_task(
-    #    crontab(hour='*', minute='15'), # 15 mins after every hour
-    #    portal_jira_sync.s('telco5g'),
-    #    name='telco5g_sync',
-    #)
+    # check for new telco cases
+    sender.add_periodic_task(
+        crontab(hour='*', minute='15'), # 15 mins after every hour
+        portal_jira_sync.s('telco5g'),
+        name='telco5g_sync',
+    )
 
-    #sender.add_periodic_task(
-    #    crontab(hour='*', minute='30'), # 30 mins after every hour
-    #    portal_jira_sync.s('cnv'),
-    #    name='cnv_sync',
-    #)
+    # check for new cnv cases
+    sender.add_periodic_task(
+        crontab(hour='*', minute='30'), # 30 mins after every hour
+        portal_jira_sync.s('cnv'),
+        name='cnv_sync',
+    )
 
+    # update card cache
     sender.add_periodic_task(
         crontab(hour='*', minute='0'), # on the hour
         cache_data.s('cards'),
         name='card_sync',
     )
 
+    # update case cache
     sender.add_periodic_task(
         crontab(hour='*', minute='*/15'), # every 15 minutes
         cache_data.s('cases'),
         name='case_sync',
     )
 
+    # update bugzilla cache
     sender.add_periodic_task(
         crontab(hour='*/12', minute='0'), # twice a day
         cache_data.s('bugs'),
@@ -83,11 +88,7 @@ def portal_jira_sync(job_type):
     logging.warning("need to create {} cases".format(len(new_cases)))
 
     if len(new_cases) > 0:
-<<<<<<< HEAD
         message_content = libtelco5g.create_cards(cfg, new_cases, action='create')
-=======
-        message_content = libtelco5g.create_cards(cfg, new_cases, action='none')
->>>>>>> 4d867c6 (scheduler stuff)
         cfg['slack_token'] = os.environ.get('slack_token')
         cfg['slack_channel'] = os.environ.get('slack_channel')
         if message_content:
@@ -98,8 +99,7 @@ def portal_jira_sync(job_type):
             else:
                 logging.warning("no slack token or channel specified")
             # refresh redis
-            cache_data('cards')
-            cache_data('pages')
+            cache_data('cards') #TODO: just add new cards to cache to speed this up
             
     end = time.time()
     logging.warning("synced to jira in {} seconds".format(end - start))
@@ -115,10 +115,7 @@ def cache_data(data_type):
         libtelco5g.cache_cases(cfg)
     elif data_type == 'cards':
         libtelco5g.cache_cards(cfg)
-        libtelco5g.cache_page_data()
     elif data_type == 'bugs':
         libtelco5g.cache_bz(cfg)
-    elif data_type == 'pages':
-        libtelco5g.cache_page_data()
     else:
         logging.warning("unkown data type")
