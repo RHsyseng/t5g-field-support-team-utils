@@ -2,6 +2,8 @@
 import logging
 import os
 import jira
+import click
+from flask.cli import with_appcontext
 from datetime import datetime, timezone, date
 import pkg_resources
 import re
@@ -175,3 +177,28 @@ def get_previous_quarter():
     elif 10 <= day.month <= 12:
         query_range = '((updated >= "{}-7-01" AND updated <= "{}-9-30") OR (created >= "{}-7-01" AND created <= "{}-9-30"))'.format(day.year, day.year, day.year, day.year)
     return query_range
+
+@click.command('init-cache')
+@with_appcontext
+def init_cache():
+    cfg = set_cfg()
+    logging.warning("checking caches")
+    cases = libtelco5g.redis_get('cases')
+    cards = libtelco5g.redis_get('cards')
+    bugs = libtelco5g.redis_get('bugs')
+        
+    if cases is None:
+        logging.warning("no cases found in cache. refreshing...")
+        libtelco5g.cache_cases(cfg)
+    if cards is None:
+        logging.warning("no cards found in cache. refreshing...")
+        libtelco5g.cache_cards(cfg)
+    if bugs is None:
+        logging.warning("no bugs found in cache. refreshing...")
+        libtelco5g.cache_bz(cfg)
+    
+    if cases and cards and bugs:
+        logging.warning("all required data found in cache")
+
+def init_app(app):
+    app.cli.add_command(init_cache)

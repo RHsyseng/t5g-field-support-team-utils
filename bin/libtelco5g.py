@@ -1,5 +1,4 @@
 #! /usr/bin/python -W ignore
-# #! /usr/bin/python -W ignore
 
 '''
 This script takes a configuration file name as its only argument.
@@ -12,6 +11,7 @@ Setting set in the environment override the ones in the configuration file.
 from __future__ import print_function
 import os
 import getpass
+import datetime
 from jira import JIRA
 from jira.client import ResultList
 from jira.resources import Issue
@@ -521,7 +521,10 @@ def redis_get(key):
     logging.warning("fetching {}..".format(key))
     r_cache = redis.Redis(host='redis')
     data = r_cache.get(key)
-    data = json.loads(data.decode("utf-8"))
+    if data is not None:
+        data = json.loads(data.decode("utf-8"))
+    else:
+        data = None
     logging.warning("{} ....fetched".format(key))
 
     return data
@@ -569,6 +572,10 @@ def cache_cases(cfg):
 def cache_bz(cfg):
     
     cases = redis_get('cases')
+    if cases is None:
+        redis_set('bugs', json.dumps(None))
+        return
+    
     bz_url = "bugzilla.redhat.com"
     bz_api = bugzilla.Bugzilla(bz_url, api_key=cfg['bz_key'])
     bz_dict = {}
@@ -659,6 +666,7 @@ def cache_cards(cfg):
     end = time.time()
     logging.warning("got {} cards in {} seconds".format(len(jira_cards), (end - start)))
     redis_set('cards', json.dumps(jira_cards))
+    redis_set('timestamp', json.dumps(str(datetime.datetime.utcnow())))
 
 def get_case_from_link(jira_conn, card):
 
