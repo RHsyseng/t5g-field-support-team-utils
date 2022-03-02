@@ -16,7 +16,7 @@ spec:
     spec:
       initContainers:
       - name: t5gweb-init
-        image: image-registry.openshift-image-registry.svc.cluster.local:5000/devt5gweb/devt5gweb:latest
+        image: image-registry.openshift-image-registry.svc.cluster.local:5000/t5g-web/t5gweb:latest
         command: [
           "/bin/sh",
           "-c",
@@ -31,7 +31,7 @@ spec:
           value: BZ_KEY
       containers:
       - name: celery
-        image: image-registry.openshift-image-registry.svc.cluster.local:5000/devt5gweb/devt5gweb:latest
+        image: image-registry.openshift-image-registry.svc.cluster.local:5000/t5g-web/t5gweb:latest
         imagePullPolicy: Always
         command: [
           "/bin/sh",
@@ -65,7 +65,7 @@ spec:
         - mountPath: /celery
           name: task-vol
       - name: t5gweb
-        image: image-registry.openshift-image-registry.svc.cluster.local:5000/devt5gweb/devt5gweb:latest
+        image: image-registry.openshift-image-registry.svc.cluster.local:5000/t5g-web/t5gweb:latest
         imagePullPolicy: Always
         command: [
           "/bin/sh",

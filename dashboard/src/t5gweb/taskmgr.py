@@ -80,14 +80,13 @@ def portal_jira_sync(job_type):
     new_cases = [case for case in open_cases if case not in card_cases]
 
     if len(new_cases) > int(max_to_create):
+        logging.warning("Warning: more than {} cases ({}) will be created, so refusing to proceed. Please check log output\n".format(max_to_create, len(new_cases)))
         email_content = email_content = ['Warning: more than {} cases ({}) will be created, so refusing to proceed. Please check log output\n"'.format(max_to_create, len(new_cases))]
         cfg['to'] = os.environ.get('alert_email')
         cfg['subject'] = 'High New Case Count Detected'
         libtelco5g.notify(cfg, email_content)
-        
-    logging.warning("need to create {} cases".format(len(new_cases)))
-
-    if len(new_cases) > 0:
+    elif len(new_cases) > 0:
+        logging.warning("need to create {} cases".format(len(new_cases)))
         message_content = libtelco5g.create_cards(cfg, new_cases, action='create')
         cfg['slack_token'] = os.environ.get('slack_token')
         cfg['slack_channel'] = os.environ.get('slack_channel')
@@ -100,6 +99,8 @@ def portal_jira_sync(job_type):
                 logging.warning("no slack token or channel specified")
             # refresh redis
             cache_data('cards') #TODO: just add new cards to cache to speed this up
+    else:
+        logging.warning("no new cards required")
             
     end = time.time()
     logging.warning("synced to jira in {} seconds".format(end - start))
