@@ -1,0 +1,65 @@
+{% extends "skeleton.html" %}
+{% block title %}{{ page_title }}{% endblock %}
+{% block content %}
+<div class="container-fluid copy mt-5">
+    <a role="button" class="btn btn-outline-dark btn-lg mb-2" href="{{ request.url[:-9] }}">Back to Report</a>
+
+    {% set severities = ["Urgent", "High", "Normal", "Low"] %}
+    <table class="table table-bordered table-hover table-responsive mt-5">
+        <th>Case#</th><th>Severity</th><th>Summary</th><th>Account</th><th>Status</th><th>Assignee</th><th>Most Recent Comment</th><th>Bugzillas</th>
+        <tbody class="list">
+            {% for severity in severities %}
+                {% for account in new_comments %}
+                    {% for status in new_comments[account] %}
+                        {% for card in new_comments[account][status]%}
+                            {% if severity == new_comments[account][status][card]['severity'] %}
+                                <tr data-bs-toggle="collapse" data-bs-target="#collapseExample-{{card}}" aria-expanded="false" aria-controls="collapseExample">
+                                    <td class="align-middle text-center"><a href=https://access.redhat.com/support/cases/#/case/{{new_comments[account][status][card]['case_number'] }} target="_blank">{{ new_comments[account][status][card]['case_number'] }}</a></td>
+                                    <td class="align-middle text-center"> <span class="badge severity {{ new_comments[account][status][card]['severity'] | lower() }}"> {{ new_comments[account][status][card]['severity'] }} </span></td>
+                                    <td class="align-middle text-center">{{ new_comments[account][status][card]['summary'] }}</td>
+                                    <td class="align-middle text-center">{{ new_comments[account][status][card]['account'] }}</td>
+                                    <td class="align-middle text-center">{{ new_comments[account][status][card]['card_status'] }}</td>
+                                    <td class="align-middle text-center">{{ new_comments[account][status][card]['assignee']['displayName'] }}</td>
+                                    <td class="align-middle text-center"><span class="fw-bold fst-italic">{{ new_comments[account][status][card]['comments'][-1][1][:10] }}</span> - {{ new_comments[account][status][card]['comments'][-1][0] | safe }}</td>
+                                    {% if new_comments[account][status][card]['bugzilla'] != "None" and new_comments[account][status][card]['bugzilla'] | length == 1  %}
+                                        <td class="align-middle text-center"><a href={{ new_comments[account][status][card]['bugzilla'][0]['bugzillaLink'] }} target="_blank">{{ new_comments[account][status][card]['bugzilla'][0]['bugzillaNumber'] }}</a></td>
+                                    {% elif new_comments[account][status][card]['bugzilla'] == "None"%}
+                                        <td class="align-middle text-center">None</td>
+                                    {% else %}
+                                        <td class="align-middle text-center">Multiple - Expand for Details</td>
+                                    {% endif %}
+                                </tr>
+                                <tr class="collapse" id="collapseExample-{{card}}">
+                                    <td colspan = "7">
+                                        <div class="card card-body">
+                                            {% if new_comments[account][status][card]['bugzilla'] != "None" %}
+                                            <ul>
+                                            <li> Bugzillas:
+                                                <ul>
+                                            {% for bug in new_comments[account][status][card]['bugzilla'] %}
+                                                <li><a href={{ bug['bugzillaLink'] }} target="_blank">{{ bug['bugzillaNumber'] }}</a> - Target Release: {{ bug['target_release'][0] }} - Assignee: {{ bug['assignee'] }}</li>
+                                            {% endfor %}
+                                                </ul>
+                                            </li>
+                                            </ul>
+                                        {% endif %}
+                                        <ul>
+                                            <li>Comments: </li>
+                                        {% for comment in new_comments[account][status][card]['comments'] %}
+                                            <ul>
+                                            <li> <span class="fw-bold fst-italic">{{ comment[1][:10] }}</span> - {{ comment[0] | safe }}</li>
+                                            </ul>
+                                        {% endfor %}
+                                        </ul>
+                                        </div>
+                                    </td>
+                                </tr>
+                            {% endif %}
+                        {% endfor %}        
+                    {% endfor %}
+                {% endfor %}
+            {% endfor %}    
+        </tbody>
+    </table>
+</div>
+{% endblock %}
