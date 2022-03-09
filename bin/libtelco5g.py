@@ -317,6 +317,7 @@ def create_cards(cfg, new_cases, action='none'):
     '''
 
     email_content = []
+    new_cards = {}
 
     logging.warning("attempting to connect to jira...")
     jira_conn = jira_connection(cfg)
@@ -384,13 +385,34 @@ def create_cards(cfg, new_cases, action='none'):
                 'title': 'Support Case'
                 })
 
+            bz = None
             if 'bug' in cases[case]:
+                bz = cases[case]['bug']
                 logging.warning('adding link to BZ {}'.format(cases[case]['bug']))
                 jira_conn.add_simple_link(new_card.key, { 
                     'url': 'https://bugzilla.redhat.com/show_bug.cgi?id=' + cases[case]['bug'],
                     'title': 'BZ ' + cases[case]['bug'] })
+
+            if 'tags' in cases[case].keys():
+                tags = cases[case]['tags']
+            else:
+                tags = ['shift_telco5g'] # trigged by case summary, not tag
+
+            new_cards[new_card.key] = {
+                "card_status": new_card.fields.status.name,
+                "account": cases[case]['account'],
+                "summary": case + ': ' + cases[case]['problem'],
+                "description": cases[case]['description'],
+                "comments": None,
+                "assignee": assignee,
+                "case_number": case,
+                "tags": tags,
+                "labels": cfg['labels'],
+                "bugzilla": bz,
+                "severity": re.search(r'[a-zA-Z]+', cases[case]['severity']).group()
+            }
     
-    return email_content
+    return email_content, new_cards
 
 def notify(ini,blist):
     

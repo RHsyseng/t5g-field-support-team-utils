@@ -81,13 +81,13 @@ def portal_jira_sync(job_type):
 
     if len(new_cases) > int(max_to_create):
         logging.warning("Warning: more than {} cases ({}) will be created, so refusing to proceed. Please check log output\n".format(max_to_create, len(new_cases)))
-        email_content = email_content = ['Warning: more than {} cases ({}) will be created, so refusing to proceed. Please check log output\n"'.format(max_to_create, len(new_cases))]
+        email_content = ['Warning: more than {} cases ({}) will be created, so refusing to proceed. Please check log output\n"'.format(max_to_create, len(new_cases))]
         cfg['to'] = os.environ.get('alert_email')
         cfg['subject'] = 'High New Case Count Detected'
         libtelco5g.notify(cfg, email_content)
     elif len(new_cases) > 0:
         logging.warning("need to create {} cases".format(len(new_cases)))
-        message_content = libtelco5g.create_cards(cfg, new_cases, action='create')
+        message_content, new_cards = libtelco5g.create_cards(cfg, new_cases, action='create')
         cfg['slack_token'] = os.environ.get('slack_token')
         cfg['slack_channel'] = os.environ.get('slack_channel')
         if message_content:
@@ -97,8 +97,9 @@ def portal_jira_sync(job_type):
                 libtelco5g.slack_notify(cfg, message_content)
             else:
                 logging.warning("no slack token or channel specified")
-            # refresh redis
-            cache_data('cards') #TODO: just add new cards to cache to speed this up
+            cards.update(new_cards)
+            libtelco5g.redis_set('cards', json.dumps(cards))
+
     else:
         logging.warning("no new cards required")
             
