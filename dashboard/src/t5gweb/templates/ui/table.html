@@ -5,15 +5,18 @@
     <a role="button" class="btn btn-outline-dark btn-lg mb-2" href="{{ request.url[:-9] }}">Back to Report</a>
 
     {% set severities = ["Urgent", "High", "Normal", "Low"] %}
-    <table class="table table-bordered table-hover table-responsive mt-5">
-        <th>Case#</th><th>Severity</th><th>Summary</th><th>Account</th><th>Status</th><th>Assignee</th><th>Most Recent Comment</th><th>Bugzillas</th>
+    <table class="table table-bordered table-hover table-responsive mt-5 w-100" id="data">
+        <thead>
+            <tr><th></th><th>Case#</th><th>Severity</th><th>Summary</th><th>Account</th><th>Status</th><th>Assignee</th><th>Most Recent Comment</th><th>Bugzillas</th></tr>
+        </thead>
         <tbody class="list">
             {% for severity in severities %}
                 {% for account in new_comments %}
                     {% for status in new_comments[account] %}
                         {% for card in new_comments[account][status]%}
                             {% if severity == new_comments[account][status][card]['severity'] %}
-                                <tr data-bs-toggle="collapse" data-bs-target="#collapseExample-{{card}}" aria-expanded="false" aria-controls="collapseExample">
+                                <tr data-child-data='{{ new_comments[account][status][card] | tojson }}'>
+                                    <td class="align-middle dt-control"></td>
                                     <td class="align-middle text-center"><a href=https://access.redhat.com/support/cases/#/case/{{new_comments[account][status][card]['case_number'] }} target="_blank">{{ new_comments[account][status][card]['case_number'] }}</a></td>
                                     <td class="align-middle text-center"> <span class="badge severity {{ new_comments[account][status][card]['severity'] | lower() }}"> {{ new_comments[account][status][card]['severity'] }} </span></td>
                                     <td class="align-middle text-center">{{ new_comments[account][status][card]['summary'] }}</td>
@@ -29,31 +32,6 @@
                                         <td class="align-middle text-center">Multiple - Expand for Details</td>
                                     {% endif %}
                                 </tr>
-                                <tr class="collapse" id="collapseExample-{{card}}">
-                                    <td colspan = "7">
-                                        <div class="card card-body">
-                                            {% if new_comments[account][status][card]['bugzilla'] != "None" %}
-                                            <ul>
-                                            <li> Bugzillas:
-                                                <ul>
-                                            {% for bug in new_comments[account][status][card]['bugzilla'] %}
-                                                <li><a href={{ bug['bugzillaLink'] }} target="_blank">{{ bug['bugzillaNumber'] }}</a> - Target Release: {{ bug['target_release'][0] }} - Assignee: {{ bug['assignee'] }}</li>
-                                            {% endfor %}
-                                                </ul>
-                                            </li>
-                                            </ul>
-                                        {% endif %}
-                                        <ul>
-                                            <li>Comments: </li>
-                                        {% for comment in new_comments[account][status][card]['comments'] %}
-                                            <ul>
-                                            <li> <span class="fw-bold fst-italic">{{ comment[1][:10] }}</span> - {{ comment[0] | safe }}</li>
-                                            </ul>
-                                        {% endfor %}
-                                        </ul>
-                                        </div>
-                                    </td>
-                                </tr>
                             {% endif %}
                         {% endfor %}        
                     {% endfor %}
@@ -62,4 +40,49 @@
         </tbody>
     </table>
 </div>
+   <!-- Include jQuery + DataTables -->
+   <script type="text/javascript" charset="utf8" src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
+   <script type="text/javascript" charset="utf8" src="https://cdn.datatables.net/1.11.5/js/jquery.dataTables.js"></script>
+   <script type="text/javascript" charset="utf8" src="https://cdn.datatables.net/1.11.5/js/dataTables.bootstrap5.min.js"></script>
+   <script>
+    function format(data) {
+        let result = "<div class='card p-3'>"
+        if (data.bugzilla != "None") {
+            result += '<ul><li>Bugzillas<ul>';
+            for (let bug = 0; bug < data.bugzilla.length; bug++) {
+                result += '<li><a href="' + data.bugzilla[bug].bugzillaLink + '" target="_blank">' + data.bugzilla[bug].bugzillaNumber + '</a> - Target Release: ' + data.bugzilla[bug].target_release[0] + ' - Assignee: ' + data.bugzilla[bug].assignee + '</li>';
+            }
+            result += '</ul></li></ul>';
+        }
+        result += '<ul><li>Comments<ul>';
+        for (let comment = 0; comment < data.comments.length; comment++) {
+            result += '<li class="text-break"><span class="fw-bold fst-italic">' + data.comments[comment][1].substring(0, 10) + '</span> - ' + data.comments[comment][0] + '</li>';
+        }
+        result += '</ul></li></ul>';
+    return result + "</div>";
+    }
+
+    $(document).ready(function () {
+        let table = $('#data').DataTable({
+            "pageLength": 50,
+            "scrollX": true
+        });
+
+        // Add event listener for opening and closing details
+        $('#data').on('click', 'td.dt-control', function () {
+            let tr = $(this).closest('tr');
+            let row = table.row(tr);
+
+            if (row.child.isShown()) {
+                // This row is already open - close it
+                row.child.hide();
+                tr.removeClass('shown');
+            } else {
+                // Open this row
+                row.child(format(tr.data('child-data'))).show();
+                tr.addClass('shown');
+            }
+        });
+    });
+    </script>
 {% endblock %}
