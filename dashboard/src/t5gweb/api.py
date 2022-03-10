@@ -1,6 +1,5 @@
 """API endpoints for t5gweb"""
 from flask import (
-    #Blueprint, redirect, render_template, request, url_for, make_response, send_file, request
     Blueprint, request
 )
 from t5gweb.t5gweb import (
