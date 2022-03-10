@@ -26,6 +26,8 @@ def create_app(test_config=None):
     #    return redirect(url_for('ui.index'))
     from . import t5gweb
     t5gweb.init_app(app)
+    from . import api
+    app.register_blueprint(api.BP)
     from . import ui
     app.register_blueprint(ui.BP)
     return app
