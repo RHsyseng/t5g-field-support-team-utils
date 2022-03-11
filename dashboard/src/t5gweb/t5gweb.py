@@ -196,7 +196,7 @@ def init_cache():
         logging.warning("no bugs found in cache. refreshing...")
         libtelco5g.cache_bz(cfg)
     if escalations is None:
-        logging.warning("no bugs found in cache. refreshing...")
+        logging.warning("no escalations found in cache. refreshing...")
         libtelco5g.cache_escalations(cfg)
     if cards is None:
         logging.warning("no cards found in cache. refreshing...")
