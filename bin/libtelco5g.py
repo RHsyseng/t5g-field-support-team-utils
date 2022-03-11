@@ -547,7 +547,7 @@ def redis_get(key):
     if data is not None:
         data = json.loads(data.decode("utf-8"))
     else:
-        data = None
+        data = {}
     logging.warning("{} ....fetched".format(key))
 
     return data
