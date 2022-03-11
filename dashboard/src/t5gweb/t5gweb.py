@@ -192,17 +192,17 @@ def init_cache():
     if cases is None:
         logging.warning("no cases found in cache. refreshing...")
         libtelco5g.cache_cases(cfg)
-    if cards is None:
-        logging.warning("no cards found in cache. refreshing...")
-        libtelco5g.cache_cards(cfg)
     if bugs is None:
         logging.warning("no bugs found in cache. refreshing...")
         libtelco5g.cache_bz(cfg)
     if escalations is None:
         logging.warning("no bugs found in cache. refreshing...")
         libtelco5g.cache_escalations(cfg)
+    if cards is None:
+        logging.warning("no cards found in cache. refreshing...")
+        libtelco5g.cache_cards(cfg)
     
-    if cases and cards and bugs:
+    if cases and cards and bugs and escalations:
         logging.warning("all required data found in cache")
 
 def init_app(app):
