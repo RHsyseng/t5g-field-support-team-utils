@@ -28,6 +28,7 @@ import json
 import logging
 import time
 import bugzilla
+import smartsheet
 
 # for portal to jira mapping
 portal2jira_sevs = {
@@ -620,10 +621,45 @@ def cache_bz(cfg):
 
     redis_set('bugs', json.dumps(bz_dict))
 
+def cache_escalations(cfg):
+    '''Get cases that have been escalated from Smartsheet'''
+    cases = redis_get('cases')
+    if cases is None:
+        redis_set('escalations', json.dumps(None))
+        return
+
+    logging.warning("getting escalated cases from smartsheet")
+    smart = smartsheet.Smartsheet(cfg['smartsheet_access_token'])
+    sheet_dict = smart.Sheets.get_sheet(cfg['sheet_id']).to_dict()
+
+    # Get Column ID's
+    column_map = {}
+    for column in sheet_dict['columns']:
+        column_map[column['title']] = column['id']
+    no_tracking_col = column_map['No longer tracking']
+    no_escalation_col = column_map['No longer an escalation']
+    case_col = column_map['Case']
+
+    # Get Escalated Cases
+    escalations = []
+    for row in sheet_dict['rows']:
+        for cell in row['cells']:
+            if cell['columnId'] == no_tracking_col and 'value' in cell:
+                break
+            if cell['columnId'] == no_escalation_col and 'value' in cell:
+                break
+            if cell['columnId'] == case_col and 'value' in cell and cell['value'][:8] not in cases.keys():
+                break
+            elif cell['columnId'] == case_col and 'value' in cell and cell['value'][:8] in cases.keys():
+                escalations.append(cell['value'][:8])
+
+    redis_set('escalations', json.dumps(escalations))
+
 def cache_cards(cfg):
 
     cases = redis_get('cases')
     bugs = redis_get('bugs')
+    escalations = redis_get('escalations')
     logging.warning("attempting to connect to jira...")
     jira_conn = jira_connection(cfg)
     max_cards = cfg['max_jira_results']
@@ -671,6 +707,11 @@ def cache_cards(cfg):
             bugzilla = bugs[case_number]
         else:
             bugzilla = "None"
+
+        if case_number in escalations:
+            escalated = True
+        else:
+            escalated = False
         jira_cards[card.key] = {
             "card_status": issue.fields.status.name,
             "account": cases[case_number]['account'],
@@ -682,7 +723,8 @@ def cache_cards(cfg):
             "tags": tags,
             "labels": issue.fields.labels,
             "bugzilla": bugzilla,
-            "severity": re.search(r'[a-zA-Z]+', cases[case_number]['severity']).group()
+            "severity": re.search(r'[a-zA-Z]+', cases[case_number]['severity']).group(),
+            "escalated": escalated
         }
 
     end = time.time()
