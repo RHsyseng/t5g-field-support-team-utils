@@ -9,8 +9,10 @@ from t5gweb.libtelco5g import(
     cache_cases,
     cache_cards,
     cache_bz,
+    cache_escalations,
     redis_get
 )
+import json
 
 BP = Blueprint('api', __name__, url_prefix='/api')
 
@@ -26,6 +28,7 @@ def index():
         "{}cases/telco5g".format(request.base_url),
         "{}cases/cnv".format(request.base_url),
         "{}bugs".format(request.base_url),
+        "{}escalations".format(request.base_url)
     ]}
     return endpoints
 
@@ -42,6 +45,9 @@ def refresh(data_type):
     elif data_type == 'bugs':
         cache_bz(cfg)
         return {"caching bugs":"ok"}
+    elif data_type == 'escalations':
+        cache_escalations(cfg)
+        return {"caching escalations":"ok"}
 
 @BP.route('/cards/<string:card_type>')
 def get_cards(card_type):
@@ -76,3 +82,9 @@ def get_bugs():
     """Retrieves all bugs"""
     bugs = redis_get('bugs')
     return bugs
+
+@BP.route('/escalations')
+def get_escalations():
+    """Retrieves all escalations"""
+    escalations = redis_get('escalations')
+    return json.dumps(escalations)

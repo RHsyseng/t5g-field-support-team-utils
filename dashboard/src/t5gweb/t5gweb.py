@@ -29,6 +29,8 @@ def set_cfg():
     cfg['offline_token'] = os.environ.get('offline_token')
     cfg['password'] = os.environ.get('jira_pass')
     cfg['bz_key'] = os.environ.get('bz_key')
+    cfg['smartsheet_access_token'] = os.environ.get('smartsheet_access_token')
+    cfg['sheet_id'] = os.environ.get('sheet_id')
 
     return cfg
 
@@ -55,7 +57,7 @@ def get_new_comments(new_comments_only=True):
     cards = libtelco5g.redis_get('cards')
     logging.warning("found %d JIRA cards" % (len(cards)))
     time_now = datetime.now(timezone.utc)
-
+    
     # filter cards for comments created in the last week
     # and sort between telco and cnv
     detailed_cards= {}
@@ -186,18 +188,21 @@ def init_cache():
     cases = libtelco5g.redis_get('cases')
     cards = libtelco5g.redis_get('cards')
     bugs = libtelco5g.redis_get('bugs')
-        
+    escalations = libtelco5g.redis_get('escalations')
     if cases is None:
         logging.warning("no cases found in cache. refreshing...")
         libtelco5g.cache_cases(cfg)
-    if cards is None:
-        logging.warning("no cards found in cache. refreshing...")
-        libtelco5g.cache_cards(cfg)
     if bugs is None:
         logging.warning("no bugs found in cache. refreshing...")
         libtelco5g.cache_bz(cfg)
+    if escalations is None:
+        logging.warning("no escalations found in cache. refreshing...")
+        libtelco5g.cache_escalations(cfg)
+    if cards is None:
+        logging.warning("no cards found in cache. refreshing...")
+        libtelco5g.cache_cards(cfg)
     
-    if cases and cards and bugs:
+    if cases and cards and bugs and escalations:
         logging.warning("all required data found in cache")
 
 def init_app(app):

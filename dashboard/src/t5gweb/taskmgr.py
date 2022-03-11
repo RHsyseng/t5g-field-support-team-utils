@@ -50,6 +50,13 @@ def setup_scheduled_tasks(sender, **kwargs):
         name='bz_sync',
     )
 
+    # update escalations cache
+    sender.add_periodic_task(
+        crontab(hour='*/12', minute='0'), # twice a day
+        cache_data.s('escalations'),
+        name='escalations_sync',
+    )
+
 @mgr.task
 def portal_jira_sync(job_type):
     
@@ -119,5 +126,7 @@ def cache_data(data_type):
         libtelco5g.cache_cards(cfg)
     elif data_type == 'bugs':
         libtelco5g.cache_bz(cfg)
+    elif data_type == 'escalations':
+        libtelco5g.cache_escalations(cfg)
     else:
         logging.warning("unkown data type")
