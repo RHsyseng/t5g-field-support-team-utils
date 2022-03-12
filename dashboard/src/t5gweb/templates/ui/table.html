@@ -18,7 +18,7 @@
                                 <tr data-child-data='{{ new_comments[account][status][card] | tojson }}'>
                                     <td class="align-middle dt-control"></td>
                                     <td class="align-middle text-center"><a href=https://access.redhat.com/support/cases/#/case/{{new_comments[account][status][card]['case_number'] }} target="_blank">{{ new_comments[account][status][card]['case_number'] }}</a></td>
-                                    <td class="align-middle text-center"> <span class="badge severity {{ new_comments[account][status][card]['severity'] | lower() }}"> {{ new_comments[account][status][card]['severity'] }} </span></td>
+                                    <td class="align-middle text-center"><span class="badge severity {{ new_comments[account][status][card]['severity'] | lower() }}">{{ new_comments[account][status][card]['severity'] }}</span></td>
                                     <td class="align-middle text-center">{{ new_comments[account][status][card]['summary'] }}</td>
                                     <td class="align-middle text-center">{{ new_comments[account][status][card]['account'] }}</td>
                                     <td class="align-middle text-center">{{ new_comments[account][status][card]['card_status'] }}</td>
@@ -61,6 +61,26 @@
         result += '</ul></li></ul>';
     return result + "</div>";
     }
+
+    $.fn.dataTable.ext.type.detect.unshift(
+        function ( d ) {
+            let d_text = jQuery(d).text();
+            return d_text == 'Low' || d_text == 'Normal' || d_text == 'High' || d_text == 'Urgent' ?
+                'severity-grade' :
+                null;
+        }
+    );
+ 
+    $.fn.dataTable.ext.type.order['severity-grade-pre'] = function ( d ) {
+        let d_text = jQuery(d).text();
+        switch ( d_text ) {
+            case 'Low':    return 1;
+            case 'Normal': return 2;
+            case 'High':   return 3;
+            case 'Urgent': return 4;
+        }
+        return 0;   
+    };
 
     $(document).ready(function () {
         let table = $('#data').DataTable({
