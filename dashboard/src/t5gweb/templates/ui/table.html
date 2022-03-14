@@ -4,21 +4,18 @@
 <div class="container-fluid copy mt-5">
     <a role="button" class="btn btn-outline-dark btn-lg mb-2" href="{{ request.url[:-9] }}">Back to Report</a>
 
-    {% set severities = ["Urgent", "High", "Normal", "Low"] %}
     <table class="table table-bordered table-hover table-responsive mt-5 w-100" id="data">
         <thead>
             <tr><th></th><th class="text-center">Case#</th><th class="text-center">Severity</th><th class="text-center">Escalated?</th><th class="text-center">Summary</th><th class="text-center">Account</th><th class="text-center">Status</th><th class="text-center">Assignee</th><th class="text-center">Most Recent Comment</th><th class="text-center">Bugzillas</th></tr>
         </thead>
         <tbody class="list">
-            {% for severity in severities %}
                 {% for account in new_comments %}
                     {% for status in new_comments[account] %}
                         {% for card in new_comments[account][status]%}
-                            {% if severity == new_comments[account][status][card]['severity'] %}
                                 <tr data-child-data='{{ new_comments[account][status][card] | tojson }}'>
                                     <td class="align-middle dt-control"></td>
                                     <td class="align-middle text-center"><a href=https://access.redhat.com/support/cases/#/case/{{new_comments[account][status][card]['case_number'] }} target="_blank">{{ new_comments[account][status][card]['case_number'] }}</a></td>
-                                    <td class="align-middle text-center"> <span class="badge severity {{ new_comments[account][status][card]['severity'] | lower() }}"> {{ new_comments[account][status][card]['severity'] }} </span></td>
+                                    <td class="align-middle text-center"><span class="badge severity {{ new_comments[account][status][card]['severity'] | lower() }}">{{ new_comments[account][status][card]['severity'] }}</span></td>
                                     {% if new_comments[account][status][card]['escalated'] %}
                                         <td class="align-middle text-center">Yes</td>
                                     {% else %}
@@ -37,11 +34,9 @@
                                         <td class="align-middle text-center">Multiple - Expand for Details</td>
                                     {% endif %}
                                 </tr>
-                            {% endif %}
                         {% endfor %}        
                     {% endfor %}
                 {% endfor %}
-            {% endfor %}    
         </tbody>
     </table>
 </div>
@@ -67,10 +62,31 @@
     return result + "</div>";
     }
 
+    $.fn.dataTable.ext.type.detect.unshift(
+        function ( d ) {
+            let d_text = jQuery(d).text();
+            return d_text == 'Low' || d_text == 'Normal' || d_text == 'High' || d_text == 'Urgent' ?
+                'severity-grade' :
+                null;
+        }
+    );
+ 
+    $.fn.dataTable.ext.type.order['severity-grade-pre'] = function ( d ) {
+        let d_text = jQuery(d).text();
+        switch ( d_text ) {
+            case 'Low':    return 1;
+            case 'Normal': return 2;
+            case 'High':   return 3;
+            case 'Urgent': return 4;
+        }
+        return 0;   
+    };
+
     $(document).ready(function () {
         let table = $('#data').DataTable({
             "pageLength": 50,
-            "scrollX": true
+            "scrollX": true,
+            "order": [[ 2, "desc" ]]
         });
 
         // Add event listener for opening and closing details
