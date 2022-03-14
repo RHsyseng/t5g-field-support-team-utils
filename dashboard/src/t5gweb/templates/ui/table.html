@@ -4,17 +4,14 @@
 <div class="container-fluid copy mt-5">
     <a role="button" class="btn btn-outline-dark btn-lg mb-2" href="{{ request.url[:-9] }}">Back to Report</a>
 
-    {% set severities = ["Urgent", "High", "Normal", "Low"] %}
     <table class="table table-bordered table-hover table-responsive mt-5 w-100" id="data">
         <thead>
             <tr><th></th><th>Case#</th><th>Severity</th><th>Summary</th><th>Account</th><th>Status</th><th>Assignee</th><th>Most Recent Comment</th><th>Bugzillas</th></tr>
         </thead>
         <tbody class="list">
-            {% for severity in severities %}
                 {% for account in new_comments %}
                     {% for status in new_comments[account] %}
                         {% for card in new_comments[account][status]%}
-                            {% if severity == new_comments[account][status][card]['severity'] %}
                                 <tr data-child-data='{{ new_comments[account][status][card] | tojson }}'>
                                     <td class="align-middle dt-control"></td>
                                     <td class="align-middle text-center"><a href=https://access.redhat.com/support/cases/#/case/{{new_comments[account][status][card]['case_number'] }} target="_blank">{{ new_comments[account][status][card]['case_number'] }}</a></td>
@@ -32,11 +29,9 @@
                                         <td class="align-middle text-center">Multiple - Expand for Details</td>
                                     {% endif %}
                                 </tr>
-                            {% endif %}
                         {% endfor %}        
                     {% endfor %}
                 {% endfor %}
-            {% endfor %}    
         </tbody>
     </table>
 </div>
@@ -85,7 +80,8 @@
     $(document).ready(function () {
         let table = $('#data').DataTable({
             "pageLength": 50,
-            "scrollX": true
+            "scrollX": true,
+            "order": [[ 2, "desc" ]]
         });
 
         // Add event listener for opening and closing details
