@@ -6,7 +6,7 @@
 
     <table class="table table-bordered table-hover table-responsive mt-5 w-100" id="data">
         <thead>
-            <tr><th></th><th>Case#</th><th>Severity</th><th>Summary</th><th>Account</th><th>Status</th><th>Assignee</th><th>Most Recent Comment</th><th>Bugzillas</th></tr>
+            <tr><th></th><th class="text-center">Case#</th><th class="text-center">Severity</th><th class="text-center">Escalated?</th><th class="text-center">Summary</th><th class="text-center">Account</th><th class="text-center">Status</th><th class="text-center">Assignee</th><th class="text-center">Most Recent Comment</th><th class="text-center">Bugzillas</th></tr>
         </thead>
         <tbody class="list">
                 {% for account in new_comments %}
@@ -16,6 +16,11 @@
                                     <td class="align-middle dt-control"></td>
                                     <td class="align-middle text-center"><a href=https://access.redhat.com/support/cases/#/case/{{new_comments[account][status][card]['case_number'] }} target="_blank">{{ new_comments[account][status][card]['case_number'] }}</a></td>
                                     <td class="align-middle text-center"><span class="badge severity {{ new_comments[account][status][card]['severity'] | lower() }}">{{ new_comments[account][status][card]['severity'] }}</span></td>
+                                    {% if new_comments[account][status][card]['escalated'] %}
+                                        <td class="align-middle text-center">Yes</td>
+                                    {% else %}
+                                        <td class="align-middle text-center">No</td>
+                                    {% endif %}
                                     <td class="align-middle text-center">{{ new_comments[account][status][card]['summary'] }}</td>
                                     <td class="align-middle text-center">{{ new_comments[account][status][card]['account'] }}</td>
                                     <td class="align-middle text-center">{{ new_comments[account][status][card]['card_status'] }}</td>

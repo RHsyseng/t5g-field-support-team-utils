@@ -59,11 +59,17 @@ k8s_deploy:
   - echo k8s/yaml/config-map.yml | awk -i inplace -v srch="Slack_channel" -v repl="$Slack_channel" '{ sub(srch,repl,$0); print $0 }' k8s/yaml/config-map.yml
   - echo k8s/yaml/config-map.yml | awk -i inplace -v srch="Team" -v repl="$Team" '{ sub(srch,repl,$0); print $0 }' k8s/yaml/config-map.yml
   - echo k8s/yaml/config-map.yml | awk -i inplace -v srch="BZ_key" -v repl="$BZ_key" '{ sub(srch,repl,$0); print $0 }' k8s/yaml/config-map.yml
+  - echo k8s/yaml/config-map.yml | awk -i inplace -v srch="Smartsheet_access_token" -v repl="$Smartsheet_access_token" '{ sub(srch,repl,$0); print $0 }' k8s/yaml/config-map.yml
+  - echo k8s/yaml/config-map.yml | awk -i inplace -v srch="Sheet_id" -v repl="$Sheet_id" '{ sub(srch,repl,$0); print $0 }' k8s/yaml/config-map.yml
+
 
   #CNV
   - sed -i 's/Jira_Pass/'"$Jira_Pass"'/g' k8s/yaml/config-map-cnv.yml
   - echo k8s/yaml/config-map-cnv.yml | awk -i inplace -v srch="Offline_token" -v repl="$Offline_token" '{ sub(srch,repl,$0); print $0 }' k8s/yaml/config-map-cnv.yml
   - echo k8s/yaml/config-map-cnv.yml | awk -i inplace -v srch="BZ_key" -v repl="$BZ_key" '{ sub(srch,repl,$0); print $0 }' k8s/yaml/config-map-cnv.yml
+  - echo k8s/yaml/config-map-cnv.yml | awk -i inplace -v srch="Smartsheet_access_token" -v repl="$Smartsheet_access_token" '{ sub(srch,repl,$0); print $0 }' k8s/yaml/config-map-cnv.yml
+  - echo k8s/yaml/config-map-cnv.yml | awk -i inplace -v srch="Sheet_id" -v repl="$Sheet_id" '{ sub(srch,repl,$0); print $0 }' k8s/yaml/config-map-cnv.yml
+
 
   #Dashboard
   - sed -i 's/OFFLINE_TOKEN/'"$Offline_token"'/g' dashboard/yaml/03_t5gweb-app-deployment.yml
@@ -77,6 +83,8 @@ k8s_deploy:
   - sed -i 's/SLACK_TOKEN/'"$Slack_token"'/g' dashboard/yaml/03_t5gweb-app-deployment.yml
   - sed -i 's/SLACK_CHANNEL/'"$Slack_channel"'/g' dashboard/yaml/03_t5gweb-app-deployment.yml
   - sed -i 's/URL/'"$URL"'/g' dashboard/yaml/05_t5gweb-route.yml
+  - sed -i 's/SMARTSHEET_ACCESS_TOKEN/'"$Smartsheet_access_token"'/g' dashboard/yaml/03_t5gweb-app-deployment.yml
+  - sed -i 's/SHEET_ID/'"$Sheet_id"'/g' dashboard/yaml/03_t5gweb-app-deployment.yml
 
   script:
   - kubectl apply -f k8s/yaml/ -n $NAMESPACE 

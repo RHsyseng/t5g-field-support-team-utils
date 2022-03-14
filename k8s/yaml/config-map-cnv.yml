@@ -1,22 +1,24 @@
 apiVersion: v1
 data:
   t5g.cfg: |+
-    card_action 	: create
-    debug       	: true
-    subject       : New Card(s) Have Been Created to Track Webscale Issues
-    labels        : cnv, no-qe, no-doc
-    priority      : High
-    type          : Story
-    query         : case_summary:*cnv,* OR case_tags:*cnv*
-    project       : KNIECO
-    component     : KNI Labs & Field
-    board         : KNI-ECO Labs & Field
-    sprintname    : T5GFE
-    to          	: kgershon@redhat.com
-    team         : [{"jira_user": "kgershon@redhat.com", "name": "Kobi Gershon", "accounts": []}]
-    password    	: Jira_Pass
-    offline_token : Offline_token
-    bz_key        : BZ_key
+    card_action 	         : create
+    debug       	         : true
+    subject                : New Card(s) Have Been Created to Track Webscale Issues
+    labels                 : cnv, no-qe, no-doc
+    priority               : High
+    type                   : Story
+    query                  : case_summary:*cnv,* OR case_tags:*cnv*
+    project                : KNIECO
+    component              : KNI Labs & Field
+    board                  : KNI-ECO Labs & Field
+    sprintname             : T5GFE
+    to          	         : kgershon@redhat.com
+    team                   : [{"jira_user": "kgershon@redhat.com", "name": "Kobi Gershon", "accounts": []}]
+    password    	         : Jira_Pass
+    offline_token          : Offline_token
+    bz_key                 : BZ_key
+    smartsheet_access_token: Smartsheet_access_token
+    sheet_id               : Sheet_id 
 kind: ConfigMap
 metadata:
   name: portal-to-jira-sync-cnv-cm

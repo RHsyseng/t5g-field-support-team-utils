@@ -29,6 +29,10 @@ spec:
           value: JIRA_PASS
         - name: bz_key
           value: BZ_KEY
+        - name: smartsheet_access_token
+          value: SMARTSHEET_ACCESS_TOKEN
+        - name: sheet_id
+          value: SHEET_ID
       containers:
       - name: celery
         image: image-registry.openshift-image-registry.svc.cluster.local:5000/t5g-web/t5gweb:latest
@@ -61,6 +65,10 @@ spec:
           value: SLACK_CHANNEL
         - name: max_to_create
           value: 10
+        - name: smartsheet_access_token
+          value: SMARTSHEET_ACCESS_TOKEN
+        - name: sheet_id
+          value: SHEET_ID
         volumeMounts:
         - mountPath: /celery
           name: task-vol
@@ -79,6 +87,10 @@ spec:
           value: JIRA_PASS
         - name: bz_key
           value: BZ_KEY
+        - name: smartsheet_access_token
+          value: SMARTSHEET_ACCESS_TOKEN
+        - name: sheet_id
+          value: SHEET_ID
       volumes:
       - name: task-vol
         emptyDir: {}
