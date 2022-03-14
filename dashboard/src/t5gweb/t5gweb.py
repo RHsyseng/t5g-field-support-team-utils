@@ -64,11 +64,14 @@ def get_new_comments(new_comments_only=True):
     telco_account_list = []
     cnv_account_list = []
     for card in cards:
+        comments = None
         if new_comments_only:
-            comments = [comment for comment in cards[card]['comments'] if (time_now - datetime.strptime(comment[1], '%Y-%m-%dT%H:%M:%S.%f%z')).days < 7]
+            if cards[card]['comments']:
+                comments = [comment for comment in cards[card]['comments'] if (time_now - datetime.strptime(comment[1], '%Y-%m-%dT%H:%M:%S.%f%z')).days < 7]
         else:
-            comments = [comment for comment in cards[card]['comments']]
-        if len(comments) == 0:
+            if cards[card]['comments']:
+                comments = [comment for comment in cards[card]['comments']]
+        if comments is None:
             #logging.warning("no recent updates for {}".format(card))
             continue # no updates
         else:
