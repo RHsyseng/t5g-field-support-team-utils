@@ -57,21 +57,18 @@ def get_new_comments(new_comments_only=True):
     cards = libtelco5g.redis_get('cards')
     logging.warning("found %d JIRA cards" % (len(cards)))
     time_now = datetime.now(timezone.utc)
-    
+
     # filter cards for comments created in the last week
     # and sort between telco and cnv
     detailed_cards= {}
     telco_account_list = []
     cnv_account_list = []
     for card in cards:
-        comments = None
         if new_comments_only:
-            if cards[card]['comments']:
-                comments = [comment for comment in cards[card]['comments'] if (time_now - datetime.strptime(comment[1], '%Y-%m-%dT%H:%M:%S.%f%z')).days < 7]
+            comments = [comment for comment in cards[card]['comments'] if (time_now - datetime.strptime(comment[1], '%Y-%m-%dT%H:%M:%S.%f%z')).days < 7]
         else:
-            if cards[card]['comments']:
-                comments = [comment for comment in cards[card]['comments']]
-        if comments is None:
+            comments = [comment for comment in cards[card]['comments']]
+        if len(comments) == 0:
             #logging.warning("no recent updates for {}".format(card))
             continue # no updates
         else:
