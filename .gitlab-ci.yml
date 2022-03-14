@@ -1,6 +1,6 @@
 variables:
-  NAMESPACE: "telco-jira"
-  IMAGE: "portal-to-jira-sync"
+  NAMESPACE: "t5g-web"
+  IMAGE: "t5gweb"
   TAG: "latest" #$CI_PIPELINE_IID
 
 stages:
@@ -24,20 +24,6 @@ github_sync:
   rules:
   - if: '$CI_PIPELINE_SOURCE == "schedule"'
 
-build_push_sync_container:
-  stage: build
-  variables:
-    NAMESPACE: "telco-jira"
-  before_script:
-  - echo "Please make sure that Podman and Kubectl are installed" 
-  script:
-  - oc login -u $OCP_USER -p $OCP_PASS --server=$SERVER --insecure-skip-tls-verify 
-  - podman build -t $REGISTRY/$NAMESPACE/$IMAGE:$TAG .
-  - podman login -u $(oc whoami) -p $(oc whoami -t) --tls-verify=false $REGISTRY
-  - podman push --tls-verify=false $REGISTRY/$NAMESPACE/$IMAGE:$TAG
-  rules:
-  - if: '$CI_COMMIT_BRANCH == "master"'
-
 build_push_dashboard_container:
   stage: build
   before_script:
@@ -52,25 +38,6 @@ build_push_dashboard_container:
 k8s_deploy:
   stage: deploy
   before_script:
-  #Shift_Telco
-  - sed -i 's/Jira_Pass/'"$Jira_Pass"'/g' k8s/yaml/config-map.yml
-  - echo k8s/yaml/config-map.yml | awk -i inplace -v srch="Offline_token" -v repl="$Offline_token" '{ sub(srch,repl,$0); print $0 }' k8s/yaml/config-map.yml
-  - echo k8s/yaml/config-map.yml | awk -i inplace -v srch="Slack_token" -v repl="$Slack_token" '{ sub(srch,repl,$0); print $0 }' k8s/yaml/config-map.yml
-  - echo k8s/yaml/config-map.yml | awk -i inplace -v srch="Slack_channel" -v repl="$Slack_channel" '{ sub(srch,repl,$0); print $0 }' k8s/yaml/config-map.yml
-  - echo k8s/yaml/config-map.yml | awk -i inplace -v srch="Team" -v repl="$Team" '{ sub(srch,repl,$0); print $0 }' k8s/yaml/config-map.yml
-  - echo k8s/yaml/config-map.yml | awk -i inplace -v srch="BZ_key" -v repl="$BZ_key" '{ sub(srch,repl,$0); print $0 }' k8s/yaml/config-map.yml
-  - echo k8s/yaml/config-map.yml | awk -i inplace -v srch="Smartsheet_access_token" -v repl="$Smartsheet_access_token" '{ sub(srch,repl,$0); print $0 }' k8s/yaml/config-map.yml
-  - echo k8s/yaml/config-map.yml | awk -i inplace -v srch="Sheet_id" -v repl="$Sheet_id" '{ sub(srch,repl,$0); print $0 }' k8s/yaml/config-map.yml
-
-
-  #CNV
-  - sed -i 's/Jira_Pass/'"$Jira_Pass"'/g' k8s/yaml/config-map-cnv.yml
-  - echo k8s/yaml/config-map-cnv.yml | awk -i inplace -v srch="Offline_token" -v repl="$Offline_token" '{ sub(srch,repl,$0); print $0 }' k8s/yaml/config-map-cnv.yml
-  - echo k8s/yaml/config-map-cnv.yml | awk -i inplace -v srch="BZ_key" -v repl="$BZ_key" '{ sub(srch,repl,$0); print $0 }' k8s/yaml/config-map-cnv.yml
-  - echo k8s/yaml/config-map-cnv.yml | awk -i inplace -v srch="Smartsheet_access_token" -v repl="$Smartsheet_access_token" '{ sub(srch,repl,$0); print $0 }' k8s/yaml/config-map-cnv.yml
-  - echo k8s/yaml/config-map-cnv.yml | awk -i inplace -v srch="Sheet_id" -v repl="$Sheet_id" '{ sub(srch,repl,$0); print $0 }' k8s/yaml/config-map-cnv.yml
-
-
   #Dashboard
   - sed -i 's/OFFLINE_TOKEN/'"$Offline_token"'/g' dashboard/yaml/03_t5gweb-app-deployment.yml
   - sed -i 's/JIRA_PASS/'"$Jira_Pass"'/g' dashboard/yaml/03_t5gweb-app-deployment.yml
@@ -87,9 +54,6 @@ k8s_deploy:
   - sed -i 's/SHEET_ID/'"$Sheet_id"'/g' dashboard/yaml/03_t5gweb-app-deployment.yml
 
   script:
-  - kubectl apply -f k8s/yaml/ -n $NAMESPACE 
-  - sed -i '/portal-to-jira-sync:/! s/portal-to-jira-sync/portal-to-jira-sync-cnv/g' k8s/yaml/cronjob.yml
-  - kubectl apply -f k8s/yaml/ -n $NAMESPACE 
   - kubectl apply -f dashboard/yaml/03_t5gweb-app-deployment.yml
   - oc apply -f dashboard/yaml/06_t5gweb-route.yml
   rules:
