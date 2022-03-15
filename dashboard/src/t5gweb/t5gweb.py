@@ -65,9 +65,11 @@ def get_new_comments(new_comments_only=True):
     cnv_account_list = []
     for card in cards:
         if new_comments_only:
-            comments = [comment for comment in cards[card]['comments'] if (time_now - datetime.strptime(comment[1], '%Y-%m-%dT%H:%M:%S.%f%z')).days < 7]
+            if cards[card]['comments'] is not None:
+                comments = [comment for comment in cards[card]['comments'] if (time_now - datetime.strptime(comment[1], '%Y-%m-%dT%H:%M:%S.%f%z')).days < 7]
         else:
-            comments = [comment for comment in cards[card]['comments']]
+            if cards[card]['comments'] is not None:
+                comments = [comment for comment in cards[card]['comments']]
         if len(comments) == 0:
             #logging.warning("no recent updates for {}".format(card))
             continue # no updates
@@ -147,7 +149,7 @@ def organize_cards(detailed_cards, telco_account_list, cnv_account_list=None):
     telco_accounts = {}
     cnv_accounts = {}
 
-    states = {"To Do":{}, "In Progress": {}, "Code Review": {},"QE Review": {}, "Done": {}, "Won't Fix / Obsolete": {}}
+    states = {"To Do":{}, "Open": {}, "In Progress": {}, "Code Review": {},"QE Review": {}, "Done": {}, "Won't Fix / Obsolete": {}}
     
     for account in telco_account_list:
         telco_accounts[account] = deepcopy(states)
