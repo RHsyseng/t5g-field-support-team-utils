@@ -480,7 +480,7 @@ def set_defaults():
     defaults['debug']       = 'False'
     defaults['sheet_id']    = '1I-Sw3qBCDv3jHon7J_H3xgPU2-mJ8c-9E1h5DeVZUbk'
     defaults['range_name']  = 'webscale - knieco field eng!A2:J'
-    defaults['fields']      =  ["case_account_name","case_summary","case_number","case_status","case_owner","case_severity","case_createdDate","case_lastModifiedDate","case_bugzillaNumber","case_description","case_tags"]
+    defaults['fields']      =  ["case_account_name","case_summary","case_number","case_status","case_owner","case_severity","case_createdDate","case_lastModifiedDate","case_bugzillaNumber","case_description","case_tags", "case_product", "case_version"]
     defaults['query']       = "case_summary:*webscale* OR case_tags:*shift_telco5g* OR case_tags:*cnv*"
     defaults['slack_token']   = ''
     defaults['slack_channel'] = ''
@@ -580,6 +580,7 @@ def cache_cases(cfg):
         "createdate": case["case_createdDate"],
         "last_update": case["case_lastModifiedDate"],
         "description": case["case_description"],
+        "product": case["case_product"][0] + " " + case["case_version"]
     }
     # Sometimes there is no BZ attached to the case
     if "case_bugzillaNumber" in case:
@@ -618,6 +619,7 @@ def cache_bz(cfg):
             bugs = bz_api.getbug(bug['bugzillaNumber'])
             bug['target_release'] = bugs.target_release
             bug['assignee'] = bugs.assigned_to
+            bug['last_change_time'] = datetime.datetime.strftime(datetime.datetime.strptime(str(bugs.last_change_time), '%Y%m%dT%H:%M:%S'), '%Y-%m-%d') # convert from xmlrpc.client.DateTime to str and reformat
 
     redis_set('bugs', json.dumps(bz_dict))
 
@@ -724,7 +726,8 @@ def cache_cards(cfg):
             "labels": issue.fields.labels,
             "bugzilla": bugzilla,
             "severity": re.search(r'[a-zA-Z]+', cases[case_number]['severity']).group(),
-            "escalated": escalated
+            "escalated": escalated,
+            "product": cases[case_number]['product']
         }
 
     end = time.time()

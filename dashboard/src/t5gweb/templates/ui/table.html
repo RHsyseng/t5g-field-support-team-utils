@@ -3,10 +3,9 @@
 {% block content %}
 <div class="container-fluid copy mt-5">
     <a role="button" class="btn btn-outline-dark btn-lg mb-2" href="{{ request.url[:-9] }}">Back to Report</a>
-
     <table class="table table-bordered table-hover table-responsive mt-5 w-100" id="data">
         <thead>
-            <tr><th></th><th class="text-center">Case#</th><th class="text-center">Severity</th><th class="text-center">Escalated?</th><th class="text-center">Summary</th><th class="text-center">Account</th><th class="text-center">Status</th><th class="text-center">Assignee</th><th class="text-center">Most Recent Comment</th><th class="text-center">Bugzillas</th></tr>
+            <tr><th></th><th class="text-center">Case#</th><th class="text-center">Severity</th><th class="text-center">Escalated?</th><th class="text-center">Summary</th><th class="text-center">Product</th><th class="text-center">Account</th><th class="text-center">Status</th><th class="text-center">Assignee</th><th class="text-center">Jira</th><th class="text-center">Most Recent Comment</th><th class="text-center">Bugzillas</th></tr>
         </thead>
         <tbody class="list">
                 {% for account in new_comments %}
@@ -22,9 +21,11 @@
                                         <td class="align-middle text-center">No</td>
                                     {% endif %}
                                     <td class="align-middle text-center">{{ new_comments[account][status][card]['summary'] }}</td>
+                                    <td class="align-middle text-center">{{ new_comments[account][status][card]['product'] }}</td>
                                     <td class="align-middle text-center">{{ new_comments[account][status][card]['account'] }}</td>
                                     <td class="align-middle text-center">{{ new_comments[account][status][card]['card_status'] }}</td>
                                     <td class="align-middle text-center">{{ new_comments[account][status][card]['assignee']['displayName'] }}</td>
+                                    <td class="align-middle text-center"><a href=https://issues.redhat.com/browse/{{ card }} target="_blank">{{ card }}</a></td>
                                     <td class="align-middle text-center"><span class="fw-bold fst-italic">{{ new_comments[account][status][card]['comments'][-1][1][:10] }}</span> - {{ new_comments[account][status][card]['comments'][-1][0] | safe }}</td>
                                     {% if new_comments[account][status][card]['bugzilla'] != "None" and new_comments[account][status][card]['bugzilla'] | length == 1  %}
                                         <td class="align-middle text-center"><a href={{ new_comments[account][status][card]['bugzilla'][0]['bugzillaLink'] }} target="_blank">{{ new_comments[account][status][card]['bugzilla'][0]['bugzillaNumber'] }}</a></td>
@@ -50,7 +51,7 @@
         if (data.bugzilla != "None") {
             result += '<ul><li>Bugzillas<ul>';
             for (let bug = 0; bug < data.bugzilla.length; bug++) {
-                result += '<li><a href="' + data.bugzilla[bug].bugzillaLink + '" target="_blank">' + data.bugzilla[bug].bugzillaNumber + '</a> - Target Release: ' + data.bugzilla[bug].target_release[0] + ' - Assignee: ' + data.bugzilla[bug].assignee + '</li>';
+                result += '<li><a href="' + data.bugzilla[bug].bugzillaLink + '" target="_blank">' + data.bugzilla[bug].bugzillaNumber + '</a> - <span class="fw-bold">Summary:</span> ' + data.bugzilla[bug].summary  + ' - <span class="fw-bold">Target Release:</span> ' + data.bugzilla[bug].target_release[0] + ' - <span class="fw-bold">Assignee:</span> ' + data.bugzilla[bug].assignee + ' - <span class="fw-bold">Last Updated:</span> ' + data.bugzilla[bug].last_change_time + ' - <span class="fw-bold">Status: </span>' + data.bugzilla[bug].status + '</li>';
             }
             result += '</ul></li></ul>';
         }
