@@ -49,17 +49,17 @@
     function format(data) {
         let result = "<div class='card p-3'>"
         if (data.bugzilla != "None") {
-            result += '<ul><li>Bugzillas<ul>';
+            result += '<h3>Bugzillas</h3><table class="table table-bordered table-hover table-responsive w-100"><thead><tr><th>#</th><th>Summary</th><th>Target Release</th><th>Assignee</th><th>Last Updated</th><th>Status</th></tr></thead><tbody>';
             for (let bug = 0; bug < data.bugzilla.length; bug++) {
-                result += '<li><a href="' + data.bugzilla[bug].bugzillaLink + '" target="_blank">' + data.bugzilla[bug].bugzillaNumber + '</a> - <span class="fw-bold">Summary:</span> ' + data.bugzilla[bug].summary  + ' - <span class="fw-bold">Target Release:</span> ' + data.bugzilla[bug].target_release[0] + ' - <span class="fw-bold">Assignee:</span> ' + data.bugzilla[bug].assignee + ' - <span class="fw-bold">Last Updated:</span> ' + data.bugzilla[bug].last_change_time + ' - <span class="fw-bold">Status: </span>' + data.bugzilla[bug].status + '</li>';
+                result += '<tr><td><a href="' + data.bugzilla[bug].bugzillaLink + '" target="_blank">' + data.bugzilla[bug].bugzillaNumber + '</a></td><td>' + data.bugzilla[bug].summary  + '</td><td>' + data.bugzilla[bug].target_release[0] + '</td><td>' + data.bugzilla[bug].assignee + '</td><td>' + data.bugzilla[bug].last_change_time + '</td><td>' + data.bugzilla[bug].status + '</td></tr>';
             }
-            result += '</ul></li></ul>';
+            result += '</tbody></table>';
         }
-        result += '<ul><li>Comments<ul>';
+        result += '<h3>Comments</h3><ul>';
         for (let comment = 0; comment < data.comments.length; comment++) {
             result += '<li class="text-break"><span class="fw-bold fst-italic">' + data.comments[comment][1].substring(0, 10) + '</span> - ' + data.comments[comment][0] + '</li>';
         }
-        result += '</ul></li></ul>';
+        result += '</ul>';
     return result + "</div>";
     }
 
