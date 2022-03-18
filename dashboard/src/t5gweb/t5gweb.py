@@ -115,34 +115,6 @@ def plots():
     summary = libtelco5g.get_card_summary()
     return summary
 
-def replace_links(detailed_cards):
-    """Replace JIRA style links in card's comments with equivalent HTML links"""
-    for card in detailed_cards:
-        for comment in range(len(detailed_cards[card]["comments"])):
-            detailed_cards[card]["comments"][comment] = re.sub(r'(?<!\||\s)\s*?((http|ftp|https):\/\/([\w_-]+(?:(?:\.[\w_-]+)+))([\w.,@?^=%&:\/~+#-]*[\w@?^=%&\/~+#-])?)',"<a href=\""+r'\g<0>'+"\" target='_blank'>"+r'\g<0>'"</a>", detailed_cards[card]["comments"][comment])
-            detailed_cards[card]["comments"][comment] = re.sub(r'\[([\s\w!"#$%&\'()*+,-.\/:;<=>?@[^_`{|}~]*?\s*?)\|\s*?((http|ftp|https):\/\/([\w_-]+(?:(?:\.[\w_-]+)+))([\w.,@?^=%&:\/~+#-]*[\w@?^=%&\/~+#-])?[\s]*)\]',"<a href=\""+r'\2'+"\" target='_blank'>"+r'\1'+"</a>", detailed_cards[card]["comments"][comment])
-    return detailed_cards
-
-
-def add_case_number(conn, cards):
-    """Associates each card with its case number and drops cards without a Support Case Link"""
-    cards_dict = {}
-    for card in cards:
-        cards_dict[card.key] = None
-
-    #Associate each card with its corresponding case number
-    for card_id in cards_dict:
-        links = conn.remote_links(card_id)
-        for link in links:
-            t = conn.remote_link(card_id, link)
-            if t.raw['object']['title'] == "Support Case":
-                t_case_number = libtelco5g.get_case_number(t.raw['object']['url'])
-                if len(t_case_number) > 0:
-                    cards_dict[card_id] = t_case_number
-    # Get rid of cards with no Support Case Link
-    linked_cards = {card: case for card, case in cards_dict.items() if case is not None}
-    return linked_cards
-
 def organize_cards(detailed_cards, telco_account_list, cnv_account_list=None):
     """Group cards by account"""
     

@@ -130,31 +130,6 @@ def get_last_sprint(conn, bid, sprintname):
         if re.search(last_sprint_name, b.name):
             return b
 
-def get_cards(conn, sid, user=None, include_closed=True):
-    ''' Gets a list of cards in the latest sprint
-    sid    - sprint id
-
-    Returns a list of card names 
-    Return: ['KNIECO-2411', 'KNIECO-2406', ...]
-    '''
-
-    returnlist = []
-    if user is not None and include_closed is False:
-        user = user.replace('@', '\\u0040')
-        if include_closed is False:
-            cards = conn.search_issues('sprint=' + str(sid) + ' and assignee = ' + str(user) + ' and status != "DONE"', 0, 1000).iterable
-        else:
-            cards = conn.search_issues('sprint=' + str(sid) + ' and assignee = ' + str(user), 0, 1000).iterable
-    else:
-        if include_closed is False:
-            cards = conn.search_issues('sprint=' + str(sid) + ' and assignee = ' + str(user) + ' and status != "DONE"', 0, 1000).iterable
-        else:
-            cards = conn.search_issues('sprint=' + str(sid), 0, 1000).iterable
-    
-    for item in cards:
-        returnlist.append(str(item))
-    return returnlist
-
 def get_sprint_summary(conn, bid, sprintname, team):
     totals = {}
     last_sprint = get_last_sprint(conn, bid, sprintname)
@@ -202,110 +177,6 @@ def get_case_number(link, pfilter='cases'):
             if len(parsed_url.path) > 0 and 'cases' in parsed_url.path:
                 return parsed_url.path.split('/')[3]
     return ''
-
-def parse_cases(conn, cases, cards, debug=False):
-    ''' Check which cases are mentioned in card links '''
-    ''' Returns: list of cases not mentioned in cards '''
-
-    cardcases = []
-    caselist = []
-    needed = []
-    sevs_to_create = ['1 (Urgent)', '2 (High)', '3 (Normal)', '4 (Low)']
-    if debug:
-        dpp = pprint.PrettyPrinter(indent=2)
-
-    ''' Build a list of email cases '''
-    for i in cases.keys():
-        caselist.append(i)
-
-    if debug:
-        print('\nDEBUG: Case List')
-        dpp.pprint(caselist)
-
-    ''' Parse the cards to build a list of mentioned case numbers '''
-    for card in cards:
-        links = conn.remote_links(card)
-
-        ''' iterate through the links in the card to see if there are any cases '''
-        for link in links:
-            t = conn.remote_link(card, link)
-
-            ''' Search link for case number and append it to cardcases '''
-            t_case_number = get_case_number(t.raw['object']['url'])
-            if len(t_case_number) > 0:
-                cardcases.append(t_case_number)
-                if debug:
-                    print('\nDEBUG:', card)
-                    dpp.pprint(t_case_number)
-
-    ''' If the case is not in the Jira card, add it to the needed list '''
-    for c in cases.keys():
-        if c not in cardcases and cases[c]['severity'] in sevs_to_create:
-            needed.append(c)
-
-    return needed
-
-def closed_cases(conn, cases, cards, debug=False):
-    
-    cardcases = []
-    caselist = []
-    needed = []
-    if debug:
-        dpp = pprint.PrettyPrinter(indent=2)
-
-    ''' Build a list of email cases '''
-    for i in cases.keys():
-        caselist.append(i)
-
-    if debug:
-        print('\nDEBUG: Case List')
-        dpp.pprint(caselist)
-
-    ''' Parse the cards to build a list of mentioned case numbers '''
-    for card in cards:
-        links = conn.remote_links(card)
-
-        ''' iterate through the links in the card to see if there are any cases '''
-        for link in links:
-            t = conn.remote_link(card, link)
-
-            ''' Search link for case number and append it to cardcases '''
-            t_case_number = get_case_number(t.raw['object']['url'])
-            if len(t_case_number) > 0:
-                if t_case_number not in caselist:
-                    print("%s is still open, %s is closed" % (card, t_case_number))
-                #cardcases.append(t_case_number)
-                #if debug:
-                #    print('\nDEBUG:', card)
-                #    dpp.pprint(t_case_number)
-    
-    #return needed
-
-def duplicate_cards(conn, cards, debug=False):
-    ''' Check which cases are mentioned in card links '''
-    ''' Returns: list of cases not mentioned in cards '''
-
-    cardcases = []
-    caselist = []
-    needed = []
-    case2issue = {}
-    
-    ''' Parse the cards to build a list of mentioned case numbers '''
-    for card in sorted(cards):
-        links = conn.remote_links(card)
-
-        ''' iterate through the links in the card to see if there are any cases '''
-        for link in links:
-            t = conn.remote_link(card, link)
-
-            ''' Search link for case number and append it to cardcases '''
-            t_case_number = get_case_number(t.raw['object']['url'])
-            if len(t_case_number) > 0:
-                if t_case_number not in cardcases:
-                    case2issue[t_case_number] = card
-                    cardcases.append(t_case_number)
-                else:
-                    print("Duplicate card detected. issue %s is likely a dupe of %s" %(card, case2issue[t_case_number]))
 
 def get_random_member(team):
     return random.choice(team)
@@ -386,7 +257,7 @@ def create_cards(cfg, new_cases, action='none'):
                 'title': 'Support Case'
                 })
 
-            bz = None
+            bz = []
             if 'bug' in cases[case]:
                 bz = cases[case]['bug']
                 logging.warning('adding link to BZ {}'.format(cases[case]['bug']))
@@ -553,6 +424,7 @@ def redis_get(key):
     return data
 
 def cache_cases(cfg):
+  # https://source.redhat.com/groups/public/hydra/hydra_integration_platform_cee_integration_wiki/hydras_api_layer
 
   token = get_token(cfg['offline_token'])
   query = cfg['query']
@@ -745,45 +617,6 @@ def get_case_from_link(jira_conn, card):
             if len(case_number) > 0:
                 return case_number
     return None
-
-def get_cases_json(token, query, fields, num_cases=5000, exclude_closed=True):
-  # https://source.redhat.com/groups/public/hydra/hydra_integration_platform_cee_integration_wiki/hydras_api_layer
-  fl = ",".join(fields)
-  query = "({})".format(query)
-
-  if exclude_closed:
-      query = query + " AND -case_status:Closed"
-  payload = {"q": query, "partnerSearch": "false", "rows": num_cases, "fl": fl}
-  headers = {"Accept": "application/json", "Authorization": "Bearer " + token}
-  url = "https://access.redhat.com/hydra/rest/search/cases"
-  r = requests.get(url, headers=headers, params=payload)
-  cases_json = r.json()['response']['docs']
-  
-  return cases_json
-
-def get_cases(cases_json, include_tags=False):
-  cases = {}
-  for case in cases_json:
-    #print(case)
-    cases[case["case_number"]] = {
-        "owner": case["case_owner"],
-        "severity": case["case_severity"],
-        "account": case["case_account_name"],
-        "problem": case["case_summary"],
-        "status": case["case_status"],
-        "createdate": case["case_createdDate"],
-        "last_update": case["case_lastModifiedDate"],
-        "description": case["case_description"],
-    }
-    # Sometimes there is no BZ attached to the case
-    if "case_bugzillaNumber" in case:
-        cases[case["case_number"]]["bug"] = case["case_bugzillaNumber"]
-
-    # Sometimes there is no tag attached to the case
-    if "case_tags" in case and include_tags:
-        cases[case["case_number"]]["tags"] = case["case_tags"]
-
-  return cases
 
 def main():
     print("libtelco5g")
