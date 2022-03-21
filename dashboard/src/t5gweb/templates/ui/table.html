@@ -87,7 +87,9 @@
         let table = $('#data').DataTable({
             "pageLength": 50,
             "scrollX": true,
-            "order": [[ 2, "desc" ]]
+            "scrollY": "75vh",
+            "order": [[ 2, "desc" ]],
+            "lengthMenu": [[10, 25, 50, -1], [10, 25, 50, "All"]]
         });
 
         // Add event listener for opening and closing details
