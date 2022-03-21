@@ -1,7 +1,9 @@
 """initialize t5gweb application"""
 import os
 from flask import Flask, redirect, url_for
-#from .extensions import scheduler
+from . import t5gweb
+from . import api
+from . import ui
 
 def create_app(test_config=None):
     """factory functions to launch app"""
@@ -21,13 +23,7 @@ def create_app(test_config=None):
     except OSError:
         pass
 
-    #@app.route('/')
-    #def _():
-    #    return redirect(url_for('ui.index'))
-    from . import t5gweb
     t5gweb.init_app(app)
-    from . import api
     app.register_blueprint(api.BP)
-    from . import ui
     app.register_blueprint(ui.BP)
     return app

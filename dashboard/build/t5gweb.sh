@@ -15,6 +15,7 @@ buildah config --label maintainer="David Critch <dcritch@redhat.com.com>" $conta
 buildah copy $container ../src/ /srv/
 buildah config --workingdir /srv $container
 buildah run $container pip3 install .
+buildah run $container pip3 install pylint
 buildah config --port 8080 $container
 buildah commit --format docker $container $IMAGE:$TAG
 
