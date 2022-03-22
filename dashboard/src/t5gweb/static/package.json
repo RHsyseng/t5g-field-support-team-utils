@@ -1,0 +1,27 @@
+{
+  "name": "t5gweb",
+  "version": "1.0.0",
+  "description": "Packages for t5gweb",
+  "main": " ",
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/RHsyseng/t5g-field-support-team-utils.git"
+  },
+  "author": "",
+  "license": "ISC",
+  "bugs": {
+    "url": "https://github.com/RHsyseng/t5g-field-support-team-utils/issues"
+  },
+  "homepage": "https://github.com/RHsyseng/t5g-field-support-team-utils#readme",
+  "dependencies": {
+    "@popperjs/core": "^2.11.4",
+    "bootstrap": "^5.1.3",
+    "chart.js": "^3.7.1",
+    "clipboard": "^2.0.10",
+    "datatables.net": "^1.11.5",
+    "datatables.net-bs5": "^1.11.5"
+  }
+}

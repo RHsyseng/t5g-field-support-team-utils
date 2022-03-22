@@ -16,6 +16,7 @@ buildah copy $container ../src/ /srv/
 buildah config --workingdir /srv $container
 buildah run $container pip3 install .
 buildah run $container pip3 install pylint
+buildah run $container npm ci --prefix t5gweb/static
 buildah config --port 8080 $container
 buildah commit --format docker $container $IMAGE:$TAG
 
