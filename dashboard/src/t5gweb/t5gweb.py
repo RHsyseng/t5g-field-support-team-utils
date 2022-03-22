@@ -34,21 +34,17 @@ def set_cfg():
 
     return cfg
 
-def get_new_cases():
+def get_new_cases(case_tag):
     """get new cases created since X days ago"""
 
     # get cases from cache
     cases = libtelco5g.redis_get("cases")
 
     interval = 7
-    new_cases = []
-    for case in sorted(cases.items(), key = lambda i: i[1]['severity']):
-        create_date = datetime.strptime(case[1]['createdate'], '%Y-%m-%dT%H:%M:%SZ')
-        time_diff = datetime.now() - create_date
-        if time_diff.days < 7:
-            case[1]['severity'] = re.sub('\(|\)| |[0-9]', '', case[1]['severity'])
-            case[1]['number'] = case[0]
-            new_cases.append(case[1])
+    today = date.today()
+    new_cases = {c: d for (c, d) in sorted(cases.items(), key = lambda i: i[1]['severity']) if case_tag in d['tags'] and (today - datetime.strptime(d['createdate'], '%Y-%m-%dT%H:%M:%SZ').date()).days < interval}
+    for case in new_cases:
+        new_cases[case]['severity'] = re.sub('\(|\)| |[0-9]', '', new_cases[case]['severity'])
     return new_cases
 
 def get_new_comments(new_comments_only=True):

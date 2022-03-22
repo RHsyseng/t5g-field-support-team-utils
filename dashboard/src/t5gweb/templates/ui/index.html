@@ -4,16 +4,29 @@
 
 <a id="top"></a>
 <div class="new-cases">
-    <h1>{{ new_cases | length }} Cases Opened in the Last 7 Days:</h1>
+    <h1>{{ new_t5g_cases | length }} Telco5G Cases Opened in the Last 7 Days:</h1>
+    <div class="copy">
+        <table class="table table-borderless table-hover">
+        <th>case#</th><th>severity</th><th>summary</th>
+        {% for case in new_t5g_cases %}
+        <tr>
+            <td><a href=https://access.redhat.com/support/cases/#/case/{{ case }} target="_blank">{{ case }}</a></td>
+            <td>{{ new_t5g_cases[case]['severity'] }}</td>
+            <td>{{ new_t5g_cases[case]['problem'] }}</td>
+        </tr>
+        {% endfor %}
+        </table>
+    </div>
+    <h1>{{ new_cnv_cases | length }} CNV Cases Opened in the Last 7 Days:</h1>
     <div class="copy">
         <table class="table table-borderless table-hover">
         <th>case#</th><th>severity</th><th>summary</th>
 
-        {% for case in new_cases %}
+        {% for case in new_cnv_cases %}
         <tr>
-            <td><a href=https://access.redhat.com/support/cases/#/case/{{ case.number }} target="_blank">{{ case.number }}</a></td>
-            <td>{{ case.severity }}</td>
-            <td>{{ case.problem }}</td>
+            <td><a href=https://access.redhat.com/support/cases/#/case/{{ case }} target="_blank">{{ case }}</a></td>
+            <td>{{ new_cnv_cases[case]['severity'] }}</td>
+            <td>{{ new_cnv_cases[case]['problem'] }}</td>
         </tr>
         {% endfor %}
         </table>
