@@ -24,7 +24,9 @@ def load_data():
     """Load data for dashboard"""
     
     cfg = set_cfg()
-    load_data.new_cases = get_new_cases()
+    #new_cases = get_new_cases()
+    load_data.new_cnv_cases = get_new_cases('cnv')
+    load_data.new_t5g_cases = get_new_cases('shift_telco5g')
     plot_data = plots()
     load_data.y = list(plot_data.values())
     telco_accounts, cnv_accounts = get_new_comments()
@@ -40,7 +42,7 @@ def load_data():
 def index():
     """list new cases"""
     load_data()
-    return render_template('ui/index.html', new_cases=load_data.new_cases, values=load_data.y, now=load_data.now)
+    return render_template('ui/index.html', new_cnv_cases=load_data.new_cnv_cases, new_t5g_cases=load_data.new_t5g_cases, values=load_data.y, now=load_data.now)
 
 @BP.route('/refresh')
 def refresh():

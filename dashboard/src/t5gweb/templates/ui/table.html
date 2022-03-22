@@ -23,7 +23,7 @@
                                     <td class="align-middle text-center">{{ new_comments[account][status][card]['summary'] }}</td>
                                     <td class="align-middle text-center">{{ new_comments[account][status][card]['product'] }}</td>
                                     <td class="align-middle text-center">{{ new_comments[account][status][card]['account'] }}</td>
-                                    <td class="align-middle text-center">{{ new_comments[account][status][card]['card_status'] }}</td>
+                                    <td class="align-middle text-center">{{ new_comments[account][status][card]['case_status'] }}</td>
                                     <td class="align-middle text-center">{{ new_comments[account][status][card]['assignee']['displayName'] }}</td>
                                     <td class="align-middle text-center"><a href=https://issues.redhat.com/browse/{{ card }} target="_blank">{{ card }}</a></td>
                                     <td class="align-middle text-center"><span class="fw-bold fst-italic">{{ new_comments[account][status][card]['comments'][-1][1][:10] }}</span> - {{ new_comments[account][status][card]['comments'][-1][0] | safe }}</td>

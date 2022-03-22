@@ -281,7 +281,8 @@ def create_cards(cfg, new_cases, action='none'):
                 "tags": tags,
                 "labels": cfg['labels'],
                 "bugzilla": bz,
-                "severity": re.search(r'[a-zA-Z]+', cases[case]['severity']).group()
+                "severity": re.search(r'[a-zA-Z]+', cases[case]['severity']).group(),
+                "case_status": cases[case]['status']
             }
     
     return email_content, new_cards
@@ -599,7 +600,8 @@ def cache_cards(cfg):
             "bugzilla": bugzilla,
             "severity": re.search(r'[a-zA-Z]+', cases[case_number]['severity']).group(),
             "escalated": escalated,
-            "product": cases[case_number]['product']
+            "product": cases[case_number]['product'],
+            "case_status": cases[case_number]['status']
         }
 
     end = time.time()
