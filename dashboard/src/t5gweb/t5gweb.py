@@ -117,7 +117,7 @@ def organize_cards(detailed_cards, telco_account_list, cnv_account_list=None):
     telco_accounts = {}
     cnv_accounts = {}
 
-    states = {"To Do":{}, "Open": {}, "In Progress": {}, "Code Review": {},"QE Review": {}, "Done": {}, "Won't Fix / Obsolete": {}}
+    states = {"Waiting on Red Hat":{}, "Waiting on Customer": {}, "Closed": {}}
     
     for account in telco_account_list:
         telco_accounts[account] = deepcopy(states)
@@ -126,7 +126,7 @@ def organize_cards(detailed_cards, telco_account_list, cnv_account_list=None):
             cnv_accounts[account] = deepcopy(states)
     
     for i in detailed_cards.keys():
-        status = detailed_cards[i]['card_status']
+        status = detailed_cards[i]['case_status']
         tags =  detailed_cards[i]['tags']
         account = detailed_cards[i]['account']
         #logging.warning("card: %s\tstatus: %s\ttags: %s\taccount: %s" % (i, status, tags, account))
