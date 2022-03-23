@@ -60,6 +60,7 @@ def get_new_comments(new_comments_only=True):
     telco_account_list = []
     cnv_account_list = []
     for card in cards:
+        comments = []
         if new_comments_only:
             if cards[card]['comments'] is not None:
                 comments = [comment for comment in cards[card]['comments'] if (time_now - datetime.strptime(comment[1], '%Y-%m-%dT%H:%M:%S.%f%z')).days < 7]
