@@ -352,7 +352,7 @@ def set_defaults():
     defaults['debug']       = 'False'
     defaults['sheet_id']    = '1I-Sw3qBCDv3jHon7J_H3xgPU2-mJ8c-9E1h5DeVZUbk'
     defaults['range_name']  = 'webscale - knieco field eng!A2:J'
-    defaults['fields']      =  ["case_account_name","case_summary","case_number","case_status","case_owner","case_severity","case_createdDate","case_lastModifiedDate","case_bugzillaNumber","case_description","case_tags", "case_product", "case_version"]
+    defaults['fields']      =  ["case_account_name","case_summary","case_number","case_status","case_owner","case_severity","case_createdDate","case_lastModifiedDate","case_bugzillaNumber","case_description","case_tags", "case_product", "case_version", "case_closedDate"]
     defaults['query']       = "case_summary:*webscale* OR case_tags:*shift_telco5g* OR case_tags:*cnv*"
     defaults['slack_token']   = ''
     defaults['slack_channel'] = ''
@@ -463,6 +463,9 @@ def cache_cases(cfg):
         cases[case["case_number"]]["tags"] = case["case_tags"]
     else: # assume. came from query, so probably telco
         cases[case["case_number"]]["tags"] = ['shift_telco5g']
+    # Sometimes there is no closed date attached to the case
+    if "case_closedDate" in case:
+        cases[case["case_number"]]["closeddate"] = case["case_closedDate"]
 
   redis_set('cases', json.dumps(cases))
 
