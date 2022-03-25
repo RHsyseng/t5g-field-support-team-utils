@@ -8,6 +8,7 @@ import t5gweb.libtelco5g as libtelco5g
 import t5gweb.t5gweb as t5gweb
 from celery import Celery
 from celery.schedules import crontab
+import bugzilla
 
 mgr = Celery('t5gweb', broker='redis://redis:6379/0', backend='redis://redis:6379/0')
 
@@ -55,6 +56,13 @@ def setup_scheduled_tasks(sender, **kwargs):
         crontab(hour='*/12', minute='0'), # twice a day
         cache_data.s('escalations'),
         name='escalations_sync',
+    )
+
+    # tag bugzillas with 'Telco' and/or 'Telco:Case'
+    sender.add_periodic_task(
+        crontab(hour='*/24', minute='0'), # once a day
+        tag_bz.s(),
+        name='tag_bz',
     )
 
 @mgr.task
@@ -129,4 +137,23 @@ def cache_data(data_type):
     elif data_type == 'escalations':
         libtelco5g.cache_escalations(cfg)
     else:
-        logging.warning("unkown data type")
+        logging.warning("unknown data type")
+
+@mgr.task
+def tag_bz():
+    
+    logging.warning("getting bugzillas")
+    bz_url = "bugzilla.redhat.com"
+    cfg = t5gweb.set_cfg()
+    bz_api = bugzilla.Bugzilla(bz_url, api_key=cfg['bz_key'])
+    bugs = libtelco5g.redis_get('bugs')
+    logging.warning("tagging bugzillas")
+    for case in bugs:
+        for bug in bugs[case]:
+            bz = bz_api.getbug(bug['bugzillaNumber'])
+            if "telco" not in bz.internal_whiteboard.lower():
+                update = bz_api.build_update(internal_whiteboard="Telco Telco:Case " + bugs.internal_whiteboard, minor_update=True)
+                bz_api.update_bugs([bz.id], update)
+            elif "telco:case" not in bz.internal_whiteboard.lower():
+                update = bz_api.build_update(internal_whiteboard="Telco:Case " + bugs.internal_whiteboard, minor_update=True)
+                bz_api.update_bugs([bz.id], update)
