@@ -58,7 +58,7 @@ def get_cards(card_type):
         return telco_cards
     elif card_type == 'cnv':
         cards = redis_get('cards')
-        cnv_cards = {c:d for (c,d) in cards.items() if 'field' in d['labels']}
+        cnv_cards = {c:d for (c,d) in cards.items() if 'cnv' in d['labels']}
         return cnv_cards
     else:
         return {'error': 'unknown card type: {}'.format(card_type)}

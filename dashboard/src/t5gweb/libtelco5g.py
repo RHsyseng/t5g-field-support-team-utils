@@ -207,6 +207,7 @@ def create_cards(cfg, new_cases, action='none'):
                     assignee = member
         if assignee == None:
             assignee = get_random_member(cfg['team'])
+        assignee['displayName'] = assignee['name']
         priority = portal2jira_sevs[cases[case]['severity']]
         card_info = {
             'project': {'key': cfg['project']},
@@ -349,8 +350,6 @@ def set_defaults():
     defaults['password']    = ''
     defaults['card_action'] = 'none'
     defaults['debug']       = 'False'
-    defaults['sheet_id']    = '1I-Sw3qBCDv3jHon7J_H3xgPU2-mJ8c-9E1h5DeVZUbk'
-    defaults['range_name']  = 'webscale - knieco field eng!A2:J'
     defaults['fields']      =  ["case_account_name","case_summary","case_number","case_status","case_owner","case_severity","case_createdDate","case_lastModifiedDate","case_bugzillaNumber","case_description","case_tags", "case_product", "case_version", "case_closedDate"]
     defaults['query']       = "case_summary:*webscale* OR case_tags:*shift_telco5g* OR case_tags:*cnv*"
     defaults['slack_token']   = ''
@@ -621,6 +620,26 @@ def get_case_from_link(jira_conn, card):
             if len(case_number) > 0:
                 return case_number
     return None
+
+def get_stats(case_type):
+    all_cards = redis_get('cards')
+    if case_type == 'telco5g':
+        cards = {c:d for (c,d) in cards.items() if 'field' in d['labels']}
+    elif case_type == 'cnv':
+        cards = {c:d for (c,d) in cards.items() if 'cnv' in d['labels']}
+    else:
+        logging.warning("unknown case type: {}".format(case_type))
+        return {}
+    #customers = [account for accounts in cards
+
+
+#break down of cases by: engineer, customer, new/closed (last day, last 7 days), severity, escalation, status
+#cases with no updates(/when?)
+#bugs: unique, no target
+#cases with no bzs
+
+
+
 
 def main():
     print("libtelco5g")
