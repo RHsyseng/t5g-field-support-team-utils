@@ -34,7 +34,7 @@ import smartsheet
 portal2jira_sevs = {
     "1 (Urgent)"    : "Urgent",
     "2 (High)"      : "High",
-    "3 (Normal)"    : "Medium",
+    "3 (Normal)"    : "Normal",
     "4 (Low)"       : "Low"
 }
 
