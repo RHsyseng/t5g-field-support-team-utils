@@ -60,7 +60,7 @@ def setup_scheduled_tasks(sender, **kwargs):
 
     # tag bugzillas with 'Telco' and/or 'Telco:Case'
     sender.add_periodic_task(
-        crontab(hour='*/24', minute='0'), # once a day
+        crontab(hour='*/24', minute='33'), # once a day + 33 for randomness
         tag_bz.s(),
         name='tag_bz',
     )
