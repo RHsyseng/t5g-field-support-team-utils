@@ -496,7 +496,7 @@ def cache_bz(cfg):
             bug['target_release'] = bugs.target_release
             bug['assignee'] = bugs.assigned_to
             bug['last_change_time'] = datetime.datetime.strftime(datetime.datetime.strptime(str(bugs.last_change_time), '%Y%m%dT%H:%M:%S'), '%Y-%m-%d') # convert from xmlrpc.client.DateTime to str and reformat
-
+            bug['internal_whiteboard'] = bugs.internal_whiteboard
     redis_set('bugs', json.dumps(bz_dict))
 
 def cache_escalations(cfg):
