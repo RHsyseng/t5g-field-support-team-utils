@@ -32,12 +32,11 @@ import smartsheet
 
 # for portal to jira mapping
 portal2jira_sevs = {
-    "1 (Urgent)"    : "Urgent",
-    "2 (High)"      : "High",
+    "1 (Urgent)"    : "Critical",
+    "2 (High)"      : "Major",
     "3 (Normal)"    : "Normal",
-    "4 (Low)"       : "Low"
+    "4 (Low)"       : "Minor"
 }
-
 
 def jira_connection(cfg):
 
