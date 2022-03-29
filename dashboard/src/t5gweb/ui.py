@@ -113,6 +113,6 @@ def get_stats(case_type):
     if case_type in ['telco5g', 'cnv']:
         stats = generate_stats(case_type)
         now = str(datetime.datetime.utcnow())
-        return render_template('ui/stats.html', now=now, stats=stats, page_title='/stats/{}'.format(case_type))
+        return render_template('ui/stats.html', now=now, stats=stats, page_title='stats/{}'.format(case_type))
     else:
         return {'error': 'unknown card type: {}'.format(case_type)}
