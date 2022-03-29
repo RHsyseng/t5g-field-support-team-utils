@@ -2,8 +2,8 @@
 {% block title %}{{ page_title }}{% endblock %}
 {% block content %}
 <div class="container-fluid copy mt-5">
-    <a role="button" class="btn btn-outline-dark btn-lg mb-2" href="{{ request.url[:-9] }}">Back to Report</a>
     <table class="table table-bordered table-hover table-responsive mt-5 w-100" id="data">
+        <caption style="caption-side: top; text-align: center;">Note: Use shift+click to sort by multiple columns</caption>
         <thead>
             <tr><th></th><th class="text-center">Case#</th><th class="text-center">Severity</th><th class="text-center">Escalated?</th><th class="text-center">Summary</th><th class="text-center">Product</th><th class="text-center">Account</th><th class="text-center">Status</th><th class="text-center">Assignee</th><th class="text-center">Jira</th><th class="text-center">Most Recent Comment</th><th class="text-center">Bugzillas</th></tr>
         </thead>
@@ -45,6 +45,7 @@
    <script type="text/javascript" charset="utf8" src="{{ url_for('static', filename='node_modules/jquery/dist/jquery.min.js') }}"></script>
    <script type="text/javascript" charset="utf8" src="{{ url_for('static', filename='node_modules/datatables.net/js/jquery.dataTables.js') }}"></script>
    <script type="text/javascript" charset="utf8" src="{{ url_for('static', filename='node_modules/datatables.net-bs5/js/dataTables.bootstrap5.min.js') }}"></script>
+   <script type="text/javascript" charset="utf8" src="{{ url_for('static', filename='js/dataTables.deepLink.min.js') }}"></script>
    <script>
     function format(data) {
         let result = "<div class='card p-3'>"
@@ -84,13 +85,17 @@
     };
 
     $(document).ready(function () {
-        let table = $('#data').DataTable({
+        let searchOptions = $.fn.dataTable.ext.deepLink([
+            'search.search', 'order', 'displayStart'
+        ]);
+        let options = {
             "pageLength": 50,
             "scrollX": true,
             "scrollY": "75vh",
-            "order": [[ 2, "desc" ]],
+            "order": [[2, "desc"], [3, "desc"]],
             "lengthMenu": [[10, 25, 50, -1], [10, 25, 50, "All"]]
-        });
+        };
+        let table = $('#data').DataTable($.extend(options, searchOptions));
 
         // Add event listener for opening and closing details
         $('#data').on('click', 'td.dt-control', function () {
