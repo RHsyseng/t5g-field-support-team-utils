@@ -621,25 +621,111 @@ def get_case_from_link(jira_conn, card):
                 return case_number
     return None
 
-def get_stats(case_type):
+def generate_stats(case_type):
+    ''' generate some stats '''
+    
+    logging.warning("generating stats for {}".format(case_type))
+    start = time.time()
+    
     all_cards = redis_get('cards')
     if case_type == 'telco5g':
-        cards = {c:d for (c,d) in cards.items() if 'field' in d['labels']}
+        cards = {c:d for (c,d) in all_cards.items() if 'field' in d['labels']}
     elif case_type == 'cnv':
-        cards = {c:d for (c,d) in cards.items() if 'cnv' in d['labels']}
+        cards = {c:d for (c,d) in all_cards.items() if 'cnv' in d['labels']}
     else:
         logging.warning("unknown case type: {}".format(case_type))
         return {}
-    #customers = [account for accounts in cards
+    
+    all_cases = redis_get('cases')
+    if case_type == 'telco5g':
+        cases = {c:d for (c,d) in all_cases.items() if 'shift_telco5g' in d['tags']}
+    elif case_type == 'cnv':
+        cases = {c:d for (c,d) in all_cases.items() if 'cnv' in d['tags']}
+    else:
+        logging.warning("unknown case type: {}".format(case_type))
+        return {}
+    
+    bugs = redis_get('bugs')
 
+    today = datetime.date.today()
+    
+    customers = [cards[card]['account'] for card in cards]
+    engineers = [cards[card]['assignee']['displayName'] for card in cards]
+    severities = [cards[card]['severity'] for card in cards]
+    statuses = [cards[card]['case_status'] for card in cards]
 
-#break down of cases by: engineer, customer, new/closed (last day, last 7 days), severity, escalation, status
-#cases with no updates(/when?)
-#bugs: unique, no target
-#cases with no bzs
+    stats = {
+        'by_customer': {c:0 for c in customers},
+        'by_engineer': {e:0 for e in engineers},
+        'by_severity': {s:0 for s in severities},
+        'by_status': {s:0 for s in statuses},
+        'escalated': 0,
+        'open_cases': 0,
+        'weekly_closed_cases': 0,
+        'weekly_opened_cases': 0,
+        'daily_closed_cases': 0,
+        'daily_opened_cases': 0,
+        'no_updates': 0,
+        'no_bzs': 0,
+        'bugs': {
+            'unique': 0,
+            'no_target': 0
+        }
+    }
 
+    for card in cards:
+        account = cards[card]['account']
+        engineer = cards[card]['assignee']['displayName']
+        severity = cards[card]['severity']
+        status = cards[card]['case_status']
 
+        stats['by_customer'][account] += 1
+        stats['by_engineer'][engineer] += 1
+        stats['by_severity'][severity] += 1
+        stats['by_status'][status] += 1
+        
+        if cards[card]['escalated']:
+            stats['escalated'] += 1
+        if cards[card]['case_status'] != 'Closed' and cards[card]['bugzilla'] == "None":
+            stats['no_bzs'] += 1
+        
+        if cards[card]['comments'] is not None:
+            comments = [comment for comment in cards[card]['comments'] if (today - datetime.datetime.strptime(comment[1], '%Y-%m-%dT%H:%M:%S.%f%z').date()).days > 7]
+            if len(comments) == 0:
+                stats['no_updates'] += 1
+        else:
+            stats['no_updates'] += 1
 
+    open_cases = {c: d for (c, d) in cases.items() if d['status'] != 'Closed'}
+    weekly_closed_cases = {c: d for (c, d) in cases.items() if d['status'] == 'Closed' and
+    (today - datetime.datetime.strptime(d['closeddate'], '%Y-%m-%dT%H:%M:%SZ').date()).days < 7}
+    weekly_opened_cases = {c: d for (c, d) in cases.items() if d['status'] != 'Closed' and
+    (today - datetime.datetime.strptime(d['createdate'], '%Y-%m-%dT%H:%M:%SZ').date()).days < 7}
+    daily_closed_cases = {c: d for (c, d) in cases.items() if d['status'] == 'Closed' and
+    (today - datetime.datetime.strptime(d['closeddate'], '%Y-%m-%dT%H:%M:%SZ').date()).days < 1}
+    daily_opened_cases = {c: d for (c, d) in cases.items() if d['status'] != 'Closed' and
+    (today - datetime.datetime.strptime(d['createdate'], '%Y-%m-%dT%H:%M:%SZ').date()).days < 1}
+    stats['open_cases'] = len(open_cases)
+    stats['weekly_closed_cases'] = len(weekly_closed_cases)
+    stats['weekly_opened_cases'] = len(weekly_opened_cases)
+    stats['daily_closed_cases'] = len(daily_closed_cases)
+    stats['daily_opened_cases'] = len(daily_opened_cases)
+
+    all_bugs = {}
+    for case in bugs:
+        for case_bug in bugs[case]:
+            all_bugs[case_bug['bugzillaNumber']] = case_bug
+    
+    no_target = {b: d for (b, d) in all_bugs.items() if d['target_release'][0] == '---'}
+
+    stats['bugs']['unique'] = len(all_bugs)
+    stats['bugs']['no_target'] = len(no_target)
+    
+
+    end = time.time()
+    logging.warning("generated stats in {} seconds".format((end-start)))
+
+    return stats
 
 def main():
     print("libtelco5g")
