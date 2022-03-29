@@ -653,7 +653,7 @@ def generate_stats(case_type):
     engineers = [cards[card]['assignee']['displayName'] for card in cards]
     severities = [cards[card]['severity'] for card in cards]
     statuses = [cards[card]['case_status'] for card in cards]
-
+        
     stats = {
         'by_customer': {c:0 for c in customers},
         'by_engineer': {e:0 for e in engineers},
@@ -678,15 +678,15 @@ def generate_stats(case_type):
         engineer = cards[card]['assignee']['displayName']
         severity = cards[card]['severity']
         status = cards[card]['case_status']
-
+    
         stats['by_customer'][account] += 1
         stats['by_engineer'][engineer] += 1
         stats['by_severity'][severity] += 1
         stats['by_status'][status] += 1
-        
+            
         if cards[card]['escalated']:
             stats['escalated'] += 1
-        if cards[card]['case_status'] != 'Closed' and cards[card]['bugzilla'] == "None":
+        if cards[card]['bugzilla'] == "None":
             stats['no_bzs'] += 1
         
         if cards[card]['comments'] is not None:
@@ -705,6 +705,7 @@ def generate_stats(case_type):
     (today - datetime.datetime.strptime(d['closeddate'], '%Y-%m-%dT%H:%M:%SZ').date()).days < 1}
     daily_opened_cases = {c: d for (c, d) in cases.items() if d['status'] != 'Closed' and
     (today - datetime.datetime.strptime(d['createdate'], '%Y-%m-%dT%H:%M:%SZ').date()).days < 1}
+    
     stats['open_cases'] = len(open_cases)
     stats['weekly_closed_cases'] = len(weekly_closed_cases)
     stats['weekly_opened_cases'] = len(weekly_opened_cases)
