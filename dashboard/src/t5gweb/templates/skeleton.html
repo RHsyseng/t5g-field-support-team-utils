@@ -34,6 +34,28 @@
                    <path fill-rule="evenodd" d="M7.293 1.5a1 1 0 0 1 1.414 0l6.647 6.646a.5.5 0 0 1-.708.708L8 2.207 1.354 8.854a.5.5 0 1 1-.708-.708L7.293 1.5z"/>
                  </svg></a>
              </li>
+             <li class="nav-item dropdown">
+               <a class="nav-link dropdown-toggle active" href="#" id="navbarDropdown" role="button" data-bs-toggle="dropdown" aria-expanded="false">
+                 Tables
+               </a>
+               <ul class="dropdown-menu dropdown-menu-dark" aria-labelledby="navbarDropdown">
+                 <li><a class="dropdown-item" href="{{ url_for('ui.telco_severity') }}">Telco5G Updates</a></li>
+                 <li><a class="dropdown-item" href="{{ url_for('ui.cnv_severity') }}">CNV Updates</a></li>
+                 <li><a class="dropdown-item" href="{{ url_for('ui.telco_all_severity') }}">All Telco5g Cards</a></li>
+                 <li><a class="dropdown-item" href="{{ url_for('ui.cnv_all_severity') }}">All CNV Cards</a></li>
+               </ul>
+             </li>
+             <li class="nav-item dropdown">
+               <a class="nav-link dropdown-toggle active" href="#" id="navbarDropdown" role="button" data-bs-toggle="dropdown" aria-expanded="false">
+                 Reports
+               </a>
+               <ul class="dropdown-menu dropdown-menu-dark" aria-labelledby="navbarDropdown">
+                 <li><a class="dropdown-item" href="{{ url_for('ui.telco5g') }}">Telco5G Updates</a></li>
+                 <li><a class="dropdown-item" href="{{ url_for('ui.cnv') }}">CNV Updates</a></li>
+                 <li><a class="dropdown-item" href="{{ url_for('ui.all_telco5g') }}">All Telco5g Cards</a></li>
+                 <li><a class="dropdown-item" href="{{ url_for('ui.all_cnv') }}">All CNV Cards</a></li>
+               </ul>
+             </li>
              <li class="nav-item ms-2">
                <a role="button" class="btn btn-dark" href="{{ url_for('ui.trends') }}"><svg xmlns="http://www.w3.org/2000/svg" width="25" height="25" fill="currentColor" role="img" aria-label="Trends" class="bi bi-graph-up-arrow" viewBox="0 0 16 16">
                   <path fill-rule="evenodd" clip-rule="evenodd" d="M0 0h1v15h15v1H0V0Zm10 3.5a.5.5 0 0 1 .5-.5h4a.5.5 0 0 1 .5.5v4a.5.5 0 0 1-1 0V4.9l-3.613 4.417a.5.5 0 0 1-.74.037L7.06 6.767l-3.656 5.027a.5.5 0 0 1-.808-.588l4-5.5a.5.5 0 0 1 .758-.06l2.609 2.61L13.445 4H10.5a.5.5 0 0 1-.5-.5Z"/>
