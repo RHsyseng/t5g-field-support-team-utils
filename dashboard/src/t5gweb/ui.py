@@ -15,7 +15,8 @@ from t5gweb.libtelco5g import(
     cache_cases,
     cache_cards,
     cache_bz,
-    redis_get
+    redis_get,
+    generate_stats
 )
 
 BP = Blueprint('ui', __name__, url_prefix='/')
@@ -105,3 +106,13 @@ def cnv_all_severity():
     """Retrieves all cards and creates report"""
     load_data()
     return render_template('ui/table.html', now=load_data.now, new_comments=load_data.cnv_comments_all, page_title='all-cnv-severity')
+
+@BP.route('/stats/<string:case_type>')
+def get_stats(case_type):
+    """ generate some stats for a given case type"""
+    if case_type in ['telco5g', 'cnv']:
+        stats = generate_stats(case_type)
+        now = str(datetime.datetime.utcnow())
+        return render_template('ui/stats.html', now=now, stats=stats, page_title='stats/{}'.format(case_type))
+    else:
+        return {'error': 'unknown card type: {}'.format(case_type)}

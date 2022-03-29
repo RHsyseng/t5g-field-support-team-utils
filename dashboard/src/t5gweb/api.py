@@ -10,7 +10,8 @@ from t5gweb.libtelco5g import(
     cache_cards,
     cache_bz,
     cache_escalations,
-    redis_get
+    redis_get,
+    generate_stats
 )
 import json
 
@@ -28,7 +29,9 @@ def index():
         "{}cases/telco5g".format(request.base_url),
         "{}cases/cnv".format(request.base_url),
         "{}bugs".format(request.base_url),
-        "{}escalations".format(request.base_url)
+        "{}escalations".format(request.base_url),
+        "{}stats/telco5g".format(request.base_url),
+        "{}stats/cnv".format(request.base_url)
     ]}
     return endpoints
 
@@ -58,7 +61,7 @@ def get_cards(card_type):
         return telco_cards
     elif card_type == 'cnv':
         cards = redis_get('cards')
-        cnv_cards = {c:d for (c,d) in cards.items() if 'field' in d['labels']}
+        cnv_cards = {c:d for (c,d) in cards.items() if 'cnv' in d['labels']}
         return cnv_cards
     else:
         return {'error': 'unknown card type: {}'.format(card_type)}
@@ -88,3 +91,12 @@ def get_escalations():
     """Retrieves all escalations"""
     escalations = redis_get('escalations')
     return json.dumps(escalations)
+
+@BP.route('/stats/<string:case_type>')
+def get_stats(case_type):
+    if case_type in ['telco5g', 'cnv']:
+        return generate_stats(case_type)
+    else:
+        return {'error': 'unknown case type: {}'.format(case_type)}
+
+

@@ -1,0 +1,105 @@
+{% extends "skeleton.html" %}
+{% block title %}{{ page_title }}{% endblock %}
+{% block content %}
+<div class="container-fluid copy mt-5">
+    <h2>Overall Stats:</h2>
+    <table class="table table-bordered table-hover table-responsive mt-5 w-100" id="overall">
+        <thead>
+            <tr><th class="text-center">Metric</th><th class="text-center">Count</th></tr>
+        </thead>
+        <tbody class="list">
+                <tr>
+                    <td class="align-middle text-center">Open Cases</td>
+                    <td class="align-middle text-center">{{ stats['open_cases'] }}</td>
+                </tr>
+                <tr>
+                    <td class="align-middle text-center">Escalated Cases</td>
+                    <td class="align-middle text-center">{{ stats['escalated'] }}</td>
+                </tr>
+                <tr>
+                    <td class="align-middle text-center">Cased Opened in the Last Day / Week</td>
+                    <td class="align-middle text-center">{{ stats['daily_opened_cases'] }} / {{ stats['weekly_opened_cases'] }}</td>
+                </tr>
+                <tr>
+                    <td class="align-middle text-center">Cased Closed in the Last Day / Week</td>
+                    <td class="align-middle text-center">{{ stats['daily_closed_cases'] }} / {{ stats['weekly_closed_cases'] }}</td>
+                </tr>
+                <tr>
+                    <td class="align-middle text-center">Cases With No Updates In The Last Week</td>
+                    <td class="align-middle text-center">{{ stats['no_updates'] }}</td>
+                </tr>
+                <tr>
+                    <td class="align-middle text-center">Cases With No BZs Associated</td>
+                    <td class="align-middle text-center">{{ stats['no_bzs'] }}</td>
+                </tr>
+                <tr>
+                    <td class="align-middle text-center">Unique Bugs</td>
+                    <td class="align-middle text-center">{{ stats['bugs']['unique'] }}</td>
+                </tr>
+                <tr>
+                    <td class="align-middle text-center">Bugs With No Target</td>
+                    <td class="align-middle text-center">{{ stats['bugs']['no_target'] }}</td>
+        </tbody>
+    </table>
+    <br>
+    <h2>Breakdowns:</h2>
+    <table class="table table-bordered table-hover table-responsive mt-5 w-100" id="severity">
+        <thead>
+            <tr><th class="text-center">Severity</th><th class="text-center">Number of Cases</th></tr>
+        </thead>
+        <tbody class="list">
+                {% for severity in stats['by_severity'] %}
+                <tr>
+                    <td class="align-middle text-center">{{ severity }}</td>
+                    <td class="align-middle text-center">{{ stats['by_severity'][severity] }}</td>
+                </tr>
+                {% endfor %}
+        </tbody>
+    </table>
+    <table class="table table-bordered table-hover table-responsive mt-5 w-100" id="status">
+        <thead>
+            <tr><th class="text-center">Status</th><th class="text-center">Number of Cases</th></tr>
+        </thead>
+        <tbody class="list">
+                {% for status in stats['by_status'] %}
+                <tr>
+                    <td class="align-middle text-center">{{ status }}</td>
+                    <td class="align-middle text-center">{{ stats['by_status'][status] }}</td>
+                </tr>
+                {% endfor %}
+        </tbody>
+    </table>
+    <table class="table table-bordered table-hover table-responsive mt-5 w-100" id="customers">
+        <thead>
+            <tr><th class="text-center">Customer</th><th class="text-center">Number of Cases</th></tr>
+        </thead>
+        <tbody class="list">
+                {% for customer in stats['by_customer'] %}
+                <tr>
+                    <td class="align-middle text-center">{{ customer }}</td>
+                    <td class="align-middle text-center">{{ stats['by_customer'][customer] }}</td>
+                </tr>
+                {% endfor %}
+        </tbody>
+    </table>
+
+    <table class="table table-bordered table-hover table-responsive mt-5 w-100" id="engineers">
+        <thead>
+            <tr><th class="text-center">Engineer</th><th class="text-center">Number of Cases</th></tr>
+        </thead>
+        <tbody class="list">
+                {% for engineer in stats['by_engineer'] %}
+                <tr>
+                    <td class="align-middle text-center">{{ engineer }}</td>
+                    <td class="align-middle text-center">{{ stats['by_engineer'][engineer] }}</td>
+                </tr>
+                {% endfor %}
+        </tbody>
+    </table>
+</div>
+   <!-- Include jQuery + DataTables -->
+    <script type="text/javascript" charset="utf8" src="{{ url_for('static', filename='node_modules/jquery/dist/jquery.min.js') }}"></script>
+    <script type="text/javascript" charset="utf8" src="{{ url_for('static', filename='node_modules/datatables.net/js/jquery.dataTables.js') }}"></script>
+    <script type="text/javascript" charset="utf8" src="{{ url_for('static', filename='node_modules/datatables.net-bs5/js/dataTables.bootstrap5.min.js') }}"></script>
+    
+{% endblock %}
