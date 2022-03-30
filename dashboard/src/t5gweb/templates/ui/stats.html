@@ -43,7 +43,7 @@
     </table>
     <br>
     <h2>Breakdowns:</h2>
-    <table class="table table-bordered table-hover table-responsive mt-5 w-100" id="severity">
+    <table class="table table-bordered table-hover table-responsive mt-5 w-100 display" id="severity">
         <thead>
             <tr><th class="text-center">Severity</th><th class="text-center">Number of Cases</th></tr>
         </thead>
@@ -56,7 +56,7 @@
                 {% endfor %}
         </tbody>
     </table>
-    <table class="table table-bordered table-hover table-responsive mt-5 w-100" id="status">
+    <table class="table table-bordered table-hover table-responsive mt-5 w-100 display" id="status">
         <thead>
             <tr><th class="text-center">Status</th><th class="text-center">Number of Cases</th></tr>
         </thead>
@@ -69,7 +69,7 @@
                 {% endfor %}
         </tbody>
     </table>
-    <table class="table table-bordered table-hover table-responsive mt-5 w-100" id="customers">
+    <table class="table table-bordered table-hover table-responsive mt-5 w-100 display" id="customers">
         <thead>
             <tr><th class="text-center">Customer</th><th class="text-center">Number of Cases</th></tr>
         </thead>
@@ -83,7 +83,7 @@
         </tbody>
     </table>
 
-    <table class="table table-bordered table-hover table-responsive mt-5 w-100" id="engineers">
+    <table class="table table-bordered table-hover table-responsive mt-5 w-100 display" id="engineers">
         <thead>
             <tr><th class="text-center">Engineer</th><th class="text-center">Number of Cases</th></tr>
         </thead>
@@ -101,5 +101,27 @@
     <script type="text/javascript" charset="utf8" src="{{ url_for('static', filename='node_modules/jquery/dist/jquery.min.js') }}"></script>
     <script type="text/javascript" charset="utf8" src="{{ url_for('static', filename='node_modules/datatables.net/js/jquery.dataTables.js') }}"></script>
     <script type="text/javascript" charset="utf8" src="{{ url_for('static', filename='node_modules/datatables.net-bs5/js/dataTables.bootstrap5.min.js') }}"></script>
-    
+    <script type="text/javascript" charset="utf8" src="{{ url_for('static', filename='js/plugins.js') }}"></script>
+    <script>
+        // First table requires natural sort, so initialize separately
+            $(document).ready(function () {
+                $('#overall').DataTable({
+                    "paging": false,
+                    "info": false,
+                    "searching": false,
+                    columnDefs: [
+                        { type: 'natural-nohtml', targets: 1 }
+                    ]
+                });
+            });
+
+        // Other tables
+            $(document).ready(function () {
+                $('table.display').DataTable({
+                    "paging": false,
+                    "info": false,
+                    "searching": false,
+                })
+            });
+    </script>
 {% endblock %}
