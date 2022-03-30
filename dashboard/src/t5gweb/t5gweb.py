@@ -161,7 +161,6 @@ def init_cache():
     bugs = libtelco5g.redis_get('bugs')
     escalations = libtelco5g.redis_get('escalations')
     t5g_stats = libtelco5g.redis_get('telco5g_stats')
-    logging.warning("stats: {}".format(t5g_stats))
     cnv_stats = libtelco5g.redis_get('cnv_stats')
     if cases is None:
         logging.warning("no cases found in cache. refreshing...")
