@@ -20,13 +20,13 @@
                                     {% else %}
                                         <td class="align-middle text-center">No</td>
                                     {% endif %}
-                                    <td class="align-middle text-center">{{ new_comments[account][status][card]['summary'] }}</td>
+                                    <td class="align-middle">{{ new_comments[account][status][card]['summary'] }}</td>
                                     <td class="align-middle text-center">{{ new_comments[account][status][card]['product'] }}</td>
                                     <td class="align-middle text-center">{{ new_comments[account][status][card]['account'] }}</td>
                                     <td class="align-middle text-center">{{ new_comments[account][status][card]['case_status'] }}</td>
                                     <td class="align-middle text-center">{{ new_comments[account][status][card]['assignee']['displayName'] }}</td>
                                     <td class="align-middle text-center"><a href=https://issues.redhat.com/browse/{{ card }} target="_blank">{{ card }}</a></td>
-                                    <td class="align-middle text-center"><span class="fw-bold fst-italic">{{ new_comments[account][status][card]['comments'][-1][1][:10] }}</span> - {{ new_comments[account][status][card]['comments'][-1][0] | safe }}</td>
+                                    <td class="align-middle"><span class="fw-bold fst-italic">{{ new_comments[account][status][card]['comments'][-1][1][:10] }}</span> - {{ new_comments[account][status][card]['comments'][-1][0] | safe }}</td>
                                     {% if new_comments[account][status][card]['bugzilla'] != "None" and new_comments[account][status][card]['bugzilla'] | length == 1  %}
                                         <td class="align-middle text-center"><a href={{ new_comments[account][status][card]['bugzilla'][0]['bugzillaLink'] }} target="_blank">{{ new_comments[account][status][card]['bugzilla'][0]['bugzillaNumber'] }}</a></td>
                                     {% elif new_comments[account][status][card]['bugzilla'] == "None"%}
