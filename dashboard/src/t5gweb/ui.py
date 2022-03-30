@@ -113,7 +113,7 @@ def get_stats(case_type):
     if case_type in ['telco5g', 'cnv']:
         stats = generate_stats(case_type)
         historical_stats = redis_get("{}_stats".format(case_type))
-        logging.warning("all stats: {}".format(historical_stats))
+        
         x_values = [day for day in historical_stats]
         y_values = {
             'escalated': [],
@@ -136,8 +136,7 @@ def get_stats(case_type):
             y_values['bugs_unique'].append(stat['bugs']['unique'])
             y_values['bugs_no_tgt'].append(stat['bugs']['no_target'])
             
-        logging.warning("days: {}".format(x_values))
-        logging.warning("y: {}".format(y_values))
+        
         now = str(datetime.datetime.utcnow())
         return render_template('ui/stats.html', now=now, stats=stats, x_values=x_values, y_values=y_values, page_title='stats/{}'.format(case_type))
     else:
