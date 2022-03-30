@@ -103,25 +103,25 @@
     <script type="text/javascript" charset="utf8" src="{{ url_for('static', filename='node_modules/datatables.net-bs5/js/dataTables.bootstrap5.min.js') }}"></script>
     <script type="text/javascript" charset="utf8" src="{{ url_for('static', filename='js/plugins.js') }}"></script>
     <script>
-        // First table requires natural sort, so initialize separately
-            $(document).ready(function () {
-                $('#overall').DataTable({
-                    "paging": false,
-                    "info": false,
-                    "searching": false,
-                    columnDefs: [
-                        { type: 'natural-nohtml', targets: 1 }
-                    ]
-                });
+    // First table requires natural sort, so initialize separately
+        $(document).ready(function () {
+            $('#overall').DataTable({
+                "paging": false,
+                "info": false,
+                "searching": false,
+                columnDefs: [
+                    { type: 'natural-nohtml', targets: 1 }
+                ]
             });
+        });
 
-        // Other tables
-            $(document).ready(function () {
-                $('table.display').DataTable({
-                    "paging": false,
-                    "info": false,
-                    "searching": false,
-                })
-            });
+    // Other tables
+        $(document).ready(function () {
+            $('table.display').DataTable({
+                "paging": false,
+                "info": false,
+                "searching": false,
+            })
+        });
     </script>
 {% endblock %}

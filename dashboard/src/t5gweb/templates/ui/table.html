@@ -22,7 +22,7 @@
                                     {% endif %}
                                     <td class="align-middle">{{ new_comments[account][status][card]['summary'] }}</td>
                                     <td class="align-middle text-center">{{ new_comments[account][status][card]['product'] }}</td>
-                                    <td class="align-middle text-center">{{ new_comments[account][status][card]['account'] }}</td>
+                                    <td class="align-middle text-center">{{ new_comments[account][status][card]['account'] | replace(".", "")}}</td>
                                     <td class="align-middle text-center">{{ new_comments[account][status][card]['case_status'] }}</td>
                                     <td class="align-middle text-center">{{ new_comments[account][status][card]['assignee']['displayName'] }}</td>
                                     <td class="align-middle text-center"><a href=https://issues.redhat.com/browse/{{ card }} target="_blank">{{ card }}</a></td>
@@ -46,7 +46,12 @@
    <script type="text/javascript" charset="utf8" src="{{ url_for('static', filename='node_modules/datatables.net/js/jquery.dataTables.js') }}"></script>
    <script type="text/javascript" charset="utf8" src="{{ url_for('static', filename='node_modules/datatables.net-bs5/js/dataTables.bootstrap5.min.js') }}"></script>
    <script type="text/javascript" charset="utf8" src="{{ url_for('static', filename='js/plugins.js') }}"></script>
+   <script type="text/javascript" charset="utf8" src="{{ url_for('static', filename='node_modules/datatables.net-searchpanes/js/dataTables.searchPanes.min.js') }}"></script>
+   <script type="text/javascript" charset="utf8" src="{{ url_for('static', filename='node_modules/datatables.net-searchpanes-bs5/js/searchPanes.bootstrap5.min.js') }}"></script>
+   <script type="text/javascript" charset="utf8" src="{{ url_for('static', filename='node_modules/datatables.net-select/js/dataTables.select.min.js') }}"></script>
+
    <script>
+    // Insert Bugzilla Info and Comments into Child Rows
     function format(data) {
         let result = "<div class='card p-3'>"
         if (data.bugzilla != "None") {
@@ -64,6 +69,7 @@
     return result + "</div>";
     }
 
+    // Sort Severities Correctly
     $.fn.dataTable.ext.type.detect.unshift(
         function ( d ) {
             let d_text = jQuery(d).text();
@@ -84,6 +90,7 @@
         return 0;   
     };
 
+    //Initialize DataTable
     $(document).ready(function () {
         let searchOptions = $.fn.dataTable.ext.deepLink([
             'search.search', 'order', 'displayStart'
@@ -93,10 +100,15 @@
             "scrollX": true,
             "scrollY": "75vh",
             "order": [[2, "desc"], [3, "desc"]],
-            "lengthMenu": [[10, 25, 50, -1], [10, 25, 50, "All"]]
+            "lengthMenu": [[10, 25, 50, -1], [10, 25, 50, "All"]],
+            "searchPanes": {
+                columns: [3, 6],
+                initCollapsed: true
+            }
         };
         let table = $('#data').DataTable($.extend(options, searchOptions));
-
+        table.searchPanes.container().prependTo(table.table().container());
+        table.searchPanes.resizePanes();        
         // Add event listener for opening and closing details
         $('#data').on('click', 'td.dt-control', function () {
             let tr = $(this).closest('tr');
