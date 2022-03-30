@@ -64,6 +64,13 @@ def setup_scheduled_tasks(sender, **kwargs):
         tag_bz.s(),
         name='tag_bz',
     )
+    
+    # generate daily stats
+    sender.add_periodic_task(
+        crontab(hour='4', minute='11'), # every day at 4:11
+        cache_stats.s(),
+        name='cache_stats',
+    )
 
 @mgr.task
 def portal_jira_sync(job_type):
@@ -158,3 +165,10 @@ def tag_bz():
                 bz = bz_api.getbug(bug['bugzillaNumber'])
                 update = bz_api.build_update(internal_whiteboard="Telco:Case " + bugs.internal_whiteboard, minor_update=True)
                 bz_api.update_bugs([bz.id], update)
+
+@mgr.task
+def cache_stats():
+
+    for case_type in ['telco5g', 'cnv']:
+        logging.warning("job: cache {} stats".format(case_type))
+        libtelco5g.cache_stats(case_type)

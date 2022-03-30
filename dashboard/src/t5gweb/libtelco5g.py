@@ -673,11 +673,11 @@ def generate_stats(case_type):
         }
     }
 
-    for card in cards:
-        account = cards[card]['account']
-        engineer = cards[card]['assignee']['displayName']
-        severity = cards[card]['severity']
-        status = cards[card]['case_status']
+    for (card, data) in cards.items():
+        account = data['account']
+        engineer = data['assignee']['displayName']
+        severity = data['severity']
+        status = data['case_status']
     
         stats['by_customer'][account] += 1
         stats['by_engineer'][engineer] += 1
@@ -689,36 +689,27 @@ def generate_stats(case_type):
         if cards[card]['bugzilla'] == "None":
             stats['no_bzs'] += 1
         
-        if cards[card]['comments'] is not None:
-            comments = [comment for comment in cards[card]['comments'] if (today - datetime.datetime.strptime(comment[1], '%Y-%m-%dT%H:%M:%S.%f%z').date()).days > 7]
-            if len(comments) == 0:
-                stats['no_updates'] += 1
+    for (case, data) in cases.items():
+        if data['status'] == 'Closed':
+            if (today - datetime.datetime.strptime(data['closeddate'], '%Y-%m-%dT%H:%M:%SZ').date()).days < 7:
+                stats['weekly_closed_cases'] += 1
+            if (today - datetime.datetime.strptime(data['closeddate'], '%Y-%m-%dT%H:%M:%SZ').date()).days < 1:
+                stats['daily_closed_cases'] += 1
         else:
-            stats['no_updates'] += 1
-
-    open_cases = {c: d for (c, d) in cases.items() if d['status'] != 'Closed'}
-    weekly_closed_cases = {c: d for (c, d) in cases.items() if d['status'] == 'Closed' and
-    (today - datetime.datetime.strptime(d['closeddate'], '%Y-%m-%dT%H:%M:%SZ').date()).days < 7}
-    weekly_opened_cases = {c: d for (c, d) in cases.items() if d['status'] != 'Closed' and
-    (today - datetime.datetime.strptime(d['createdate'], '%Y-%m-%dT%H:%M:%SZ').date()).days < 7}
-    daily_closed_cases = {c: d for (c, d) in cases.items() if d['status'] == 'Closed' and
-    (today - datetime.datetime.strptime(d['closeddate'], '%Y-%m-%dT%H:%M:%SZ').date()).days < 1}
-    daily_opened_cases = {c: d for (c, d) in cases.items() if d['status'] != 'Closed' and
-    (today - datetime.datetime.strptime(d['createdate'], '%Y-%m-%dT%H:%M:%SZ').date()).days < 1}
+            stats['open_cases'] += 1
+            if (today - datetime.datetime.strptime(data['createdate'], '%Y-%m-%dT%H:%M:%SZ').date()).days < 7:
+                stats['weekly_opened_cases'] += 1
+            if (today - datetime.datetime.strptime(data['createdate'], '%Y-%m-%dT%H:%M:%SZ').date()).days < 1:
+                stats['daily_opened_cases'] += 1
+            if (today - datetime.datetime.strptime(data['last_update'], '%Y-%m-%dT%H:%M:%SZ').date()).days < 7:
+                stats['no_updates'] += 1
     
-    stats['open_cases'] = len(open_cases)
-    stats['weekly_closed_cases'] = len(weekly_closed_cases)
-    stats['weekly_opened_cases'] = len(weekly_opened_cases)
-    stats['daily_closed_cases'] = len(daily_closed_cases)
-    stats['daily_opened_cases'] = len(daily_opened_cases)
-
     all_bugs = {}
-    for case in bugs:
-        for case_bug in bugs[case]:
-            all_bugs[case_bug['bugzillaNumber']] = case_bug
-    
+    for (case, bzs) in bugs.items():
+        if case in cases:
+            for bug in bzs:
+                all_bugs[bug['bugzillaNumber']] = bug
     no_target = {b: d for (b, d) in all_bugs.items() if d['target_release'][0] == '---'}
-
     stats['bugs']['unique'] = len(all_bugs)
     stats['bugs']['no_target'] = len(no_target)
     
@@ -727,6 +718,17 @@ def generate_stats(case_type):
     logging.warning("generated stats in {} seconds".format((end-start)))
 
     return stats
+
+def cache_stats(case_type):
+
+    logging.warning("caching {} stats".format(case_type))
+    all_stats = redis_get('{}_stats'.format(case_type))
+    new_stats = generate_stats(case_type)
+    tstamp = datetime.datetime.utcnow()
+    today = tstamp.strftime('%Y-%m-%d')
+    stats = {today: new_stats}
+    all_stats.update(stats)
+    redis_set('{}_stats'.format(case_type), json.dumps(all_stats))
 
 def main():
     print("libtelco5g")
