@@ -67,8 +67,7 @@ def setup_scheduled_tasks(sender, **kwargs):
     
     # generate daily stats
     sender.add_periodic_task(
-        #crontab(hour='4', minute='11'), # every day at 4:11
-        crontab(hour='*', minute='*/5'),
+        crontab(hour='4', minute='11'), # every day at 4:11
         cache_stats.s(),
         name='cache_stats',
     )
