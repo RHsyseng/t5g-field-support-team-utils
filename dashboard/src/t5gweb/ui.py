@@ -16,7 +16,8 @@ from t5gweb.libtelco5g import(
     cache_cards,
     cache_bz,
     redis_get,
-    generate_stats
+    generate_stats,
+    plot_stats
 )
 
 BP = Blueprint('ui', __name__, url_prefix='/')
@@ -112,31 +113,7 @@ def get_stats(case_type):
     """ generate some stats for a given case type"""
     if case_type in ['telco5g', 'cnv']:
         stats = generate_stats(case_type)
-        historical_stats = redis_get("{}_stats".format(case_type))
-        
-        x_values = [day for day in historical_stats]
-        y_values = {
-            'escalated': [],
-            'open_cases': [],
-            'new_cases': [],
-            'closed_cases': [],
-            'no_updates': [],
-            'no_bzs': [],
-            'bugs_unique': [],
-            'bugs_no_tgt': []
-        }
-
-        for day, stat in historical_stats.items():
-            y_values['escalated'].append(stat['escalated'])
-            y_values['open_cases'].append(stat['open_cases'])
-            y_values['new_cases'].append(stat['daily_opened_cases'])
-            y_values['closed_cases'].append(stat['daily_closed_cases'])
-            y_values['no_updates'].append(stat['no_updates'])
-            y_values['no_bzs'].append(stat['no_bzs'])
-            y_values['bugs_unique'].append(stat['bugs']['unique'])
-            y_values['bugs_no_tgt'].append(stat['bugs']['no_target'])
-            
-        
+        x_values, y_values = plot_stats(case_type)        
         now = str(datetime.datetime.utcnow())
         return render_template('ui/stats.html', now=now, stats=stats, x_values=x_values, y_values=y_values, page_title='stats/{}'.format(case_type))
     else:
