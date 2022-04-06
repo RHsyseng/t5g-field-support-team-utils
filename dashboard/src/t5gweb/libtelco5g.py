@@ -578,7 +578,12 @@ def cache_cards(cfg):
         }
         tags = []
         if 'tags' in cases[case_number].keys():
-            tags = cases[case_number]['tags']
+            case_tags = cases[case_number]['tags']
+            if len(case_tags) == 1:
+                logging.warning("bad?")
+                tags = case_tags[0].split(';') # csv instead of a proper list
+            else:
+                tags = case_tags
         else: # assume telco
             tags = ['shift_telco5g']
         if 'bug' in cases[case_number].keys() and case_number in bugs.keys():
