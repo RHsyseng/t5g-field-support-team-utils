@@ -8,7 +8,7 @@ from t5gweb.t5gweb import (
 from t5gweb.libtelco5g import(
     cache_cases,
     cache_cards,
-    cache_bz,
+    cache_details,
     cache_escalations,
     cache_watchlist,
     redis_get,
@@ -25,6 +25,7 @@ def index():
         "{}refresh/cards".format(request.base_url),
         "{}refresh/cases".format(request.base_url),
         "{}refresh/bugs".format(request.base_url),
+        "{}refresh/details".format(request.base_url),
         "{}refresh/escalations".format(request.base_url),
         "{}refresh/watchlist".format(request.base_url),
         "{}cards/telco5g".format(request.base_url),
@@ -32,6 +33,7 @@ def index():
         "{}cases/telco5g".format(request.base_url),
         "{}cases/cnv".format(request.base_url),
         "{}bugs".format(request.base_url),
+        "{}details".format(request.base_url),
         "{}escalations".format(request.base_url),
         "{}stats/telco5g".format(request.base_url),
         "{}stats/cnv".format(request.base_url)
@@ -48,9 +50,9 @@ def refresh(data_type):
     elif data_type == 'cases':
         cache_cases(cfg)
         return {"caching cases":"ok"}
-    elif data_type == 'bugs':
-        cache_bz(cfg)
-        return {"caching bugs":"ok"}
+    elif data_type == 'details' or data_type == 'bugs':
+        cache_details(cfg)
+        return {"caching details":"ok"}
     elif data_type == 'escalations':
         cache_escalations(cfg)
         return {"caching escalations":"ok"}
@@ -104,6 +106,11 @@ def get_watched():
     watchlist = redis_get('watchlist')
     return json.dumps(watchlist)
 
+@BP.route('/details')
+def get_details():
+    """Retrieves CritSit and Group Name for each case"""
+    details = redis_get('details')
+    return json.dumps(details)
 
 @BP.route('/stats/<string:case_type>')
 def get_stats(case_type):

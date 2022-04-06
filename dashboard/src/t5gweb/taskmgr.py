@@ -44,11 +44,11 @@ def setup_scheduled_tasks(sender, **kwargs):
         name='case_sync',
     )
 
-    # update bugzilla cache
+    # update bugzilla/details cache
     sender.add_periodic_task(
         crontab(hour='*/12', minute='0'), # twice a day
-        cache_data.s('bugs'),
-        name='bz_sync',
+        cache_data.s('details'),
+        name='details_sync',
     )
 
     # update escalations cache
@@ -146,8 +146,8 @@ def cache_data(data_type):
         libtelco5g.cache_cases(cfg)
     elif data_type == 'cards':
         libtelco5g.cache_cards(cfg)
-    elif data_type == 'bugs':
-        libtelco5g.cache_bz(cfg)
+    elif data_type == 'details':
+        libtelco5g.cache_details(cfg)
     elif data_type == 'escalations':
         libtelco5g.cache_escalations(cfg)
     elif data_type == 'watchlist':
