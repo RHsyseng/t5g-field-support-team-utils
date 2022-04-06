@@ -537,6 +537,7 @@ def cache_cards(cfg):
     bugs = redis_get('bugs')
     escalations = redis_get('escalations')
     watchlist = redis_get('watchlist')
+    details = redis_get('details')
     logging.warning("attempting to connect to jira...")
     jira_conn = jira_connection(cfg)
     max_cards = cfg['max_jira_results']
@@ -593,6 +594,13 @@ def cache_cards(cfg):
             watched = True
         else:
             watched = False
+        if case_number in details.keys():
+            crit_sit = details[case_number]['crit_sit']
+            group_name = details[case_number]['group_name']
+        else:
+            crit_sit = False
+            group_name = "None"       
+
         jira_cards[card.key] = {
             "card_status": issue.fields.status.name,
             "account": cases[case_number]['account'],
@@ -608,7 +616,9 @@ def cache_cards(cfg):
             "escalated": escalated,
             "watched": watched,
             "product": cases[case_number]['product'],
-            "case_status": cases[case_number]['status']
+            "case_status": cases[case_number]['status'],
+            "crit_sit": crit_sit,
+            "group_name": group_name
         }
 
     end = time.time()
@@ -635,6 +645,57 @@ def cache_watchlist(cfg):
                 watchlist.append(caseNumber)
     
     redis_set('watchlist', json.dumps(watchlist))
+
+def cache_details(cfg):
+    '''Caches CritSit, CaseGroup, and Bugzillas from open cases'''
+    cases = redis_get('cases')
+    if cases is None:
+        redis_set('bugs', json.dumps(None))
+        redis_set('details', json.dumps(None))
+        return
+
+    bz_url = "bugzilla.redhat.com"
+    bz_api = bugzilla.Bugzilla(bz_url, api_key=cfg['bz_key'])
+    bz_dict = {}
+    token = get_token(cfg['offline_token'])
+    headers = {"Accept": "application/json", "Authorization": "Bearer " + token}
+    case_details = {}
+    logging.warning("getting all bugzillas and case details")
+    for case in cases:
+        if cases[case]['status'] != "Closed":
+            case_endpoint = "https://access.redhat.com/hydra/rest/v1/cases/" + case
+            r_case = requests.get(case_endpoint, headers=headers)
+            if r_case.status_code == 401:
+                token = get_token(cfg['offline_token'])
+                headers = {"Accept": "application/json", "Authorization": "Bearer " + token}
+                r_case = requests.get(case_endpoint, headers=headers)
+            if "critSit" in r_case.json():
+                crit_sit = r_case.json()['critSit']
+            else:
+                crit_sit = False
+            if "groupName" in r_case.json():
+                group_name = r_case.json()['groupName']
+            else:
+                group_name = "None"
+            
+            case_details[case] = {
+                "crit_sit": crit_sit,
+                "group_name": group_name
+            }
+            if "bug" in cases[case]:
+                bz_dict[case] = r_case.json()['bugzillas']
+
+            logging.warning("getting additional info via bugzilla API")
+    for case in bz_dict:
+        for bug in bz_dict[case]:
+            bugs = bz_api.getbug(bug['bugzillaNumber'])
+            bug['target_release'] = bugs.target_release
+            bug['assignee'] = bugs.assigned_to
+            bug['last_change_time'] = datetime.datetime.strftime(datetime.datetime.strptime(str(bugs.last_change_time), '%Y%m%dT%H:%M:%S'), '%Y-%m-%d') # convert from xmlrpc.client.DateTime to str and reformat
+            bug['internal_whiteboard'] = bugs.internal_whiteboard
+    
+    redis_set('bugs', json.dumps(bz_dict))
+    redis_set('details', json.dumps(case_details))
 
 def get_case_from_link(jira_conn, card):
 

@@ -15,7 +15,7 @@
                                     <td class="align-middle dt-control"></td>
                                     <td class="align-middle text-center"><a href=https://access.redhat.com/support/cases/#/case/{{new_comments[account][status][card]['case_number'] }} target="_blank">{{ new_comments[account][status][card]['case_number'] }}</a></td>
                                     <td class="align-middle text-center"><span class="badge severity {{ new_comments[account][status][card]['severity'] | lower() }}">{{ new_comments[account][status][card]['severity'] }}</span></td>
-                                    {% if new_comments[account][status][card]['escalated'] %}
+                                    {% if new_comments[account][status][card]['escalated'] or new_comments[account][status][card]['crit_sit'] or new_comments[account][status][card]['watched']%}
                                         <td class="align-middle text-center">Yes</td>
                                     {% else %}
                                         <td class="align-middle text-center">No</td>
