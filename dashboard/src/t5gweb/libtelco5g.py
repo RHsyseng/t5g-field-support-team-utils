@@ -580,7 +580,6 @@ def cache_cards(cfg):
         if 'tags' in cases[case_number].keys():
             case_tags = cases[case_number]['tags']
             if len(case_tags) == 1:
-                logging.warning("bad?")
                 tags = case_tags[0].split(';') # csv instead of a proper list
             else:
                 tags = case_tags
