@@ -20,7 +20,7 @@
                                     {% else %}
                                         <td class="align-middle text-center">No</td>
                                     {% endif %}
-                                    <td class="align-middle">{{ new_comments[account][status][card]['summary'] }}</td>
+                                    <td class="align-middle">{{ new_comments[account][status][card]['summary'] | replace("?", "")}}</td>
                                     <td class="align-middle text-center">{{ new_comments[account][status][card]['product'] }}</td>
                                     <td class="align-middle text-center">{{ new_comments[account][status][card]['account'] | replace(".", "")}}</td>
                                     <td class="align-middle text-center">{{ new_comments[account][status][card]['case_status'] }}</td>
