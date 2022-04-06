@@ -536,6 +536,7 @@ def cache_cards(cfg):
     cases = redis_get('cases')
     bugs = redis_get('bugs')
     escalations = redis_get('escalations')
+    watchlist = redis_get('watchlist')
     logging.warning("attempting to connect to jira...")
     jira_conn = jira_connection(cfg)
     max_cards = cfg['max_jira_results']
@@ -588,6 +589,10 @@ def cache_cards(cfg):
             escalated = True
         else:
             escalated = False
+        if case_number in watchlist:
+            watched = True
+        else:
+            watched = False
         jira_cards[card.key] = {
             "card_status": issue.fields.status.name,
             "account": cases[case_number]['account'],
@@ -601,6 +606,7 @@ def cache_cards(cfg):
             "bugzilla": bugzilla,
             "severity": re.search(r'[a-zA-Z]+', cases[case_number]['severity']).group(),
             "escalated": escalated,
+            "watched": watched,
             "product": cases[case_number]['product'],
             "case_status": cases[case_number]['status']
         }
@@ -609,6 +615,26 @@ def cache_cards(cfg):
     logging.warning("got {} cards in {} seconds".format(len(jira_cards), (end - start)))
     redis_set('cards', json.dumps(jira_cards))
     redis_set('timestamp', json.dumps(str(datetime.datetime.utcnow())))
+
+def cache_watchlist(cfg):
+
+    cases = redis_get('cases')
+    token = get_token(cfg['offline_token'])
+    num_cases = cfg['max_portal_results']
+    payload = {"rows": num_cases}
+    headers = {"Accept": "application/json", "Authorization": "Bearer " + token}
+    url = "https://access.redhat.com/hydra/rest/eh/escalations?highlight=true"
+    r = requests.get(url, headers=headers, params=payload)
+    
+    watchlist = []
+    for watched in r.json():
+        watched_cases = watched['cases']
+        for case in watched_cases:
+            caseNumber = case['caseNumber']
+            if caseNumber in cases:
+                watchlist.append(caseNumber)
+    
+    redis_set('watchlist', json.dumps(watchlist))
 
 def get_case_from_link(jira_conn, card):
 
@@ -659,7 +685,9 @@ def generate_stats(case_type):
         'by_engineer': {e:0 for e in engineers},
         'by_severity': {s:0 for s in severities},
         'by_status': {s:0 for s in statuses},
+        'high_prio': 0,
         'escalated': 0,
+        'watched': 0,
         'open_cases': 0,
         'weekly_closed_cases': 0,
         'weekly_opened_cases': 0,
@@ -683,36 +711,41 @@ def generate_stats(case_type):
         stats['by_engineer'][engineer] += 1
         stats['by_severity'][severity] += 1
         stats['by_status'][status] += 1
-            
-        if cards[card]['escalated']:
-            stats['escalated'] += 1
-        if cards[card]['bugzilla'] == "None":
-            stats['no_bzs'] += 1
+
+        if status != 'Closed':
+            if severity == "High" or severity == "Urgent":
+                stats['high_prio'] += 1
+            if cards[card]['escalated']:
+                stats['escalated'] += 1
+            if cards[card]['watched']:
+                stats['watched'] += 1
+            if cards[card]['bugzilla'] == "None":
+                stats['no_bzs'] += 1
         
     for (case, data) in cases.items():
         if data['status'] == 'Closed':
             if (today - datetime.datetime.strptime(data['closeddate'], '%Y-%m-%dT%H:%M:%SZ').date()).days < 7:
                 stats['weekly_closed_cases'] += 1
-            if (today - datetime.datetime.strptime(data['closeddate'], '%Y-%m-%dT%H:%M:%SZ').date()).days < 1:
+            if (today - datetime.datetime.strptime(data['closeddate'], '%Y-%m-%dT%H:%M:%SZ').date()).days <= 1:
                 stats['daily_closed_cases'] += 1
         else:
             stats['open_cases'] += 1
             if (today - datetime.datetime.strptime(data['createdate'], '%Y-%m-%dT%H:%M:%SZ').date()).days < 7:
                 stats['weekly_opened_cases'] += 1
-            if (today - datetime.datetime.strptime(data['createdate'], '%Y-%m-%dT%H:%M:%SZ').date()).days < 1:
+            if (today - datetime.datetime.strptime(data['createdate'], '%Y-%m-%dT%H:%M:%SZ').date()).days <= 1:
                 stats['daily_opened_cases'] += 1
             if (today - datetime.datetime.strptime(data['last_update'], '%Y-%m-%dT%H:%M:%SZ').date()).days < 7:
                 stats['no_updates'] += 1
     
     all_bugs = {}
     for (case, bzs) in bugs.items():
-        if case in cases:
+        if case in cases and cases[case]['status'] != 'Closed':
             for bug in bzs:
                 all_bugs[bug['bugzillaNumber']] = bug
     no_target = {b: d for (b, d) in all_bugs.items() if d['target_release'][0] == '---'}
     stats['bugs']['unique'] = len(all_bugs)
     stats['bugs']['no_target'] = len(no_target)
-    
+     
 
     end = time.time()
     logging.warning("generated stats in {} seconds".format((end-start)))
@@ -729,6 +762,43 @@ def cache_stats(case_type):
     stats = {today: new_stats}
     all_stats.update(stats)
     redis_set('{}_stats'.format(case_type), json.dumps(all_stats))
+
+def plot_stats(case_type):
+
+    historical_stats = redis_get("{}_stats".format(case_type))
+    x_values = [day for day in historical_stats]
+    y_values = {
+        'escalated': [],
+        'watched': [],
+        'open_cases': [],
+        'new_cases': [],
+        'closed_cases': [],
+        'no_updates': [],
+        'no_bzs': [],
+        'bugs_unique': [],
+        'bugs_no_tgt': [],
+        'high_prio': []
+        }
+    for day, stat in historical_stats.items():
+        y_values['escalated'].append(exists_or_zero(stat, 'escalated'))
+        y_values['watched'].append(exists_or_zero(stat, 'watched'))
+        y_values['open_cases'].append(exists_or_zero(stat, 'open_cases'))
+        y_values['new_cases'].append(exists_or_zero(stat, 'daily_opened_cases'))
+        y_values['closed_cases'].append(exists_or_zero(stat, 'daily_closed_cases'))
+        y_values['no_updates'].append(exists_or_zero(stat, 'no_updates'))
+        y_values['no_bzs'].append(exists_or_zero(stat, 'no_bzs'))
+        y_values['bugs_unique'].append(exists_or_zero(stat['bugs'], 'unique'))
+        y_values['bugs_no_tgt'].append(exists_or_zero(stat['bugs'], 'no_target'))
+        y_values['high_prio'].append(exists_or_zero(stat, 'high_prio'))
+    
+    return x_values, y_values
+        
+def exists_or_zero(data, key):
+    ''' hack for when a new data point is added, so history does not exist'''
+    if key in data.keys():
+        return data[key]
+    else:
+        return 0
 
 def main():
     print("libtelco5g")

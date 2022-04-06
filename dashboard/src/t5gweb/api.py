@@ -10,6 +10,7 @@ from t5gweb.libtelco5g import(
     cache_cards,
     cache_bz,
     cache_escalations,
+    cache_watchlist,
     redis_get,
     generate_stats
 )
@@ -24,6 +25,8 @@ def index():
         "{}refresh/cards".format(request.base_url),
         "{}refresh/cases".format(request.base_url),
         "{}refresh/bugs".format(request.base_url),
+        "{}refresh/escalations".format(request.base_url),
+        "{}refresh/watchlist".format(request.base_url),
         "{}cards/telco5g".format(request.base_url),
         "{}cards/cnv".format(request.base_url),
         "{}cases/telco5g".format(request.base_url),
@@ -51,6 +54,9 @@ def refresh(data_type):
     elif data_type == 'escalations':
         cache_escalations(cfg)
         return {"caching escalations":"ok"}
+    elif data_type == 'watchlist':
+        cache_watchlist(cfg)
+        return {"caching watchlist":"ok"}
 
 @BP.route('/cards/<string:card_type>')
 def get_cards(card_type):
@@ -91,6 +97,13 @@ def get_escalations():
     """Retrieves all escalations"""
     escalations = redis_get('escalations')
     return json.dumps(escalations)
+
+@BP.route('/watchlist')
+def get_watched():
+    """Retrieves all cases on the watchlist"""
+    watchlist = redis_get('watchlist')
+    return json.dumps(watchlist)
+
 
 @BP.route('/stats/<string:case_type>')
 def get_stats(case_type):
