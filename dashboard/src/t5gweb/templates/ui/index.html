@@ -7,10 +7,11 @@
     <h2>{{ new_t5g_cases | length }} <a href="{{ url_for('ui.telco5g') }}">Telco5G Cases</a> Opened in the Last 7 Days:</h2>
     <div class="copy">
         <table class="table table-borderless table-hover">
-        <th>case#</th><th>severity</th><th>summary</th>
+        <th>case#</th><th>account</th><th>severity</th><th>summary</th>
         {% for case in new_t5g_cases %}
         <tr>
             <td><a href=https://access.redhat.com/support/cases/#/case/{{ case }} target="_blank">{{ case }}</a></td>
+            <td>{{ new_t5g_cases[case]['account'] }}</td>
             <td>{{ new_t5g_cases[case]['severity'] }}</td>
             <td>{{ new_t5g_cases[case]['problem'] }}</td>
         </tr>
@@ -20,11 +21,12 @@
     <h2>{{ new_cnv_cases | length }} <a href="{{ url_for('ui.cnv') }}">CNV Cases</a> Opened in the Last 7 Days:</h2>
     <div class="copy">
         <table class="table table-borderless table-hover">
-        <th>case#</th><th>severity</th><th>summary</th>
+        <th>case#</th><th>account</th><th>severity</th><th>summary</th>
 
         {% for case in new_cnv_cases %}
         <tr>
             <td><a href=https://access.redhat.com/support/cases/#/case/{{ case }} target="_blank">{{ case }}</a></td>
+            <td>{{ new_cnv_cases[case]['account'] }}</td>
             <td>{{ new_cnv_cases[case]['severity'] }}</td>
             <td>{{ new_cnv_cases[case]['problem'] }}</td>
         </tr>
