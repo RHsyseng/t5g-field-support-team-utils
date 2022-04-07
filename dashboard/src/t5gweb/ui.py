@@ -108,6 +108,12 @@ def cnv_all_severity():
     load_data()
     return render_template('ui/table.html', now=load_data.now, new_comments=load_data.cnv_comments_all, page_title='all-cnv-severity')
 
+@BP.route('/updates/weeklyupdates')
+def weekly_updates():
+    """Retrieves cards and displays them plainly for easy copy/pasting and distribution"""
+    load_data()
+    return render_template('ui/weekly_report.html', now=load_data.now, new_comments=load_data.telco_comments, page_title='weekly-update')
+
 @BP.route('/stats/<string:case_type>')
 def get_stats(case_type):
     """ generate some stats for a given case type"""
