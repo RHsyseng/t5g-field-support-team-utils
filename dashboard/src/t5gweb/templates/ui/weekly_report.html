@@ -1,0 +1,60 @@
+{% extends "skeleton.html" %}
+{% block title %}{{ page_title }}{% endblock %}
+{% block content %}
+   <a id="top"></a>
+   <div class="container-fluid pt-2 ms-0">
+      <div class="row">
+         <div class="col">      
+            <div class="copy pt-5">
+              {% for account in new_comments %}
+                  <ul>
+                  <li>{{ account }}</li>
+                  {% if new_comments[account] != "No Updates" %}
+                     {% for status in new_comments[account] %}
+                        {% if new_comments[account][status] | length > 0 %}
+                        <ul>
+                           {% if status == "Code Review" or status == "Review" %}
+                              <li>Waiting On Engineering</li>
+                           {% elif status == "QE Review" or status == "Release Pending" %}
+                              <li>Waiting On Customer</li>
+                           {% else %}
+                              <li>{{ status }}</li>
+                           {% endif %}
+                              {% for details in new_comments[account][status] %}
+                                 <span class="anchor" id={{ new_comments[account][status][details]['case_number'] }}></span>
+                                 <ul class="highlight pe-3 pb-3">
+                                    <li class="header" id = {{ new_comments[account][status][details]['case_number'] }}><a href=https://access.redhat.com/support/cases/#/case/{{ new_comments[account][status][details]['case_number'] }} target="_blank">{{ new_comments[account][status][details]['case_number'] }}</a> | Severity: {{ new_comments[account][status][details]['severity'] }} {% if new_comments[account][status][details]['escalated'] %} | Escalated{% endif %} {% if new_comments[account][status][details]['watched'] %} |  WatchList{% endif %} | {{ new_comments[account][status][details]['summary'] }} | (Jira: <a href=https://issues.redhat.com/browse/{{ details }} target="_blank">{{ details }}</a>) | Product: {{ new_comments[account][status][details]['product'] }}</li>
+                                    <ul>
+                                       <li>Most Recent Comment: </li>
+                                       <ul>
+                                          <li class="text-break">{{ new_comments[account][status][details]['comments'][-1][1][:10] }} - {{ new_comments[account][status][details]['comments'][-1][0] | safe }}</li>
+                                       </ul>
+                                 </ul>
+                                 </ul>
+                              {% endfor %}
+                        </ul>
+                        {% endif %}
+                     {% endfor %}
+                  {% else %}
+                  <span class="anchor" id={{ account | replace(" ", "-") }}-no-update></span>
+                     <ul class="highlight">
+                        <li id={{ account | replace(" ", "-") }}-no-update>{{ new_comments[account] }}</li>
+                     </ul>
+                  {% endif %}
+                  </ul>
+               {% endfor %}
+            </div>
+         </div>
+      </div>
+   </div>
+   <script>
+      var clipboard = new ClipboardJS('.btn');
+      clipboard.on('success', function (e) {
+         console.log(e);
+      });
+
+      clipboard.on('error', function (e) {
+         console.log(e);
+      });
+   </script>
+{% endblock %}
