@@ -18,7 +18,7 @@ def check_cases(api_url, case_tag):
         sys.exit(1)
     cards = requests.get("{}/api/cards/{}".format(api_url, case_tag))
     if cases.status_code == 200:
-        open_cards = {c: d for (c, d) in cards.json().items() if d['card_status'] != 'Done'}
+        open_cards = {c: d for (c, d) in cards.json().items() if d['card_status'] not in ('Done', 'Won\'t Fix / Obsolete')}
     else:
         print("could not retrieve cards: {}".format(cards.status_code))
         sys.exit(1)
