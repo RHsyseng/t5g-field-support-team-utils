@@ -17,6 +17,7 @@ setup(
         'redis==4.1.4',
         'python_bugzilla==3.2.0',
         'celery==5.2.3',
-        'smartsheet-python-sdk==2.105.1'
+        'smartsheet-python-sdk==2.105.1',
+        'flower==1.0.0'
     ],
 )
