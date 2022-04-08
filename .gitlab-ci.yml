@@ -39,23 +39,26 @@ k8s_deploy:
   stage: deploy
   before_script:
   #Dashboard
-  - sed -i 's/OFFLINE_TOKEN/'"$Offline_token"'/g' dashboard/yaml/03_t5gweb-app-deployment.yml
-  - sed -i 's/JIRA_PASS/'"$Jira_Pass"'/g' dashboard/yaml/03_t5gweb-app-deployment.yml
-  - sed -i 's/BZ_KEY/'"$BZ_key"'/g' dashboard/yaml/03_t5gweb-app-deployment.yml
-  - sed -i 's/TELCO_TEAM/'"$Telco_team"'/g' dashboard/yaml/03_t5gweb-app-deployment.yml
-  - sed -i 's/TELCO_EMAIL/'"$Telco_email"'/g' dashboard/yaml/03_t5gweb-app-deployment.yml
-  - sed -i 's/CNV_TEAM/'"$CNV_team"'/g' dashboard/yaml/03_t5gweb-app-deployment.yml
-  - sed -i 's/CNV_EMAIL/'"$CNV_email"'/g' dashboard/yaml/03_t5gweb-app-deployment.yml
-  - sed -i 's/ALERT_EMAIL/'"$Alert_email"'/g' dashboard/yaml/03_t5gweb-app-deployment.yml
-  - sed -i 's/SLACK_TOKEN/'"$Slack_token"'/g' dashboard/yaml/03_t5gweb-app-deployment.yml
-  - sed -i 's/SLACK_CHANNEL/'"$Slack_channel"'/g' dashboard/yaml/03_t5gweb-app-deployment.yml
-  - sed -i 's/URL/'"$URL"'/g' dashboard/yaml/05_t5gweb-route.yml
-  - sed -i 's/SMARTSHEET_ACCESS_TOKEN/'"$Smartsheet_access_token"'/g' dashboard/yaml/03_t5gweb-app-deployment.yml
-  - sed -i 's/SHEET_ID/'"$Sheet_id"'/g' dashboard/yaml/03_t5gweb-app-deployment.yml
+  - sed -i 's/OFFLINE_TOKEN/'"$Offline_token"'/g' dashboard/yaml/*.yml
+  - sed -i 's/JIRA_PASS/'"$Jira_Pass"'/g' dashboard/yaml/*.yml
+  - sed -i 's/BZ_KEY/'"$BZ_key"'/g' dashboard/yaml/*.yml
+  - sed -i 's/TELCO_TEAM/'"$Telco_team"'/g' dashboard/yaml/*.yml
+  - sed -i 's/TELCO_EMAIL/'"$Telco_email"'/g' dashboard/yaml/*.yml
+  - sed -i 's/CNV_TEAM/'"$CNV_team"'/g' dashboard/yaml/*.yml
+  - sed -i 's/CNV_EMAIL/'"$CNV_email"'/g' dashboard/yaml/*.yml
+  - sed -i 's/ALERT_EMAIL/'"$Alert_email"'/g' dashboard/yaml/*.yml
+  - sed -i 's/SLACK_TOKEN/'"$Slack_token"'/g' dashboard/yaml/*.yml
+  - sed -i 's/SLACK_CHANNEL/'"$Slack_channel"'/g' dashboard/yaml/*.yml
+  - sed -i 's/APP_URL/'"$URL"'/g' dashboard/yaml/*.yml
+  - sed -i 's/TASKS_URL/'"$URL"'/g' dashboard/yaml/*.yml
+  - sed -i 's/SMARTSHEET_ACCESS_TOKEN/'"$Smartsheet_access_token"'/g' dashboard/yaml/*.yml
+  - sed -i 's/SHEET_ID/'"$Sheet_id"'/g' dashboard/yaml/*.yml
 
   script:
-  - kubectl apply -f dashboard/yaml/03_t5gweb-app-deployment.yml
+  - oc apply -f dashboard/yaml/03_t5gweb-app-deployment.yml
+  - oc apply -f dashboard/yaml/06_t5gweb-tasks-deployment.yml
   - oc apply -f dashboard/yaml/06_t5gweb-route.yml
+  - oc apply -f dashboard/yaml/08_t5gweb-tasks-route.yml
   rules:
   - if: '$CI_COMMIT_BRANCH == "master"'
   - if: '$CI_PIPELINE_SOURCE == "schedule"'

@@ -1,0 +1,66 @@
+---
+kind: Deployment
+apiVersion: apps/v1
+metadata:
+  name: t5gweb-tasks
+  namespace: t5g-web
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: t5gweb-tasks
+  template:
+    metadata:
+      labels:
+        app: t5gweb-tasks
+    spec:
+      containers:
+      - name: celery-worker
+        image: image-registry.openshift-image-registry.svc.cluster.local:5000/t5g-web/t5gweb:latest
+        imagePullPolicy: Always
+        command: [
+          "/bin/sh",
+          "-c",
+          "celery -A t5gweb.taskmgr worker -B -E -s /celery/tasks",
+          ]
+        env:
+        - name: offline_token
+          value: OFFLINE_TOKEN
+        - name: jira_pass
+          value: JIRA_PASS
+        - name: bz_key
+          value: BZ_KEY
+        - name: telco_team
+          value: TELCO_TEAM
+        - name: telco_email
+          value: TELCO_EMAIL
+        - name: cnv_team
+          value: CNV_TEAM
+        - name: cnv_email
+          value: CNV_EMAIL
+        - name: alert_email
+          value: ALERT_EMAIL
+        - name: slack_token
+          value: SLACK_TOKEN
+        - name: slack_channel
+          value: SLACK_CHANNEL
+        - name: max_to_create
+          value: 10
+        - name: smartsheet_access_token
+          value: SMARTSHEET_ACCESS_TOKEN
+        - name: sheet_id
+          value: SHEET_ID
+        volumeMounts:
+        - mountPath: /celery
+          name: task-vol
+      - name: celery-ui
+        image: image-registry.openshift-image-registry.svc.cluster.local:5000/devt5gweb/devt5gweb:latest
+        imagePullPolicy: Always
+        command: [
+          "/bin/sh",
+          "-c",
+          "celery -A t5gweb.taskmgr flower --address=0.0.0.0 --port=8080",
+          ]
+      volumes:
+      - name: task-vol
+        emptyDir: {}
