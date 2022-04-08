@@ -166,13 +166,14 @@ def tag_bz():
     logging.warning("tagging bugzillas")
     for case in bugs:
         for bug in bugs[case]:
-            if "telco" not in bz['internal_whiteboard'].lower():
-                bz = bz_api.getbug(bug['bugzillaNumber'])
-                update = bz_api.build_update(internal_whiteboard="Telco Telco:Case " + bugs.internal_whiteboard, minor_update=True)
+            bz = bz_api.getbug(bug['bugzillaNumber'])
+            if "telco" not in bz.internal_whiteboard.lower():
+                update = bz_api.build_update(internal_whiteboard="Telco Telco:Case " + bz.internal_whiteboard, minor_update=True)
+                logging.warning("tagging BZ:"+ bz.id)
                 bz_api.update_bugs([bz.id], update)
-            elif "telco:case" not in bz['internal_whiteboard'].lower():
-                bz = bz_api.getbug(bug['bugzillaNumber'])
-                update = bz_api.build_update(internal_whiteboard="Telco:Case " + bugs.internal_whiteboard, minor_update=True)
+            elif "telco:case" not in bz.internal_whiteboard.lower():
+                update = bz_api.build_update(internal_whiteboard="Telco:Case " + bz.internal_whiteboard, minor_update=True)
+                logging.warning("tagging BZ:"+ bz.id)
                 bz_api.update_bugs([bz.id], update)
 
 @mgr.task
