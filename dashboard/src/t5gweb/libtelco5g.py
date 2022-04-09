@@ -555,6 +555,7 @@ def cache_cards(cfg):
 
     jira_query = 'sprint=' + str(sprint.id) + ' AND (labels = "field" OR labels = "cnv")'
     card_list = jira_conn.search_issues(jira_query, 0, max_cards).iterable
+    time_now = datetime.datetime.now(datetime.timezone.utc)
 
     jira_cards = {}
     for card in card_list:
@@ -623,7 +624,9 @@ def cache_cards(cfg):
             "product": cases[case_number]['product'],
             "case_status": cases[case_number]['status'],
             "crit_sit": crit_sit,
-            "group_name": group_name
+            "group_name": group_name,
+            "case_updated_date": cases[case_number]['last_update'],
+            "case_days_open": (time_now.replace(tzinfo=None) - datetime.datetime.strptime(cases[case_number]['createdate'], '%Y-%m-%dT%H:%M:%SZ')).days
         }
 
     end = time.time()
