@@ -164,17 +164,22 @@ def tag_bz():
     bz_api = bugzilla.Bugzilla(bz_url, api_key=cfg['bz_key'])
     bugs = libtelco5g.redis_get('bugs')
     logging.warning("tagging bugzillas")
+    i = 0
     for case in bugs:
+        if i > 10:
+            break
         for bug in bugs[case]:
             bz = bz_api.getbug(bug['bugzillaNumber'])
             if "telco" not in bz.internal_whiteboard.lower():
                 update = bz_api.build_update(internal_whiteboard="Telco Telco:Case " + bz.internal_whiteboard, minor_update=True)
-                logging.warning("tagging BZ:"+ bz.id)
+                logging.warning("tagging BZ:" + str(bz.id))
                 bz_api.update_bugs([bz.id], update)
+                i+=1
             elif "telco:case" not in bz.internal_whiteboard.lower():
                 update = bz_api.build_update(internal_whiteboard="Telco:Case " + bz.internal_whiteboard, minor_update=True)
-                logging.warning("tagging BZ:"+ bz.id)
+                logging.warning("tagging BZ:" + str(bz.id))
                 bz_api.update_bugs([bz.id], update)
+                i+=1
 
 @mgr.task
 def cache_stats():
