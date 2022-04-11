@@ -60,7 +60,7 @@ def setup_scheduled_tasks(sender, **kwargs):
 
     # tag bugzillas with 'Telco' and/or 'Telco:Case'
     sender.add_periodic_task(
-        crontab(hour='*/24', minute='33'), # once a day + 33 for randomness
+        crontab(hour='*', minute='60'), # once an hour for testing
         tag_bz.s(),
         name='tag_bz',
     )
@@ -162,24 +162,27 @@ def tag_bz():
     bz_url = "bugzilla.redhat.com"
     cfg = t5gweb.set_cfg()
     bz_api = bugzilla.Bugzilla(bz_url, api_key=cfg['bz_key'])
+    cases = libtelco5g.redis_get("cases")
+    telco_cases = [case for case in cases if "shift_telco5g" in cases[case]['tags']]
     bugs = libtelco5g.redis_get('bugs')
     logging.warning("tagging bugzillas")
     i = 0
     for case in bugs:
         if i > 10:
             break
-        for bug in bugs[case]:
-            bz = bz_api.getbug(bug['bugzillaNumber'])
-            if "telco" not in bz.internal_whiteboard.lower():
-                update = bz_api.build_update(internal_whiteboard="Telco Telco:Case " + bz.internal_whiteboard, minor_update=True)
-                logging.warning("tagging BZ:" + str(bz.id))
-                bz_api.update_bugs([bz.id], update)
-                i+=1
-            elif "telco:case" not in bz.internal_whiteboard.lower():
-                update = bz_api.build_update(internal_whiteboard="Telco:Case " + bz.internal_whiteboard, minor_update=True)
-                logging.warning("tagging BZ:" + str(bz.id))
-                bz_api.update_bugs([bz.id], update)
-                i+=1
+        if case in telco_cases:
+            for bug in bugs[case]:
+                bz = bz_api.getbug(bug['bugzillaNumber'])
+                if "telco" not in bz.internal_whiteboard.lower():
+                    update = bz_api.build_update(internal_whiteboard="Telco Telco:Case " + bz.internal_whiteboard, minor_update=True)
+                    logging.warning("tagging BZ:" + str(bz.id))
+                    bz_api.update_bugs([bz.id], update)
+                    i+=1
+                elif "telco:case" not in bz.internal_whiteboard.lower():
+                    update = bz_api.build_update(internal_whiteboard="Telco:Case " + bz.internal_whiteboard, minor_update=True)
+                    logging.warning("tagging BZ:" + str(bz.id))
+                    bz_api.update_bugs([bz.id], update)
+                    i+=1
 
 @mgr.task
 def cache_stats():
