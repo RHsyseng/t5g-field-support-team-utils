@@ -15,7 +15,7 @@
                                     <td class="align-middle dt-control"></td>
                                     <td class="align-middle text-center"><a href=https://access.redhat.com/support/cases/#/case/{{new_comments[account][status][card]['case_number'] }} target="_blank">{{ new_comments[account][status][card]['case_number'] }}</a></td>
                                     <td class="align-middle text-center"><span class="badge severity {{ new_comments[account][status][card]['severity'] | lower() }}">{{ new_comments[account][status][card]['severity'] }}</span></td>
-                                    {% if new_comments[account][status][card]['escalated'] or new_comments[account][status][card]['crit_sit'] or new_comments[account][status][card]['watched']%}
+                                    {% if new_comments[account][status][card]['escalated'] or new_comments[account][status][card]['crit_sit'] or new_comments[account][status][card]['watched'] %}
                                         <td class="align-middle text-center">Yes</td>
                                     {% else %}
                                         <td class="align-middle text-center">No</td>
@@ -25,10 +25,10 @@
                                     {% else %}
                                         <td class="align-middle text-center">No</td>
                                     {% endif %}
-                                    <td class="align-middle">{{ new_comments[account][status][card]['summary'] | replace("?", "") }}</td>
+                                    <td class="align-middle">{{ new_comments[account][status][card]['summary'] }}</td>
                                     <td class="align-middle text-center">{{ new_comments[account][status][card]['product'] }}</td>
                                     <td class="align-middle text-center">{{ new_comments[account][status][card]['group_name'] }}</td>
-                                    <td class="align-middle text-center">{{ new_comments[account][status][card]['account'] | replace(".", "")}}</td>
+                                    <td class="align-middle text-center">{{ new_comments[account][status][card]['account'] }}</td>
                                     <td class="align-middle text-center">{{ new_comments[account][status][card]['case_status'] }}</td>
                                     <td class="align-middle text-center">{{ new_comments[account][status][card]['assignee']['displayName'] }}</td>
                                     <td class="align-middle text-center"><a href=https://issues.redhat.com/browse/{{ card }} target="_blank">{{ card }}</a></td>
@@ -80,13 +80,19 @@
     // Sort Severities Correctly
     $.fn.dataTable.ext.type.detect.unshift(
         function ( d ) {
-            let d_text = jQuery(d).text();
+            let d_text;
+            d = String(d);
+            if (d.includes("Low") || d.includes("Normal") || d.includes("High") || d.includes("Urgent")) {
+                d_text = jQuery(d).text();
+            } else {
+                d_text = d;
+            }
             return d_text == 'Low' || d_text == 'Normal' || d_text == 'High' || d_text == 'Urgent' ?
                 'severity-grade' :
                 null;
         }
     );
- 
+
     $.fn.dataTable.ext.type.order['severity-grade-pre'] = function ( d ) {
         let d_text = jQuery(d).text();
         switch ( d_text ) {

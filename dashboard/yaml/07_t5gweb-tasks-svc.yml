@@ -2,15 +2,15 @@
 apiVersion: v1
 kind: Service
 metadata:
-  name: t5gweb-app
+  name: t5gweb-tasks
   namespace: t5g-web
   labels:
-    app: t5gweb-app
+    app: t5gweb-tasks
 spec:
   ports:
   - port: 80
-    name: t5gweb-app-http
+    name: t5gweb-tasks-http
     protocol: TCP
     targetPort: 8080
   selector:
-    app: t5gweb-app
+    app: t5gweb-tasks

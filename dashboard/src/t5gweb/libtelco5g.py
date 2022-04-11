@@ -458,7 +458,12 @@ def cache_cases(cfg):
         cases[case["case_number"]]["bug"] = case["case_bugzillaNumber"]
     # Sometimes there is no tag attached to the case
     if "case_tags" in case:
-        cases[case["case_number"]]["tags"] = case["case_tags"]
+        case_tags = case["case_tags"]
+        if len(case_tags) == 1:
+            tags = case_tags[0].split(';') # csv instead of a proper list
+        else:
+            tags = case_tags
+        cases[case["case_number"]]["tags"] = tags
     else: # assume. came from query, so probably telco
         cases[case["case_number"]]["tags"] = ['shift_telco5g']
     # Sometimes there is no closed date attached to the case
@@ -579,12 +584,7 @@ def cache_cards(cfg):
         }
         tags = []
         if 'tags' in cases[case_number].keys():
-            case_tags = cases[case_number]['tags']
-            if len(case_tags) == 1:
-                logging.warning("bad?")
-                tags = case_tags[0].split(';') # csv instead of a proper list
-            else:
-                tags = case_tags
+            tags = cases[case_number]['tags']
         else: # assume telco
             tags = ['shift_telco5g']
         if 'bug' in cases[case_number].keys() and case_number in bugs.keys():
