@@ -5,7 +5,7 @@
     <table class="table table-bordered table-hover table-responsive mt-5 w-100" id="data">
         <caption style="caption-side: top; text-align: center;">Note: Use shift+click to sort by multiple columns</caption>
         <thead>
-            <tr><th></th><th class="text-center">Case#</th><th class="text-center">Severity</th><th class="text-center">Escalated?</th><th class="text-center">On Watchlist?</th><th class="text-center">Summary</th><th class="text-center">Product</th><th class="text-center">Account</th><th class="text-center">Status</th><th class="text-center">Assignee</th><th class="text-center">Jira</th><th class="text-center">Most Recent Comment</th><th class="text-center">Bugzillas</th><th>Days Open</th><th>Case Last Updated</th></tr>
+            <tr><th></th><th class="text-center">Case#</th><th class="text-center">Severity</th><th class="text-center">Escalated?</th><th class="text-center">On Watchlist?</th><th class="text-center">Summary</th><th class="text-center">Product</th><th class="text-center">Case Group</th><th class="text-center">Account</th><th class="text-center">Status</th><th class="text-center">Assignee</th><th class="text-center">Jira</th><th class="text-center">Most Recent Comment</th><th class="text-center">Bugzillas</th><th class="text-center">Days Open</th><th class="text-center">Case Last Updated</th></tr>
         </thead>
         <tbody class="list">
                 {% for account in new_comments %}
@@ -27,6 +27,7 @@
                                     {% endif %}
                                     <td class="align-middle">{{ new_comments[account][status][card]['summary'] | replace("?", "") }}</td>
                                     <td class="align-middle text-center">{{ new_comments[account][status][card]['product'] }}</td>
+                                    <td class="align-middle text-center">{{ new_comments[account][status][card]['group_name'] }}</td>
                                     <td class="align-middle text-center">{{ new_comments[account][status][card]['account'] | replace(".", "")}}</td>
                                     <td class="align-middle text-center">{{ new_comments[account][status][card]['case_status'] }}</td>
                                     <td class="align-middle text-center">{{ new_comments[account][status][card]['assignee']['displayName'] }}</td>

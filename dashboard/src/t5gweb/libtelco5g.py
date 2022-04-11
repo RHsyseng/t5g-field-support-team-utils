@@ -625,7 +625,7 @@ def cache_cards(cfg):
             "case_status": cases[case_number]['status'],
             "crit_sit": crit_sit,
             "group_name": group_name,
-            "case_updated_date": cases[case_number]['last_update'],
+            "case_updated_date": datetime.datetime.strftime(datetime.datetime.strptime(cases[case_number]['last_update'], '%Y-%m-%dT%H:%M:%SZ'), '%Y-%m-%d %H:%M'),
             "case_days_open": (time_now.replace(tzinfo=None) - datetime.datetime.strptime(cases[case_number]['createdate'], '%Y-%m-%dT%H:%M:%SZ')).days
         }
 
