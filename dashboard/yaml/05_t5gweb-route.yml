@@ -9,7 +9,7 @@ metadata:
     haproxy.router.openshift.io/timeout: 10m
   namespace: t5g-web
 spec:
-  host: APP_URL
+  host: URL
   to:
     kind: Service
     name: t5gweb-app
