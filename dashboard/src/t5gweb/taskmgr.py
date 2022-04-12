@@ -162,18 +162,22 @@ def tag_bz():
     bz_url = "bugzilla.redhat.com"
     cfg = t5gweb.set_cfg()
     bz_api = bugzilla.Bugzilla(bz_url, api_key=cfg['bz_key'])
+    cases = libtelco5g.redis_get("cases")
+    telco_cases = [case for case in cases if "shift_telco5g" in cases[case]['tags']]
     bugs = libtelco5g.redis_get('bugs')
     logging.warning("tagging bugzillas")
     for case in bugs:
-        for bug in bugs[case]:
-            if "telco" not in bz['internal_whiteboard'].lower():
+        if case in telco_cases:
+            for bug in bugs[case]:
                 bz = bz_api.getbug(bug['bugzillaNumber'])
-                update = bz_api.build_update(internal_whiteboard="Telco Telco:Case " + bugs.internal_whiteboard, minor_update=True)
-                bz_api.update_bugs([bz.id], update)
-            elif "telco:case" not in bz['internal_whiteboard'].lower():
-                bz = bz_api.getbug(bug['bugzillaNumber'])
-                update = bz_api.build_update(internal_whiteboard="Telco:Case " + bugs.internal_whiteboard, minor_update=True)
-                bz_api.update_bugs([bz.id], update)
+                if "telco" not in bz.internal_whiteboard.lower():
+                    update = bz_api.build_update(internal_whiteboard="Telco Telco:Case " + bz.internal_whiteboard, minor_update=True)
+                    logging.warning("tagging BZ:" + str(bz.id))
+                    bz_api.update_bugs([bz.id], update)
+                elif "telco:case" not in bz.internal_whiteboard.lower():
+                    update = bz_api.build_update(internal_whiteboard="Telco:Case " + bz.internal_whiteboard, minor_update=True)
+                    logging.warning("tagging BZ:" + str(bz.id))
+                    bz_api.update_bugs([bz.id], update)
 
 @mgr.task
 def cache_stats():
