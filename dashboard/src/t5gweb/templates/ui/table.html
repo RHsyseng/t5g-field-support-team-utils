@@ -5,7 +5,28 @@
     <table class="table table-bordered table-hover table-responsive mt-5 w-100" id="data">
         <caption style="caption-side: top; text-align: center;">Note: Use shift+click to sort by multiple columns</caption>
         <thead>
-            <tr><th></th><th class="text-center">Case#</th><th class="text-center">Severity</th><th class="text-center">On Prio-list?</th><th class="text-center">On Watchlist?</th><th class="text-center">Crit Sit?</th><th class="text-center">Summary</th><th class="text-center">Product</th><th class="text-center">Case Group</th><th class="text-center">Account</th><th class="text-center">Status</th><th class="text-center">Assignee</th><th class="text-center">Jira</th><th class="text-center">Most Recent Comment</th><th class="text-center">Bugzillas</th><th class="text-center">Days Open</th><th class="text-center">Case Last Updated</th></tr>
+            <tr>
+                <th rowspan="2"></th>
+                <th rowspan="2" class="text-center">Case#</th>
+                <th rowspan="2" class="text-center">Severity</th>
+                <th colspan="3" class="text-center">Escalations</th>
+                <th rowspan="2" class="text-center">Summary</th>
+                <th rowspan="2" class="text-center">Product</th>
+                <th rowspan="2" class="text-center">Case Group</th>
+                <th rowspan="2" class="text-center">Account</th>
+                <th rowspan="2" class="text-center">Status</th>
+                <th rowspan="2" class="text-center">Assignee</th>
+                <th rowspan="2" class="text-center">Jira</th>
+                <th rowspan="2" class="text-center">Most Recent Comment</th>
+                <th rowspan="2" class="text-center">Bugzillas</th>
+                <th rowspan="2" class="text-center">Days Open</th>
+                <th rowspan="2" class="text-center">Case Last Updated</th>
+            </tr>
+            <tr>
+                <th class="text-center">On Prio-list?</th>
+                <th class="text-center">On Watchlist?</th>
+                <th class="text-center">Crit Sit?</th>
+            </tr>
         </thead>
         <tbody class="list">
                 {% for account in new_comments %}
@@ -15,7 +36,7 @@
                                     <td class="align-middle dt-control"></td>
                                     <td class="align-middle text-center"><a href=https://access.redhat.com/support/cases/#/case/{{new_comments[account][status][card]['case_number'] }} target="_blank">{{ new_comments[account][status][card]['case_number'] }}</a></td>
                                     <td class="align-middle text-center"><span class="badge severity {{ new_comments[account][status][card]['severity'] | lower() }}">{{ new_comments[account][status][card]['severity'] }}</span></td>
-                                    {% if new_comments[account][status][card]['escalated'] or new_comments[account][status][card]['crit_sit'] or new_comments[account][status][card]['watched'] %}
+                                    {% if new_comments[account][status][card]['escalated'] %}
                                         <td class="align-middle text-center">Yes</td>
                                     {% else %}
                                         <td class="align-middle text-center">No</td>
@@ -118,11 +139,22 @@
             "pageLength": 50,
             "scrollX": true,
             "scrollY": "75vh",
-            "order": [[2, "desc"], [3, "desc"]],
+            "order": [[2, "desc"], [3, "desc"], [4, "desc"], [5, "desc"]],
             "lengthMenu": [[10, 25, 50, -1], [10, 25, 50, "All"]],
             "searchPanes": {
-                columns: [3, 9],
-                initCollapsed: true
+                order: ['On Prio-list?', 'On Watchlist?', 'Crit Sit?', 'Escalated?', 'Account'],
+                columns: [3, 4, 5, 9],
+                initCollapsed: true,
+                panes: [{
+                    name: 'Escalated?',
+                    header: 'Escalated?',
+                    options: [{
+                        label: 'Cases on Prio-list or Watchlist or Crit Sit',
+                        value: function (rowData, rowIdx) {
+                            return rowData[3] === 'Yes' || rowData[4] === 'Yes' || rowData[5] === 'Yes';
+                        }
+                    }]
+                }]
             }
         };
         let table = $('#data').DataTable($.extend(options, searchOptions));
