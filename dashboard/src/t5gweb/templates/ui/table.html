@@ -89,9 +89,9 @@
     function format(data) {
         let result = "<div class='card p-3'>"
         if (data.bugzilla != "None") {
-            result += '<h3>Bugzillas</h3><table class="table table-bordered table-hover table-responsive w-100"><thead><tr><th>#</th><th>Summary</th><th>Target Release</th><th>Assignee</th><th>Last Updated</th><th>Status</th></tr></thead><tbody>';
+            result += '<h3>Bugzillas</h3><table class="table table-bordered table-hover table-responsive w-100"><thead><tr><th>#</th><th>Summary</th><th>Target Release</th><th>Assignee</th><th>QA Contact</th><th>Last Updated</th><th>Status</th></tr></thead><tbody>';
             for (let bug = 0; bug < data.bugzilla.length; bug++) {
-                result += '<tr><td><a href="' + data.bugzilla[bug].bugzillaLink + '" target="_blank">' + data.bugzilla[bug].bugzillaNumber + '</a></td><td>' + data.bugzilla[bug].summary  + '</td><td>' + data.bugzilla[bug].target_release[0] + '</td><td>' + data.bugzilla[bug].assignee + '</td><td>' + data.bugzilla[bug].last_change_time + '</td><td>' + data.bugzilla[bug].status + '</td></tr>';
+                result += '<tr><td><a href="' + data.bugzilla[bug].bugzillaLink + '" target="_blank">' + data.bugzilla[bug].bugzillaNumber + '</a></td><td>' + data.bugzilla[bug].summary  + '</td><td>' + data.bugzilla[bug].target_release[0] + '</td><td>' + data.bugzilla[bug].assignee + '</td><td>' + data.bugzilla[bug].qa_contact + '</td><td>' + data.bugzilla[bug].last_change_time + '</td><td>' + data.bugzilla[bug].status + '</td></tr>';
             }
             result += '</tbody></table>';
         }
