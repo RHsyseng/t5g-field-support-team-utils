@@ -5,7 +5,7 @@
     <table class="table table-bordered table-hover table-responsive mt-5 w-100" id="data">
         <caption style="caption-side: top; text-align: center;">Note: Use shift+click to sort by multiple columns</caption>
         <thead>
-            <tr><th></th><th class="text-center">Case#</th><th class="text-center">Severity</th><th class="text-center">Escalated?</th><th class="text-center">On Watchlist?</th><th class="text-center">Crit Sit?</th><th class="text-center">Summary</th><th class="text-center">Product</th><th class="text-center">Case Group</th><th class="text-center">Account</th><th class="text-center">Status</th><th class="text-center">Assignee</th><th class="text-center">Jira</th><th class="text-center">Most Recent Comment</th><th class="text-center">Bugzillas</th><th class="text-center">Days Open</th><th class="text-center">Case Last Updated</th></tr>
+            <tr><th></th><th class="text-center">Case#</th><th class="text-center">Severity</th><th class="text-center">On Prio-list?</th><th class="text-center">On Watchlist?</th><th class="text-center">Crit Sit?</th><th class="text-center">Summary</th><th class="text-center">Product</th><th class="text-center">Case Group</th><th class="text-center">Account</th><th class="text-center">Status</th><th class="text-center">Assignee</th><th class="text-center">Jira</th><th class="text-center">Most Recent Comment</th><th class="text-center">Bugzillas</th><th class="text-center">Days Open</th><th class="text-center">Case Last Updated</th></tr>
         </thead>
         <tbody class="list">
                 {% for account in new_comments %}
@@ -121,7 +121,7 @@
             "order": [[2, "desc"], [3, "desc"]],
             "lengthMenu": [[10, 25, 50, -1], [10, 25, 50, "All"]],
             "searchPanes": {
-                columns: [3, 7],
+                columns: [3, 9],
                 initCollapsed: true
             }
         };
