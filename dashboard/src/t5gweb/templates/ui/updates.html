@@ -59,13 +59,14 @@
                                              <div class="table-responsive">
                                                 <table class="table table-hover w-100">
                                                    <thead>
-                                                      <tr><th>#</th><th>Summary</th><th>Target Release</th><th>Assignee</th><th>Last Updated</th><th>Status</th></tr></thead>
+                                                      <tr><th>#</th><th>Summary</th><th>Target Release</th><th>Assignee</th><th>QA Contact</th></th><th>Last Updated</th><th>Status</th></tr></thead>
                                                       <tbody>
                                                          {% for bug in new_comments[account][status][details]['bugzilla'] %}
                                                          <tr><td><a href="{{ bug['bugzillaLink'] }}" target="_blank">{{ bug['bugzillaNumber'] }}</a></td>
                                                             <td>{{ bug['summary'] }}</td>
                                                             <td>{{ bug['target_release'][0] }}</td>
                                                             <td>{{ bug['assignee'] }}</td>
+                                                            <td>{{ bug['qa_contact'] }}</td>
                                                             <td>{{ bug['last_change_time'] }}</td>
                                                             <td>{{ bug['status'] }}</td>
                                                          </tr>

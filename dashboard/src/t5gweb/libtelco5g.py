@@ -693,7 +693,7 @@ def cache_details(cfg):
             if "bug" in cases[case]:
                 bz_dict[case] = r_case.json()['bugzillas']
 
-            logging.warning("getting additional info via bugzilla API")
+    logging.warning("getting additional info via bugzilla API")
     for case in bz_dict:
         for bug in bz_dict[case]:
             bugs = bz_api.getbug(bug['bugzillaNumber'])
@@ -701,6 +701,7 @@ def cache_details(cfg):
             bug['assignee'] = bugs.assigned_to
             bug['last_change_time'] = datetime.datetime.strftime(datetime.datetime.strptime(str(bugs.last_change_time), '%Y%m%dT%H:%M:%S'), '%Y-%m-%d') # convert from xmlrpc.client.DateTime to str and reformat
             bug['internal_whiteboard'] = bugs.internal_whiteboard
+            bug['qa_contact'] = bugs.qa_contact
     
     redis_set('bugs', json.dumps(bz_dict))
     redis_set('details', json.dumps(case_details))
