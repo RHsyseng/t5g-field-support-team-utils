@@ -32,7 +32,7 @@ def setup_scheduled_tasks(sender, **kwargs):
 
     # update card cache
     sender.add_periodic_task(
-        crontab(hour='*', minute='0'), # on the hour
+        crontab(hour='*', minute='21'), # on the hour + offset
         cache_data.s('cards'),
         name='card_sync',
     )
@@ -135,7 +135,7 @@ def portal_jira_sync(job_type):
     end = time.time()
     logging.warning("synced to jira in {} seconds".format(end - start))
 
-@mgr.task
+@mgr.task(autoretry_for=(Exception,), max_retries=5, retry_backoff=30)
 def cache_data(data_type):
     
     logging.warning("job: sync {}".format(data_type))

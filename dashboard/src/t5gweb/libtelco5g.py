@@ -240,7 +240,10 @@ def create_cards(cfg, new_cases, action='none'):
             logging.warning('creating card for case {}'.format(case))
             new_card = jira_conn.create_issue(fields=card_info)
             logging.warning('created {}'.format(new_card.key))
-            email_content.append( f"A JIRA issue (https://issues.redhat.com/browse/{new_card}) has been created for a new Telco5G case:\nCase #: {case} (https://access.redhat.com/support/cases/{case})\nAccount: {cases[case]['account']}\nSummary: {cases[case]['problem']}\nSeverity: {cases[case]['severity']}\nDescription: {cases[case]['description']}\n\nIt is initially being tracked by {assignee['name']}.\n")
+            if 'field' in card_info['labels']:
+                email_content.append( f"A JIRA issue (https://issues.redhat.com/browse/{new_card}) has been created for a new Telco5G case:\nCase #: {case} (https://access.redhat.com/support/cases/{case})\nAccount: {cases[case]['account']}\nSummary: {cases[case]['problem']}\nSeverity: {cases[case]['severity']}\nDescription: {cases[case]['description']}\n\nIt is initially being tracked by {assignee['name']}.\n")
+            else:
+                email_content.append( f"A JIRA issue (https://issues.redhat.com/browse/{new_card}) has been created for a new CNV case:\nCase #: {case} (https://access.redhat.com/support/cases/{case})\nAccount: {cases[case]['account']}\nSummary: {cases[case]['problem']}\nSeverity: {cases[case]['severity']}\nDescription: {cases[case]['description']}\n\nIt is initially being tracked by {assignee['name']}.\n")
 
             # Add newly create card to the sprint
             logging.warning('moving card to sprint {}'.format(sprint.id))
