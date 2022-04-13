@@ -2,6 +2,9 @@
 {% block title %}{{ page_title }}{% endblock %}
 {% block content %}
 <div class="container-fluid copy mt-5">
+    <div class="container-fluid pt-2">
+        <button type="button" class="btn btn-outline-dark" id="expand-button">Expand All Rows</button> <button type="button" class="btn btn-outline-dark" id="collapse-button">Collapse All Rows</button>
+    </div>
     <table class="table table-bordered table-hover table-responsive mt-5 w-100" id="data">
         <caption style="caption-side: top; text-align: center;">Note: Use shift+click to sort by multiple columns</caption>
         <thead>
@@ -175,6 +178,24 @@
                 tr.addClass('shown');
             }
         });
-    });
+
+        // Adapted from https://www.gyrocode.com/articles/jquery-datatables-how-to-expand-collapse-all-child-rows/
+        $('#expand-button').on('click', function () {
+            table.rows().every(function () {
+                if (!this.child.isShown()) {
+                    this.child(format($(this.node()).data('child-data'))).show();
+                    $(this.node()).addClass('shown');
+                }
+            })
+        });
+        $('#collapse-button').on('click', function () {
+            table.rows().every(function () {
+                if (this.child.isShown()) {
+                    this.child.hide();
+                    $(this.node()).removeClass('shown');
+                }
+            })
+        });
+});
     </script>
 {% endblock %}
