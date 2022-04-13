@@ -42,7 +42,7 @@ def get_new_cases(case_tag):
 
     interval = 7
     today = date.today()
-    new_cases = {c: d for (c, d) in sorted(cases.items(), key = lambda i: i[1]['severity']) if case_tag in d['tags'] and (today - datetime.strptime(d['createdate'], '%Y-%m-%dT%H:%M:%SZ').date()).days < interval}
+    new_cases = {c: d for (c, d) in sorted(cases.items(), key = lambda i: i[1]['severity']) if case_tag in d['tags'] and (today - datetime.strptime(d['createdate'], '%Y-%m-%dT%H:%M:%SZ').date()).days <= interval}
     for case in new_cases:
         new_cases[case]['severity'] = re.sub('\(|\)| |[0-9]', '', new_cases[case]['severity'])
     return new_cases
