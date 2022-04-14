@@ -175,7 +175,7 @@ def tag_bz():
                     logging.warning("tagging BZ:" + str(bz.id))
                     bz_api.update_bugs([bz.id], update)
                 elif "telco:case" not in bz.internal_whiteboard.lower():
-                    update = bz_api.build_update(internal_whiteboard="Telco:Case " + bz.internal_whiteboard, minor_update=True)
+                    update = bz_api.build_update(internal_whiteboard=bz.internal_whiteboard + " Telco:Case", minor_update=True)
                     logging.warning("tagging BZ:" + str(bz.id))
                     bz_api.update_bugs([bz.id], update)
 
