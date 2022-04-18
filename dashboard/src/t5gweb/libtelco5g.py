@@ -525,10 +525,12 @@ def cache_escalations(cfg):
     escalations = []
     for row in sheet_dict['rows']:
         for cell in row['cells']:
-            if cell['columnId'] == no_tracking_col and 'value' in cell:
-                break
-            if cell['columnId'] == no_escalation_col and 'value' in cell:
-                break
+            if cell['columnId'] == no_tracking_col:
+                if 'value' in cell and cell['value'] == True:
+                    break
+            if cell['columnId'] == no_escalation_col:
+                if 'value' in cell:
+                    break
             if cell['columnId'] == case_col and 'value' in cell and cell['value'][:8] not in cases.keys():
                 break
             elif cell['columnId'] == case_col and 'value' in cell and cell['value'][:8] in cases.keys():
