@@ -1,6 +1,12 @@
 {% extends "skeleton.html" %}
 {% block title %}{{ page_title }}{% endblock %}
 {% block content %}
+   <!-- Include jQuery + DataTables -->
+   <script type="text/javascript" charset="utf8" src="{{ url_for('static', filename='node_modules/jquery/dist/jquery.min.js') }}"></script>
+   <script type="text/javascript" charset="utf8" src="{{ url_for('static', filename='node_modules/datatables.net/js/jquery.dataTables.js') }}"></script>
+   <script type="text/javascript" charset="utf8" src="{{ url_for('static', filename='node_modules/datatables.net-bs5/js/dataTables.bootstrap5.min.js') }}"></script>
+   <script type="text/javascript" charset="utf8" src="{{ url_for('static', filename='js/plugins.js') }}"></script>
+
 <div class="container-fluid copy mt-5">
     <h2>Overall Stats:</h2>
     <table class="table table-bordered table-hover table-responsive mt-5 w-100" id="overall">
@@ -49,12 +55,19 @@
                     <td class="align-middle text-center">{{ stats['bugs']['no_target'] }}</td>
         </tbody>
     </table>
-    <div class="chart-container">
+    <div class="chart-container pt-3">
+        <button class="btn btn-outline-dark" id="hide-stats">Hide All</button>
+        <button class="btn btn-outline-dark" id="show-stats">Show All</button>
         <canvas id="statsChart"></canvas>
         <script>
             var ctx = document.getElementById('statsChart').getContext('2d');
             var statsChart = new Chart(ctx, {
                 type: 'line',
+                options: {
+                  animation: {
+                    duration: 0
+                  }
+                },
                 data: {
                     labels: {{ x_values | safe }},
                     datasets: [
@@ -120,7 +133,19 @@
                         }
                 ]
                 }
-            })
+            });
+            $('#hide-stats').click(function () {
+                    statsChart.data.datasets.forEach((element, index) => {
+                        statsChart.setDatasetVisibility(index, false)          
+                    });
+                    statsChart.update();
+                });
+            $('#show-stats').click(function () {
+                    statsChart.data.datasets.forEach((element, index) => {
+                        statsChart.setDatasetVisibility(index, true)              
+                    });
+                    statsChart.update();
+                });
         </script>
 
     </div>
@@ -186,11 +211,6 @@
         </div>  
     </div>
 </div>
-   <!-- Include jQuery + DataTables -->
-    <script type="text/javascript" charset="utf8" src="{{ url_for('static', filename='node_modules/jquery/dist/jquery.min.js') }}"></script>
-    <script type="text/javascript" charset="utf8" src="{{ url_for('static', filename='node_modules/datatables.net/js/jquery.dataTables.js') }}"></script>
-    <script type="text/javascript" charset="utf8" src="{{ url_for('static', filename='node_modules/datatables.net-bs5/js/dataTables.bootstrap5.min.js') }}"></script>
-    <script type="text/javascript" charset="utf8" src="{{ url_for('static', filename='js/plugins.js') }}"></script>
     <script>
     // First table requires natural sort, so initialize separately
         $(document).ready(function () {
