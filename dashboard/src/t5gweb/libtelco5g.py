@@ -275,6 +275,7 @@ def create_cards(cfg, new_cases, action='none'):
 
             new_cards[new_card.key] = {
                 "card_status": new_card.fields.status.name,
+                "card_created": new_card.fields.created,
                 "account": cases[case]['account'],
                 "summary": case + ': ' + cases[case]['problem'],
                 "description": cases[case]['description'],
@@ -610,10 +611,11 @@ def cache_cards(cfg):
             group_name = details[case_number]['group_name']
         else:
             crit_sit = False
-            group_name = "None"       
+            group_name = "None"
 
         jira_cards[card.key] = {
             "card_status": issue.fields.status.name,
+            "card_created": issue.fields.created,
             "account": cases[case_number]['account'],
             "summary": cases[case_number]['problem'],
             "description": cases[case_number]['description'],
@@ -796,7 +798,9 @@ def generate_stats(case_type):
                 stats['watched'] += 1
             if cards[card]['bugzilla'] == "None":
                 stats['no_bzs'] += 1
-        
+            if (today - datetime.datetime.strptime(data['card_created'], '%Y-%m-%dT%H:%M:%S.000+0000').date()).days <= 1:
+                stats['daily_opened_cases'] += 1
+
     for (case, data) in cases.items():
         if data['status'] == 'Closed':
             if (today - datetime.datetime.strptime(data['closeddate'], '%Y-%m-%dT%H:%M:%SZ').date()).days < 7:
@@ -807,8 +811,6 @@ def generate_stats(case_type):
             stats['open_cases'] += 1
             if (today - datetime.datetime.strptime(data['createdate'], '%Y-%m-%dT%H:%M:%SZ').date()).days < 7:
                 stats['weekly_opened_cases'] += 1
-            if (today - datetime.datetime.strptime(data['createdate'], '%Y-%m-%dT%H:%M:%SZ').date()).days <= 1:
-                stats['daily_opened_cases'] += 1
             if (today - datetime.datetime.strptime(data['last_update'], '%Y-%m-%dT%H:%M:%SZ').date()).days < 7:
                 stats['no_updates'] += 1
     
