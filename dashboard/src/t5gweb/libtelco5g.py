@@ -612,8 +612,7 @@ def cache_cards(cfg):
         else:
             crit_sit = False
             group_name = "None"
-        
-        
+
         jira_cards[card.key] = {
             "card_status": issue.fields.status.name,
             "card_created": issue.fields.created,
