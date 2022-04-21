@@ -168,7 +168,7 @@
             </table>
         </div>
         <div class="col-12 col-xl-6">
-            <table class="table table-bordered table-hover table-responsive mt-5 w-100 display" id="severity">
+            <table class="table table-bordered table-hover table-responsive mt-5 w-100" id="severity">
                 <thead>
                     <tr><th class="text-center">Severity</th><th class="text-center">Number of Cases</th></tr>
                 </thead>
@@ -221,6 +221,35 @@
                 columnDefs: [
                     { type: 'natural-nohtml', targets: 1 }
                 ]
+            });
+        });
+
+    // Sort Severities Correctly (https://datatables.net/examples/plug-ins/sorting_auto.html)
+    $.fn.dataTable.ext.type.detect.unshift(
+        function ( d ) {
+            return d === 'Low' || d === 'Normal' || d === 'High' || d === 'Urgent' ?
+                'severity-grade' :
+                null;
+        }
+    );
+
+    $.fn.dataTable.ext.type.order['severity-grade-pre'] = function ( d ) {
+        switch ( d ) {
+            case 'Low':    return 1;
+            case 'Normal': return 2;
+            case 'High':   return 3;
+            case 'Urgent': return 4;
+        }
+        return 0;   
+    };
+
+    // Sort severity table from Urgent -> Low
+        $(document).ready(function () {
+            $('#severity').DataTable({
+                "paging": false,
+                "info": false,
+                "searching": false,
+                "order": [[0, "desc"]]
             });
         });
 
