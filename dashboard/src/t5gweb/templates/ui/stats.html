@@ -60,6 +60,7 @@
         <button class="btn btn-outline-dark" id="show-stats">Show All</button>
         <canvas id="statsChart"></canvas>
         <script>
+            Chart.defaults.scales.linear.min = 0;
             var ctx = document.getElementById('statsChart').getContext('2d');
             var statsChart = new Chart(ctx, {
                 type: 'line',
