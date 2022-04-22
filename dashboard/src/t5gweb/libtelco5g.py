@@ -588,6 +588,22 @@ def cache_cards(cfg):
             "key": issue.fields.assignee.key,
             "name": issue.fields.assignee.name
         }
+
+        # Get contributors
+        if issue.fields.customfield_12315950:
+            for engineer in issue.fields.customfield_12315950:
+                contributor = {
+                    "displayName": engineer.displayName,
+                    "key": engineer.key,
+                    "name": engineer.name
+                }
+        else:
+            contributor = {
+                "displayName": "None",
+                "key": "None",
+                "name": "None"
+            }
+        
         tags = []
         if 'tags' in cases[case_number].keys():
             tags = cases[case_number]['tags']
@@ -621,6 +637,7 @@ def cache_cards(cfg):
             "description": cases[case_number]['description'],
             "comments": card_comments,
             "assignee": assignee,
+            "contributor": contributor,
             "case_number": case_number,
             "tags": tags,
             "labels": issue.fields.labels,

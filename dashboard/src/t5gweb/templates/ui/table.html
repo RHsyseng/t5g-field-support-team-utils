@@ -19,6 +19,7 @@
                 <th rowspan="2" class="text-center">Account</th>
                 <th rowspan="2" class="text-center">Status</th>
                 <th rowspan="2" class="text-center">Assignee</th>
+                <th rowspan="2" class="text-center">Contributor</th>
                 <th rowspan="2" class="text-center">Jira</th>
                 <th rowspan="2" class="text-center">Most Recent Comment</th>
                 <th rowspan="2" class="text-center">Bugzillas</th>
@@ -60,6 +61,7 @@
                                     <td class="align-middle text-center">{{ new_comments[account][status][card]['account'] }}</td>
                                     <td class="align-middle text-center">{{ new_comments[account][status][card]['case_status'] }}</td>
                                     <td class="align-middle text-center">{{ new_comments[account][status][card]['assignee']['displayName'] }}</td>
+                                    <td class="align-middle text-center">{{ new_comments[account][status][card]['contributor']['displayName'] }}</td>
                                     <td class="align-middle text-center"><a href=https://issues.redhat.com/browse/{{ card }} target="_blank">{{ card }}</a></td>
                                     <td class="align-middle"><span class="fw-bold fst-italic">{{ new_comments[account][status][card]['comments'][-1][1][:10] }}</span> - {{ new_comments[account][status][card]['comments'][-1][0] | safe }}</td>
                                     {% if new_comments[account][status][card]['bugzilla'] != "None" and new_comments[account][status][card]['bugzilla'] | length == 1  %}
