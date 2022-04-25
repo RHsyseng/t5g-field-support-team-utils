@@ -599,9 +599,9 @@ def cache_cards(cfg):
                 }
         else:
             contributor = {
-                "displayName": "None",
-                "key": "None",
-                "name": "None"
+                "displayName": None,
+                "key": None,
+                "name": None
             }
         
         tags = []
