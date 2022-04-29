@@ -612,7 +612,7 @@ def cache_cards(cfg):
         if 'bug' in cases[case_number].keys() and case_number in bugs.keys():
             bugzilla = bugs[case_number]
         else:
-            bugzilla = "None"
+            bugzilla = None
 
         if case_number in escalations:
             escalated = True
@@ -627,7 +627,7 @@ def cache_cards(cfg):
             group_name = details[case_number]['group_name']
         else:
             crit_sit = False
-            group_name = "None"
+            group_name = None
 
         jira_cards[card.key] = {
             "card_status": issue.fields.status.name,
@@ -708,7 +708,7 @@ def cache_details(cfg):
             if "groupName" in r_case.json():
                 group_name = r_case.json()['groupName']
             else:
-                group_name = "None"
+                group_name = None
             
             case_details[case] = {
                 "crit_sit": crit_sit,
@@ -813,7 +813,7 @@ def generate_stats(case_type):
                 stats['escalated'] += 1
             if cards[card]['watched']:
                 stats['watched'] += 1
-            if cards[card]['bugzilla'] == "None":
+            if cards[card]['bugzilla'] is None:
                 stats['no_bzs'] += 1
             if (today - datetime.datetime.strptime(data['card_created'], '%Y-%m-%dT%H:%M:%S.000+0000').date()).days <= 1:
                 stats['daily_opened_cases'] += 1
