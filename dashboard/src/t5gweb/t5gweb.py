@@ -170,9 +170,9 @@ def init_cache():
     if bugs == {} or details == {}:
         logging.warning("no details found in cache. refreshing...")
         libtelco5g.cache_details(cfg)
-    #if escalations == {}:
-    #    logging.warning("no escalations found in cache. refreshing...")
-    #    libtelco5g.cache_escalations(cfg)
+    if escalations == {}:
+        logging.warning("no escalations found in cache. refreshing...")
+        libtelco5g.cache_escalations(cfg)
     if watchlist == {}:
         logging.warning("no watchlist found in cache. refreshing...")
         libtelco5g.cache_watchlist(cfg)
