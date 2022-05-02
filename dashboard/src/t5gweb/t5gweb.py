@@ -164,25 +164,25 @@ def init_cache():
     watchlist = libtelco5g.redis_get('watchlist')
     t5g_stats = libtelco5g.redis_get('telco5g_stats')
     cnv_stats = libtelco5g.redis_get('cnv_stats')
-    if cases is None:
+    if cases == {}:
         logging.warning("no cases found in cache. refreshing...")
         libtelco5g.cache_cases(cfg)
-    if bugs is None or details is None:
+    if bugs == {} or details == {}:
         logging.warning("no details found in cache. refreshing...")
         libtelco5g.cache_details(cfg)
-    if escalations is None:
+    if escalations == {}:
         logging.warning("no escalations found in cache. refreshing...")
         libtelco5g.cache_escalations(cfg)
-    if watchlist is None:
+    if watchlist == {}:
         logging.warning("no watchlist found in cache. refreshing...")
         libtelco5g.cache_watchlist(cfg)
-    if cards is None:
+    if cards == {}:
         logging.warning("no cards found in cache. refreshing...")
         libtelco5g.cache_cards(cfg)
     if t5g_stats == {}:
         logging.warning("no t5g stats found in cache. refreshing...")
         libtelco5g.cache_stats('telco5g')
-    if cnv_stats is None:
+    if cnv_stats == {}:
         logging.warning("no cnv stats found in cache. refreshing...")
         libtelco5g.cache_stats('cnv')
 
