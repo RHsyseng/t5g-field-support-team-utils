@@ -62,10 +62,10 @@
                                     <td class="align-middle text-center">{{ new_comments[account][status][card]['assignee']['displayName'] }} {% if new_comments[account][status][card]['contributor']['displayName'] %} <br><br><span class="fw-bold">Contributor:</span> {{ new_comments[account][status][card]['contributor']['displayName'] }} {% endif %}</td>
                                     <td class="align-middle text-center"><a href=https://issues.redhat.com/browse/{{ card }} target="_blank">{{ card }}</a></td>
                                     <td class="align-middle"><span class="fw-bold fst-italic">{{ new_comments[account][status][card]['comments'][-1][1][:10] }}</span> - {{ new_comments[account][status][card]['comments'][-1][0] | safe }}</td>
-                                    {% if new_comments[account][status][card]['bugzilla'] != "None" and new_comments[account][status][card]['bugzilla'] | length == 1  %}
+                                    {% if new_comments[account][status][card]['bugzilla'] and new_comments[account][status][card]['bugzilla'] | length == 1  %}
                                         <td class="align-middle text-center"><a href={{ new_comments[account][status][card]['bugzilla'][0]['bugzillaLink'] }} target="_blank">{{ new_comments[account][status][card]['bugzilla'][0]['bugzillaNumber'] }}</a></td>
-                                    {% elif new_comments[account][status][card]['bugzilla'] == "None"%}
-                                        <td class="align-middle text-center">None</td>
+                                    {% elif new_comments[account][status][card]['bugzilla'] is none%}
+                                        <td class="align-middle text-center">{{ new_comments[account][status][card]['bugzilla'] }}</td>
                                     {% else %}
                                         <td class="align-middle text-center">Multiple - Expand for Details</td>
                                     {% endif %}
@@ -90,8 +90,8 @@
    <script>
     // Insert Bugzilla Info and Comments into Child Rows
     function format(data) {
-        let result = "<div class='card p-3'>"
-        if (data.bugzilla != "None") {
+        let result = "<div class='card p-3'>";
+        if (data.bugzilla != null) {
             result += '<h3>Bugzillas</h3><table class="table table-bordered table-hover table-responsive w-100"><thead><tr><th>#</th><th>Summary</th><th>Target Release</th><th>Assignee</th><th>QA Contact</th><th>Last Updated</th><th>Status</th></tr></thead><tbody>';
             for (let bug = 0; bug < data.bugzilla.length; bug++) {
                 result += '<tr><td><a href="' + data.bugzilla[bug].bugzillaLink + '" target="_blank">' + data.bugzilla[bug].bugzillaNumber + '</a></td><td>' + data.bugzilla[bug].summary  + '</td><td>' + data.bugzilla[bug].target_release[0] + '</td><td>' + data.bugzilla[bug].assignee + '</td><td>' + data.bugzilla[bug].qa_contact + '</td><td>' + data.bugzilla[bug].last_change_time + '</td><td>' + data.bugzilla[bug].status + '</td></tr>';
