@@ -818,7 +818,7 @@ def generate_stats(case_type):
                 stats['watched'] += 1
             if cards[card]['bugzilla'] is None:
                 stats['no_bzs'] += 1
-            if (today - datetime.datetime.strptime(data['card_created'], '%Y-%m-%dT%H:%M:%S.000+0000').date()).days <= 1:
+            if (today - datetime.datetime.strptime(data['card_created'], '%Y-%m-%dT%H:%M:%S.%f%z').date()).days <= 1:
                 stats['daily_opened_cases'] += 1
 
     for (case, data) in cases.items():
