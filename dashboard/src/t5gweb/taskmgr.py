@@ -185,3 +185,12 @@ def cache_stats():
     for case_type in ['telco5g', 'cnv']:
         logging.warning("job: cache {} stats".format(case_type))
         libtelco5g.cache_stats(case_type)
+
+@mgr.task(bind=True)
+def refresh_background(self):
+    '''Refresh Jira cards cache in background.'''
+
+    cfg = t5gweb.set_cfg()
+    libtelco5g.cache_cards(cfg, self, background=True)
+    response = {'current': 100, 'total': 100, 'status': 'Done', 'result': 'Refresh Complete'}
+    return response
