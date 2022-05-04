@@ -40,7 +40,7 @@
             $.getJSON(status_url, function (data) {
                 if (data['state'] == 'PROGRESS') {
                     $('#progressbar').empty();
-                    div = $('<div class="text-white progress"><div class="progress-bar bg-danger" role="progressbar" style="width: 0%;" aria-valuenow="0" aria-valuemin="0" aria-valuemax="100">0%</div></div>');
+                    div = $('<div class="text-center text-white">Refresh in progress...</div> <div class="text-white progress"><div class="progress-bar bg-danger" role="progressbar" style="width: 0%;" aria-valuenow="0" aria-valuemin="0" aria-valuemax="100">0%</div></div>');
                     $('#progressbar').append(div);
                     updatePercentage(status_url, $('#progressbar'));
                 }
@@ -59,7 +59,7 @@
  */
 function getBackground() {
     $('#progressbar').empty();
-    div = $('<div class="text-white progress"><div class="progress-bar bg-danger" role="progressbar" style="width: 0%;" aria-valuenow="0" aria-valuemin="0" aria-valuemax="100">0%</div></div>');
+    div = $('<div class="text-center text-white">Refresh in progress...</div> <div class="text-white progress"><div class="progress-bar bg-danger" role="progressbar" style="width: 0%;" aria-valuenow="0" aria-valuemin="0" aria-valuemax="100">0%</div></div>');
     $('#progressbar').append(div);
     $.ajax({
         type: 'POST',
