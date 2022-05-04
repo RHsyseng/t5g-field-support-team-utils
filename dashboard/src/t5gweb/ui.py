@@ -47,6 +47,15 @@ def index():
     load_data()
     return render_template('ui/index.html', new_cnv_cases=load_data.new_cnv_cases, new_t5g_cases=load_data.new_t5g_cases, values=load_data.y, now=load_data.now)
 
+@BP.route('/progress/status', methods=['POST'])
+def progress_status():
+    """On page load: if refresh is in progress, get task information for progress bar display"""
+    refresh_id = redis_get('refresh_id')
+    if refresh_id != {}:
+        return jsonify({}), 202, {'Location': url_for('ui.refresh_status', task_id=refresh_id)}
+    else:
+        return jsonify({})
+
 @BP.route('/status/<task_id>')
 def refresh_status(task_id):
     """Provide updates for refresh_background task"""
@@ -68,6 +77,8 @@ def refresh_status(task_id):
         }
         if 'result' in task.info:
             response['result'] = task.info['result']
+        if 'locked' in task.info:
+            response['locked'] = task.info['locked']
     else:
         # something went wrong in the background job
         response = {

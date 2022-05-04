@@ -26,7 +26,30 @@
  *   SOFTWARE.
  */
 
- function getBackground() {
+ $(document).ready(function () {
+    $.ajax({
+        type: 'POST',
+        url: '/progress/status',
+        success: function (data, status, request) {
+            status_url = request.getResponseHeader('Location');
+            console.log(data);
+            $.getJSON(status_url, function (data) {
+                console.log(data['state']);
+                if (data['state'] == 'PROGRESS') {
+                    $('#progressbar').empty();
+                    div = $('<div class="text-white progress"><div class="progress-bar bg-danger" role="progressbar" style="width: 0%;" aria-valuenow="0" aria-valuemin="0" aria-valuemax="100">0%</div></div>');
+                    $('#progressbar').append(div);
+                    updatePercentage(status_url, $('#progressbar'));
+                }
+            });
+        },
+        error: function () {
+            alert('Unexpected error')
+        }
+    });
+});
+
+function getBackground() {
     $('#progressbar').empty();
     div = $('<div class="text-white progress"><div class="progress-bar bg-danger" role="progressbar" style="width: 0%;" aria-valuenow="0" aria-valuemin="0" aria-valuemax="100">0%</div></div>');
     $('#progressbar').append(div);
@@ -48,20 +71,22 @@ function updatePercentage(status_url, div) {
         console.log(data);
         percent = parseInt(data['current'] * 100 / data['total']);
         div.find(".progress-bar").css('width', percent + '%').attr('aria-valuenow', percent).text(percent + "%");
-        if (data['state'] != 'PENDING' && data['state'] != 'PROGRESS') {
-            if ('result' in data) {
-                // show result
-                $(div).text(data['result']).css('color', 'white');
+        if (!('locked' in data)) {
+            if (data['state'] != 'PENDING' && data['state'] != 'PROGRESS') {
+                if ('result' in data) {
+                    // show result
+                    $(div).text(data['result']).css('color', 'white');
+                }
+                else {
+                    // something unexpected happened
+                    $(div).text(data['state'] + ", please try again.").css('color', 'white');
+                }
+            } else {
+                // rerun in 2 seconds
+                setTimeout(function () {
+                    updatePercentage(status_url, div);
+                }, 2000);
             }
-            else {
-                // something unexpected happened
-                $(div).text(data['state'] + ", please try again.").css('color', 'white');
-            }
-        } else {
-            // rerun in 2 seconds
-            setTimeout(function () {
-                updatePercentage(status_url, div);
-            }, 2000);
         }
     })
 }

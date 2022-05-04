@@ -14,7 +14,7 @@
 
   <!-- Include ChartJS -->
   <script src="{{ url_for('static', filename='node_modules/chart.js/dist/chart.js') }}"></script>
-
+  
   <!-- Include JQuery -->
   <script type="text/javascript" charset="utf8" src="{{ url_for('static', filename='node_modules/jquery/dist/jquery.min.js') }}"></script>
 
@@ -119,9 +119,8 @@
 
   <!-- Include Bootstrap JS Bundle -->
   <script src="{{ url_for('static', filename='node_modules/bootstrap/dist/js/bootstrap.bundle.min.js') }}"></script>
-   
   <!-- Copy Button JS-->
- <script>
+  <script>
       var clipboard = new ClipboardJS('.btn');
       clipboard.on('success', function (e) {
          console.log(e);
