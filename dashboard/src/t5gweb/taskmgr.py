@@ -195,7 +195,7 @@ def refresh_background(self):
     '''
 
     have_lock = False
-    refresh_lock = redis.Redis(host='127.0.0.1').lock("refresh_lock", timeout=60*5)
+    refresh_lock = redis.Redis(host='redis').lock("refresh_lock", timeout=60*5)
     try:
         have_lock = refresh_lock.acquire(blocking=False)
         if have_lock:
