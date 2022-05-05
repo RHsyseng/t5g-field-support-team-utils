@@ -146,7 +146,17 @@ def cache_data(data_type):
     if data_type == 'cases':
         libtelco5g.cache_cases(cfg)
     elif data_type == 'cards':
-        libtelco5g.cache_cards(cfg)
+        # Use redis locks to prevent concurrent refreshes
+
+        have_lock = False
+        refresh_lock = redis.Redis(host='redis').lock("refresh_lock", timeout=60*5)
+        try:
+            have_lock = refresh_lock.acquire(blocking=False)
+            if have_lock:
+                libtelco5g.cache_cards(cfg)
+        finally:
+            if have_lock:
+                refresh_lock.release()
     elif data_type == 'details':
         libtelco5g.cache_details(cfg)
     elif data_type == 'escalations':
