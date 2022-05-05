@@ -2,8 +2,9 @@
 import logging
 import datetime
 from flask import (
-    Blueprint, redirect, render_template, request, url_for, make_response, send_file, request
+    Blueprint, jsonify, redirect, render_template, request, url_for, make_response, send_file, request
 )
+from t5gweb.taskmgr import refresh_background
 from t5gweb.t5gweb import (
     get_new_cases,
     get_new_comments,
@@ -46,13 +47,55 @@ def index():
     load_data()
     return render_template('ui/index.html', new_cnv_cases=load_data.new_cnv_cases, new_t5g_cases=load_data.new_t5g_cases, values=load_data.y, now=load_data.now)
 
-@BP.route('/refresh')
+@BP.route('/progress/status', methods=['POST'])
+def progress_status():
+    """On page load: if refresh is in progress, get task information for progress bar display"""
+    refresh_id = redis_get('refresh_id')
+    if refresh_id != {}:
+        return jsonify({}), 202, {'Location': url_for('ui.refresh_status', task_id=refresh_id)}
+    else:
+        return jsonify({})
+
+@BP.route('/status/<task_id>')
+def refresh_status(task_id):
+    """Provide updates for refresh_background task"""
+    task = refresh_background.AsyncResult(task_id)
+    if task.state == 'PENDING':
+        # job did not start yet
+        response = {
+            'state': task.state,
+            'current': 0,
+            'total': 1,
+            'status': 'Pending...'
+        }
+    elif task.state != 'FAILURE':
+        response = {
+            'state': task.state,
+            'current': task.info.get('current', 0),
+            'total': task.info.get('total', 1),
+            'status': task.info.get('status', '')
+        }
+        if 'result' in task.info:
+            response['result'] = task.info['result']
+        if 'locked' in task.info:
+            response['locked'] = task.info['locked']
+    else:
+        # something went wrong in the background job
+        response = {
+            'state': task.state,
+            'current': 1,
+            'total': 1,
+            'status': str(task.info) # this is the exception raised
+        }
+    return jsonify(response)
+
+@BP.route('/refresh', methods=['POST'])
 def refresh():
     """Forces an update to the dashboard"""
-    cfg = set_cfg()
-    cache_cards(cfg)
+    task = refresh_background.delay()
     load_data()
-    return redirect(url_for("ui.telco5g"))
+    return jsonify({}), 202, {'Location': url_for('ui.refresh_status', task_id=task.id)}
+
 
 @BP.route('/updates/telco5g')
 def telco5g():

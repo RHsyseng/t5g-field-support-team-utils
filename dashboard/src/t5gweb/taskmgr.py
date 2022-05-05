@@ -9,6 +9,7 @@ import t5gweb.t5gweb as t5gweb
 from celery import Celery
 from celery.schedules import crontab
 import bugzilla
+import redis
 
 mgr = Celery('t5gweb', broker='redis://redis:6379/0', backend='redis://redis:6379/0')
 
@@ -145,7 +146,17 @@ def cache_data(data_type):
     if data_type == 'cases':
         libtelco5g.cache_cases(cfg)
     elif data_type == 'cards':
-        libtelco5g.cache_cards(cfg)
+        # Use redis locks to prevent concurrent refreshes
+
+        have_lock = False
+        refresh_lock = redis.Redis(host='redis').lock("refresh_lock", timeout=60*5)
+        try:
+            have_lock = refresh_lock.acquire(blocking=False)
+            if have_lock:
+                libtelco5g.cache_cards(cfg)
+        finally:
+            if have_lock:
+                refresh_lock.release()
     elif data_type == 'details':
         libtelco5g.cache_details(cfg)
     elif data_type == 'escalations':
@@ -185,3 +196,26 @@ def cache_stats():
     for case_type in ['telco5g', 'cnv']:
         logging.warning("job: cache {} stats".format(case_type))
         libtelco5g.cache_stats(case_type)
+
+@mgr.task(bind=True)
+def refresh_background(self):
+    '''Refresh Jira cards cache in background. If the refresh is already in progress, the task will be locked and won't run.
+    The lock is released when the task completes or after five minutes.
+    Lock code derived from http://loose-bits.com/2010/10/distributed-task-locking-in-celery.html
+    '''
+
+    have_lock = False
+    refresh_lock = redis.Redis(host='redis').lock("refresh_lock", timeout=60*5)
+    try:
+        have_lock = refresh_lock.acquire(blocking=False)
+        if have_lock:
+            libtelco5g.redis_set('refresh_id', json.dumps(self.request.id))
+            cfg = t5gweb.set_cfg()
+            libtelco5g.cache_cards(cfg, self, background=True)
+            response = {'current': 100, 'total': 100, 'status': 'Done', 'result': 'Refresh Complete'}
+        else:
+            response = {'locked': 'Task is Locked'}
+    finally:
+        if have_lock:
+            refresh_lock.release()
+    return response

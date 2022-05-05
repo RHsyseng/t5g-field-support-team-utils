@@ -545,7 +545,7 @@ def cache_escalations(cfg):
 
     redis_set('escalations', json.dumps(escalations))
 
-def cache_cards(cfg):
+def cache_cards(cfg, self=None, background=False):
 
     cases = redis_get('cases')
     bugs = redis_get('bugs')
@@ -572,7 +572,13 @@ def cache_cards(cfg):
     time_now = datetime.datetime.now(datetime.timezone.utc)
 
     jira_cards = {}
-    for card in card_list:
+    for index, card in enumerate(card_list):
+        if background:
+            # Update task information for progress bar
+            self.update_state(state='PROGRESS',
+                              meta={'current': index, 'total': len(card_list),
+                                    'status': "Refreshing Cards in Background..."}
+                            )
         issue = jira_conn.issue(card)
         comments = jira_conn.comments(issue)
         card_comments = []
