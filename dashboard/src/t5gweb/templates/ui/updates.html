@@ -79,7 +79,7 @@
                                     {% endif %}
                                     <ul>
                                        <li>Comments: </li>
-                                    {% for comment in new_comments[account][status][details]['comments'] %}
+                                    {% for comment in new_comments[account][status][details]['comments'] | reverse %}
                                        <ul>
                                           <li class="text-break"> <span class="fw-bold fst-italic">{{ comment[1][:10] }}</span> - {{ comment[0] | safe }}</li>
                                        </ul>
