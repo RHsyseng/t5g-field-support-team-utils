@@ -101,7 +101,7 @@ ul.highlight:hover {
   border-radius: 5px;
 }
 
-.internalstatus.todo {
+.internalstatus.backlog {
   background-color: var(--bs-cyan);
   border-radius: 5px;
 }

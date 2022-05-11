@@ -40,7 +40,7 @@ portal2jira_sevs = {
 
 # card status mappings
 status_map = {
-    "Backlog": "To Do",
+    "To Do": "Backlog",
     "Open": "Debugging",
     "In Progress": "Eng Working",
     "Code Review": "Backport",
@@ -160,7 +160,7 @@ def get_sprint_summary(conn, bid, sprintname, team):
 def get_card_summary():
 
     cards = redis_get('cards')
-    backlog = [card for card in cards if cards[card]['card_status'] == 'To Do']
+    backlog = [card for card in cards if cards[card]['card_status'] == 'Backlog']
     debugging = [card for card in cards if cards[card]['card_status'] == 'Debugging']
     eng_working = [card for card in cards if cards[card]['card_status'] == 'Eng Working']
     backport = [card for card in cards if cards[card]['card_status'] == 'Backport']
