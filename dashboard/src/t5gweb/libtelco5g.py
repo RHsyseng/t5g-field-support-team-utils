@@ -38,6 +38,17 @@ portal2jira_sevs = {
     "4 (Low)"       : "Minor"
 }
 
+# card status mappings
+status_map = {
+    "Backlog": "To Do",
+    "Open": "Debugging",
+    "In Progress": "Eng Working",
+    "Code Review": "Backport",
+    "QE Review": "Ready To Close",
+    "Won't Fix / Obsolete": "Done",
+    "Done": "Done"
+}
+
 def jira_connection(cfg):
 
     jira = JIRA(
@@ -149,16 +160,19 @@ def get_sprint_summary(conn, bid, sprintname, team):
 def get_card_summary():
 
     cards = redis_get('cards')
-    backlog = [card for card in cards if cards[card]['card_status'] == 'Backlog']
-    in_progress = [card for card in cards if cards[card]['card_status'] == 'In Progress']
-    code_review = [card for card in cards if cards[card]['card_status'] == 'Code Review']
-    qe_review = [card for card in cards if cards[card]['card_status'] == 'QE Review']
+    backlog = [card for card in cards if cards[card]['card_status'] == 'To Do']
+    debugging = [card for card in cards if cards[card]['card_status'] == 'Debugging']
+    eng_working = [card for card in cards if cards[card]['card_status'] == 'Eng Working']
+    backport = [card for card in cards if cards[card]['card_status'] == 'Backport']
+    ready_to_close = [card for card in cards if cards[card]['card_status'] == 'Ready To Close']
     done = [card for card in cards if cards[card]['card_status'] == 'Done']
+
     summary = {}
     summary['backlog'] = len(backlog)
-    summary['in_progress'] = len(in_progress)
-    summary['code_review'] = len(code_review)
-    summary['qe_review'] = len(qe_review)
+    summary['debugging'] = len(debugging)
+    summary['eng_working'] = len(eng_working)
+    summary['backport'] = len(backport)
+    summary['ready_to_close'] = len(ready_to_close)
     summary['done'] = len(done)
     return summary
 
@@ -274,7 +288,7 @@ def create_cards(cfg, new_cases, action='none'):
                 tags = ['shift_telco5g'] # trigged by case summary, not tag
 
             new_cards[new_card.key] = {
-                "card_status": new_card.fields.status.name,
+                "card_status": status_map[new_card.fields.status.name],
                 "card_created": new_card.fields.created,
                 "account": cases[case]['account'],
                 "summary": case + ': ' + cases[case]['problem'],
@@ -639,7 +653,7 @@ def cache_cards(cfg, self=None, background=False):
             group_name = None
 
         jira_cards[card.key] = {
-            "card_status": issue.fields.status.name,
+            "card_status": status_map[issue.fields.status.name],
             "card_created": issue.fields.created,
             "account": cases[case_number]['account'],
             "summary": cases[case_number]['problem'],

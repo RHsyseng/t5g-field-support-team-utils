@@ -46,7 +46,7 @@
             var myChart = new Chart(ctx, {
                 type: 'bar',
                 data: {
-                    labels: ["Backlog", "In Progress", "Waiting on Engineering", "Waiting on Customer", "Done"],
+                    labels: ["Backlog", "Debugging", "Waiting on Engineering", "Waiting on Backport", "Ready To Close", "Done"],
                     datasets: [{
                         data: {{ values | safe }},
                         backgroundColor: [
