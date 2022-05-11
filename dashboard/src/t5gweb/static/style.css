@@ -101,6 +101,37 @@ ul.highlight:hover {
   border-radius: 5px;
 }
 
+.internalstatus.backlog {
+  background-color: var(--bs-cyan);
+  border-radius: 5px;
+}
+
+.internalstatus.debugging {
+  background-color: red;
+  border-radius: 5px;
+}
+
+.internalstatus.eng-working {
+  background-color: var(--bs-orange);
+  border-radius: 5px;
+}
+
+.internalstatus.backport {
+  background-color: var(--bs-yellow);
+  border-radius: 5px;
+}
+
+.internalstatus.ready-to-close {
+  background-color: blue;
+  border-radius: 5px;
+}
+
+.internalstatus.done {
+  background-color: green;
+  border-radius: 5px;
+}
+
+
 /* Sidebar*/
 /* Derived from https://getbootstrap.com/docs/5.1/examples/#snippets */
 
