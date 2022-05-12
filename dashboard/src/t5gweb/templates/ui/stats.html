@@ -31,6 +31,10 @@
                     <td class="align-middle text-center">{{ stats['crit_sit'] }}</td>
                 </tr>
                 <tr>
+                    <td class="align-middle">Total Escalations</td>
+                    <td class="align-middle text-center">{{ stats['total_escalations'] }}</td>
+                </tr>
+                <tr>
                     <td class="align-middle">High Priority Cases</td>
                     <td class="align-middle text-center">{{ stats['high_prio'] }}</td>
                 </tr>
@@ -93,7 +97,13 @@
                         data: {{ y_values['crit_sit'] | safe }},
                         borderColor: 'rgba(34, 147, 25, 1)',
                         backgroundColor: 'rgba(34, 147, 25, 1)'
-                        },                        
+                        },
+                        {
+                        label: 'Total Escalations',
+                        data: {{ y_values['total_escalations'] | safe }},
+                        borderColor: 'rgba(122, 0, 63, 1)',
+                        backgroundColor: 'rgba(122, 0, 63, 1)'
+                        },                                                
                         {
                         label: 'Total Cases',
                         data: {{ y_values['open_cases'] | safe }},
