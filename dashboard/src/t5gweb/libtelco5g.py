@@ -801,7 +801,8 @@ def generate_stats(case_type):
         'bugs': {
             'unique': 0,
             'no_target': 0
-        }
+        },
+        'crit_sit': 0
     }
 
     for (card, data) in cards.items():
@@ -822,6 +823,8 @@ def generate_stats(case_type):
                 stats['escalated'] += 1
             if cards[card]['watched']:
                 stats['watched'] += 1
+            if cards[card]['crit_sit']:
+                stats['crit_sit'] += 1
             if cards[card]['bugzilla'] is None:
                 stats['no_bzs'] += 1
             if (today - datetime.datetime.strptime(data['card_created'], '%Y-%m-%dT%H:%M:%S.%f%z').date()).days <= 1:
@@ -880,7 +883,8 @@ def plot_stats(case_type):
         'no_bzs': [],
         'bugs_unique': [],
         'bugs_no_tgt': [],
-        'high_prio': []
+        'high_prio': [],
+        'crit_sit': []
         }
     for day, stat in historical_stats.items():
         y_values['escalated'].append(exists_or_zero(stat, 'escalated'))
@@ -893,6 +897,7 @@ def plot_stats(case_type):
         y_values['bugs_unique'].append(exists_or_zero(stat['bugs'], 'unique'))
         y_values['bugs_no_tgt'].append(exists_or_zero(stat['bugs'], 'no_target'))
         y_values['high_prio'].append(exists_or_zero(stat, 'high_prio'))
+        y_values['crit_sit'].append(exists_or_zero(stat, 'crit_sit'))
     
     return x_values, y_values
         

@@ -27,6 +27,10 @@
                     <td class="align-middle text-center">{{ stats['watched'] }}</td>
                 </tr>
                 <tr>
+                    <td class="align-middle">Crit Sit Cases</td>
+                    <td class="align-middle text-center">{{ stats['crit_sit'] }}</td>
+                </tr>
+                <tr>
                     <td class="align-middle">High Priority Cases</td>
                     <td class="align-middle text-center">{{ stats['high_prio'] }}</td>
                 </tr>
@@ -73,17 +77,23 @@
                     labels: {{ x_values | safe }},
                     datasets: [
                         {
-                        label: 'Escalated',
+                        label: 'Prio-List',
                         data: {{ y_values['escalated'] | safe }},
                         borderColor: 'rgba(255, 99, 132, 1)',
                         backgroundColor: 'rgba(255, 99, 132, 1)'
                         },
                         {
-                        label: 'Watched',
+                        label: 'WatchList',
                         data: {{ y_values['watched'] | safe }},
                         borderColor: 'rgba(205, 189, 232, 1)',
                         backgroundColor: 'rgba(205, 189, 232, 1)'
                         },
+                        {
+                        label: 'Crit Sit',
+                        data: {{ y_values['crit_sit'] | safe }},
+                        borderColor: 'rgba(34, 147, 25, 1)',
+                        backgroundColor: 'rgba(34, 147, 25, 1)'
+                        },                        
                         {
                         label: 'Total Cases',
                         data: {{ y_values['open_cases'] | safe }},
