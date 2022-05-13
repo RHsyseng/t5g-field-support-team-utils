@@ -5,6 +5,7 @@
     <div class="container-fluid pt-2" id="expand-buttons">
         <button type="button" class="btn btn-outline-dark" id="expand-button">Expand All Rows</button> <button type="button" class="btn btn-outline-dark" id="collapse-button">Collapse All Rows</button>
     </div>
+    <div class="loading text-center fs-3">Loading Table...</div>
     <div class="case-table" style="display: none;">
         <table class="table table-bordered table-hover table-responsive mt-5 w-100" id="data">
             <caption style="caption-side: top; text-align: center;">Note: Use shift+click to sort by multiple columns</caption>
@@ -92,9 +93,6 @@
    <script type="text/javascript" charset="utf8" src="{{ url_for('static', filename='node_modules/datatables.net-select/js/dataTables.select.min.js') }}"></script>
 
    <script>
-    // Loading Table Message   
-    $('<div class="loading text-center fs-3">Loading Table...</div>').appendTo('#expand-buttons');
-    
     // Insert Bugzilla Info and Comments into Child Rows
     function format(data) {
         let result = "<div class='card p-3'>";
