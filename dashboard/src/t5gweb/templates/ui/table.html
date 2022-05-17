@@ -170,8 +170,15 @@
                 $('div.loading').remove();
                 $('.case-table').show();
                 $($.fn.dataTable.tables(true)).DataTable().columns.adjust();
-            }
-        };
+            },
+            "columnDefs": [
+                {
+                    searchPanes: {
+                        show: true
+                    },
+                    targets: [9]
+                }
+            ]        };
         let table = $('#data').DataTable($.extend(options, searchOptions));
         table.searchPanes.container().prependTo(table.table().container());
         table.searchPanes.resizePanes();        
