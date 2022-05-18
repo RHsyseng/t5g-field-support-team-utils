@@ -29,7 +29,7 @@
 /**
  * On page load, get status of most recent background refresh
  * If refresh is in progress, display progress bar and call updatePercentage()
- * to continously update it.
+ * to continuously update it.
  */
  $(document).ready(function () {
     $.ajax({
@@ -55,7 +55,7 @@
 /**
  * getBackground() displays the progress bar when the refresh button is clicked
  * and gets progress information from the task. Also calls updatePercentage()
- * to continously update the progress bar.
+ * to continuously update the progress bar.
  */
 function getBackground() {
     $('#progressbar').empty();
