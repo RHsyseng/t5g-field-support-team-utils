@@ -140,9 +140,10 @@
 
     // Initialize DataTable
     $(document).ready(function () {
-        let searchOptions = $.fn.dataTable.ext.deepLink([
-            'search.search', 'order', 'displayStart'
-        ]);
+        let deeplinkList = [
+            'search.search', 'order', 'displayStart', 'searchPanes.preSelect'
+        ]
+        let searchOptions = $.fn.dataTable.ext.deepLink(deeplinkList);
         let options = {
             "pageLength": 50,
             "scrollX": true,
@@ -178,7 +179,7 @@
                 }
             ]        
         };
-        let table = $('#data').DataTable($.extend(options, searchOptions));
+        let table = $('#data').DataTable($.extend(true, options, searchOptions));
         table.searchPanes.container().prependTo(table.table().container());
         table.searchPanes.resizePanes();        
         // Add event listener for opening and closing details
@@ -214,6 +215,125 @@
                 }
             })
         });
+
+        /**
+         * updateOrder() retrieves the current column order settings
+         * and updates the URL to reflect these settings
+         */
+        function updateOrder() {
+            let order = JSON.stringify(table.order());
+            if (order.length > 0) {
+                if (query.includes('order=')) {
+                    // Update order section of query in place
+                    query = query.replace(/order=.[^&]*/i, 'order=' + order);
+                } else {
+                    if (query.length > 1) {
+                        query = query + '&';
+                    }
+                    query = query + 'order=' + order;
+                }
+            } else {
+                if (query.includes('order')) {
+                    // Remove order section from query
+                    query = query.replace(/&?order=.[^&]*/i, '');
+                }
+            }
+            history.replaceState(null, null, query);
+
+        }
+
+        /**
+         * updateSearch() retrieves the current search settings
+         * and updates the URL to reflect these settings
+         */
+        function updateSearch() {
+            let search = table.search();
+            if (search.length > 0) {
+                if (query.includes('search.search=')) {
+                    // Update search section of query in place
+                    query = query.replace(/search.search=.[^&]*/i, 'search.search=' + search);
+                } else {
+                    if (query.length > 1) {
+                        query = query + '&';
+                    }
+                    query = query + 'search.search=' + search;
+                }
+            } else {
+                if (query.includes('search.search')) {
+                    // Remove search section from query
+                    query = query.replace(/&?search.search=.[^&]*/i, '');
+                }
+            }
+            history.replaceState(null, null, query);
+        }
+
+        /**
+         * updatePanes() retrieves the current search panes settings
+         * and updates the URL to reflect these settings
+         */
+        function updatePanes() {
+            let panes = [];
+            setTimeout(function () {
+                // Retrieve active filters
+                $.each($('div.dtsp-searchPane'), function (i, col) {
+                    let colName = $(col).find('input').attr('placeholder');
+                    let colIndex = table.column(':contains(' + colName + ')').index();
+                    if (colIndex == undefined) {
+                        // If more custom search panes are added, this section needs to be changed
+                        colIndex = extraCol + 1;
+                    }
+                    let column = { 'column': colIndex, 'rows': [] };
+                    let rows = [];
+                    $.each($('tr.selected', col), function (j, row) {
+
+                        rows.push($('span:eq(0)', row).text());
+                    });
+                    if (rows.length != 0) {
+                        column.rows = rows;
+                        panes.push(column);
+                    }
+                });
+
+                // Update URL with active filters
+                if (panes.length > 0) {
+                    if (query.includes('searchPanes.preSelect')) {
+                        // Update search panes section of query in place
+                        query = query.replace(/searchPanes.preSelect=.[^&]*/i, 'searchPanes.preSelect=' + JSON.stringify(panes));
+                    } else {
+                        if (query.length > 1) {
+                            query = query + '&';
+                        }
+                        query = query + 'searchPanes.preSelect=' + JSON.stringify(panes);
+                    }
+                } else {
+                    if (query.includes('searchPanes.preSelect')) {
+                        // Remove search panes section from query
+                        query = query.replace(/&?searchPanes.preSelect=.[^&]*/i, '');
+                    }
+                }
+                history.replaceState(null, null, query);
+            }, 1);
+        }
+
+        // Make sure previous URL settings are not overwritten
+        let url = window.location.href;
+        let query = '';
+        if (url.includes('?')) {
+            let deeplink = url.slice(url.indexOf('?'));
+            if (deeplink.length > 1) {
+                query = deeplink;
+            }
+        } else {
+            query = '?';
+        }
+
+        let extraCol = table.columns()[0].length - 1;
+
+        // Update order and search pane settings when datatable is reordered,
+        // and update search settings when a search event occurs
+        $('#data').on('order.dt', updateOrder);
+        $('#data').on('order.dt', updatePanes);
+        $('#data').on('search.dt', updateSearch);
 });
     </script>
 {% endblock %}
