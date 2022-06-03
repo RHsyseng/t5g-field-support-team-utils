@@ -1,6 +1,12 @@
 {% extends "skeleton.html" %}
 {% block title %}{{ page_title }}{% endblock %}
 {% block content %}
+<style>
+    body {
+        width: auto;
+        margin: 1% 1%;
+    }
+</style>
 <div class="container-fluid copy mt-5">
     <div class="container-fluid pt-2" id="expand-buttons">
         <button type="button" class="btn btn-outline-dark" id="expand-button">Expand All Rows</button> <button type="button" class="btn btn-outline-dark" id="collapse-button">Collapse All Rows</button>
