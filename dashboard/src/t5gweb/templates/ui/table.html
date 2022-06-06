@@ -17,14 +17,12 @@
                     <th colspan="3" class="text-center">Escalations</th>
                     <th rowspan="2" class="text-center">Summary</th>
                     <th rowspan="2" class="text-center">Product</th>
-                    <th rowspan="2" class="text-center">Case Group</th>
                     <th rowspan="2" class="text-center">Account</th>
                     <th rowspan="2" class="text-center">Case Status</th>
                     <th rowspan="2" class="text-center">Internal Status</th>
                     <th rowspan="2" class="text-center">Assignee</th>
                     <th rowspan="2" class="text-center">Jira</th>
                     <th rowspan="2" class="text-center">Most Recent Comment</th>
-                    <th rowspan="2" class="text-center">Bugzillas</th>
                     <th rowspan="2" class="text-center">Days Open</th>
                     <th rowspan="2" class="text-center">Case Last Updated</th>
                 </tr>
@@ -59,20 +57,12 @@
                                         {% endif %}
                                         <td class="align-middle">{{ new_comments[account][status][card]['summary'] }}</td>
                                         <td class="align-middle text-center">{{ new_comments[account][status][card]['product'] }}</td>
-                                        <td class="align-middle text-center">{{ new_comments[account][status][card]['group_name'] }}</td>
                                         <td class="align-middle text-center">{{ new_comments[account][status][card]['account'] }}</td>
                                         <td class="align-middle text-center">{{ new_comments[account][status][card]['case_status'] }}</td>
                                         <td class="align-middle text-center">{{ new_comments[account][status][card]['card_status'] }}</td>
                                         <td class="align-middle text-center">{{ new_comments[account][status][card]['assignee']['displayName'] }} {% if new_comments[account][status][card]['contributor']['displayName'] %} <br><br><span class="fw-bold">Contributor:</span> {{ new_comments[account][status][card]['contributor']['displayName'] }} {% endif %}</td>
                                         <td class="align-middle text-center"><a href=https://issues.redhat.com/browse/{{ card }} target="_blank">{{ card }}</a></td>
                                         <td class="align-middle"><span class="fw-bold fst-italic">{{ new_comments[account][status][card]['comments'][-1][1][:10] }}</span> - {{ new_comments[account][status][card]['comments'][-1][0] | safe }}</td>
-                                        {% if new_comments[account][status][card]['bugzilla'] and new_comments[account][status][card]['bugzilla'] | length == 1  %}
-                                            <td class="align-middle text-center"><a href={{ new_comments[account][status][card]['bugzilla'][0]['bugzillaLink'] }} target="_blank">{{ new_comments[account][status][card]['bugzilla'][0]['bugzillaNumber'] }}</a></td>
-                                        {% elif new_comments[account][status][card]['bugzilla'] is none%}
-                                            <td class="align-middle text-center">{{ new_comments[account][status][card]['bugzilla'] }}</td>
-                                        {% else %}
-                                            <td class="align-middle text-center">Multiple - Expand for Details</td>
-                                        {% endif %}
                                         <td class="align-middle text-center">{{ new_comments[account][status][card]['case_days_open'] }}</td>
                                         <td class="align-middle text-center">{{ new_comments[account][status][card]['case_updated_date'] }}</td>
                                     </tr>
@@ -96,14 +86,17 @@
     // Insert Bugzilla Info and Comments into Child Rows
     function format(data) {
         let result = "<div class='card p-3'>";
+        if (data.group_name != null) {
+            result += "<h3>Case Group: " + data.group_name + "</h3>"
+        }
         if (data.bugzilla != null) {
-            result += '<h3>Bugzillas</h3><table class="table table-bordered table-hover table-responsive w-100"><thead><tr><th>#</th><th>Summary</th><th>Target Release</th><th>Assignee</th><th>QA Contact</th><th>Last Updated</th><th>Status</th></tr></thead><tbody>';
+            result += '<h3>Bugzillas:</h3><table class="table table-bordered table-hover table-responsive w-100"><thead><tr><th>#</th><th>Summary</th><th>Target Release</th><th>Assignee</th><th>QA Contact</th><th>Last Updated</th><th>Status</th></tr></thead><tbody>';
             for (let bug = 0; bug < data.bugzilla.length; bug++) {
                 result += '<tr><td><a href="' + data.bugzilla[bug].bugzillaLink + '" target="_blank">' + data.bugzilla[bug].bugzillaNumber + '</a></td><td>' + data.bugzilla[bug].summary  + '</td><td>' + data.bugzilla[bug].target_release[0] + '</td><td>' + data.bugzilla[bug].assignee + '</td><td>' + data.bugzilla[bug].qa_contact + '</td><td>' + data.bugzilla[bug].last_change_time + '</td><td>' + data.bugzilla[bug].status + '</td></tr>';
             }
             result += '</tbody></table>';
         }
-        result += '<h3>Comments</h3><ul>';
+        result += '<h3>Comments:</h3><ul>';
         for (let comment = data.comments.length -1; comment >= 0; comment--) {
             result += '<li class="text-break"><span class="fw-bold fst-italic">' + data.comments[comment][1].substring(0, 10) + '</span> - ' + data.comments[comment][0] + '</li>';
         }
@@ -152,7 +145,7 @@
             "lengthMenu": [[10, 25, 50, -1], [10, 25, 50, "All"]],
             "searchPanes": {
                 order: ['On Prio-list?', 'On Watchlist?', 'Crit Sit?', 'Escalated?', 'Account', 'Internal Status'],
-                columns: [3, 4, 5, 9, 11],
+                columns: [3, 4, 5, 8, 10],
                 initCollapsed: true,
                 panes: [{
                     name: 'Escalated?',
@@ -175,7 +168,7 @@
                     searchPanes: {
                         show: true
                     },
-                    targets: [3, 4, 5, 9, 11]
+                    targets: [3, 4, 5, 8, 10]
                 }
             ]        
         };
