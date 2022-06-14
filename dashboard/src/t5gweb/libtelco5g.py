@@ -867,8 +867,6 @@ def generate_stats(case_type):
                 stats['total_escalations'] += 1
             if cards[card]['bugzilla'] is None:
                 stats['no_bzs'] += 1
-            if (today - datetime.datetime.strptime(data['card_created'], '%Y-%m-%dT%H:%M:%S.%f%z').date()).days <= 1:
-                stats['daily_opened_cases'] += 1
 
     for (case, data) in cases.items():
         if data['status'] == 'Closed':
@@ -880,6 +878,8 @@ def generate_stats(case_type):
             stats['open_cases'] += 1
             if (today - datetime.datetime.strptime(data['createdate'], '%Y-%m-%dT%H:%M:%SZ').date()).days < 7:
                 stats['weekly_opened_cases'] += 1
+            if (today - datetime.datetime.strptime(data['createdate'], '%Y-%m-%dT%H:%M:%SZ').date()).days <= 1:
+                stats['daily_opened_cases'] += 1
             if (today - datetime.datetime.strptime(data['last_update'], '%Y-%m-%dT%H:%M:%SZ').date()).days < 7:
                 stats['no_updates'] += 1
     
