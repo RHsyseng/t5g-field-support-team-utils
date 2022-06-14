@@ -519,8 +519,8 @@ def cache_bz(cfg):
         for bug in bz_dict[case]:
             try:
                 bugs = bz_api.getbug(bug['bugzillaNumber'])
-            except: # restriced access
-                logging.warning("error retrieving bug {} - restriced?".format(bug['bugzillaNumber']))
+            except: # restricted access
+                logging.warning("error retrieving bug {} - restricted?".format(bug['bugzillaNumber']))
                 bugs = None
             if bugs:
                 bug['target_release'] = bugs.target_release
@@ -758,7 +758,7 @@ def cache_details(cfg):
             try:
                 bugs = bz_api.getbug(bug['bugzillaNumber'])
             except:
-                logging.warning("error retrieving bug {} - restriced?".format(bug['bugzillaNumber']))
+                logging.warning("error retrieving bug {} - restricted?".format(bug['bugzillaNumber']))
                 bugs = None
             if bugs:
                 bug['target_release'] = bugs.target_release
