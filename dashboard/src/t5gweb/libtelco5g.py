@@ -45,6 +45,7 @@ status_map = {
     "In Progress": "Eng Working",
     "Code Review": "Backport",
     "QE Review": "Ready To Close",
+    "Blocked": "Blocked",
     "Won't Fix / Obsolete": "Done",
     "Done": "Done"
 }
@@ -516,11 +517,22 @@ def cache_bz(cfg):
     logging.warning("getting additional info via bugzilla API")
     for case in bz_dict:
         for bug in bz_dict[case]:
-            bugs = bz_api.getbug(bug['bugzillaNumber'])
-            bug['target_release'] = bugs.target_release
-            bug['assignee'] = bugs.assigned_to
-            bug['last_change_time'] = datetime.datetime.strftime(datetime.datetime.strptime(str(bugs.last_change_time), '%Y%m%dT%H:%M:%S'), '%Y-%m-%d') # convert from xmlrpc.client.DateTime to str and reformat
-            bug['internal_whiteboard'] = bugs.internal_whiteboard
+            try:
+                bugs = bz_api.getbug(bug['bugzillaNumber'])
+            except: # restricted access
+                logging.warning("error retrieving bug {} - restricted?".format(bug['bugzillaNumber']))
+                bugs = None
+            if bugs:
+                bug['target_release'] = bugs.target_release
+                bug['assignee'] = bugs.assigned_to
+                bug['last_change_time'] = datetime.datetime.strftime(datetime.datetime.strptime(str(bugs.last_change_time), '%Y%m%dT%H:%M:%S'), '%Y-%m-%d') # convert from xmlrpc.client.DateTime to str and reformat
+                bug['internal_whiteboard'] = bugs.internal_whiteboard
+            else:
+                bug['target_release'] = ['unavailable']
+                bug['assignee'] = 'unavailable'
+                bug['last_change_time'] = 'unavailable'
+                bug['internal_whiteboard'] = 'unavailable'
+
     redis_set('bugs', json.dumps(bz_dict))
 
 def cache_escalations(cfg):
@@ -743,12 +755,23 @@ def cache_details(cfg):
     logging.warning("getting additional info via bugzilla API")
     for case in bz_dict:
         for bug in bz_dict[case]:
-            bugs = bz_api.getbug(bug['bugzillaNumber'])
-            bug['target_release'] = bugs.target_release
-            bug['assignee'] = bugs.assigned_to
-            bug['last_change_time'] = datetime.datetime.strftime(datetime.datetime.strptime(str(bugs.last_change_time), '%Y%m%dT%H:%M:%S'), '%Y-%m-%d') # convert from xmlrpc.client.DateTime to str and reformat
-            bug['internal_whiteboard'] = bugs.internal_whiteboard
-            bug['qa_contact'] = bugs.qa_contact
+            try:
+                bugs = bz_api.getbug(bug['bugzillaNumber'])
+            except:
+                logging.warning("error retrieving bug {} - restricted?".format(bug['bugzillaNumber']))
+                bugs = None
+            if bugs:
+                bug['target_release'] = bugs.target_release
+                bug['assignee'] = bugs.assigned_to
+                bug['last_change_time'] = datetime.datetime.strftime(datetime.datetime.strptime(str(bugs.last_change_time), '%Y%m%dT%H:%M:%S'), '%Y-%m-%d') # convert from xmlrpc.client.DateTime to str and reformat
+                bug['internal_whiteboard'] = bugs.internal_whiteboard
+                bug['qa_contact'] = bugs.qa_contact
+            else:
+                bug['target_release'] = ['unavailable']
+                bug['assignee'] = 'unavailable'
+                bug['last_change_time'] = 'unavailable'
+                bug['internal_whiteboard'] = 'unavailable'
+                bug['qa_contact'] = 'unavailable'
     
     redis_set('bugs', json.dumps(bz_dict))
     redis_set('details', json.dumps(case_details))

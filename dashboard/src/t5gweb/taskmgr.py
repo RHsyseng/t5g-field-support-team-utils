@@ -47,14 +47,14 @@ def setup_scheduled_tasks(sender, **kwargs):
 
     # update bugzilla/details cache
     sender.add_periodic_task(
-        crontab(hour='*/12', minute='0'), # twice a day
+        crontab(hour='*/12', minute='48'), # twice a day
         cache_data.s('details'),
         name='details_sync',
     )
 
     # update escalations cache
     sender.add_periodic_task(
-        crontab(hour='*/12', minute='0'), # twice a day
+        crontab(hour='*/12', minute='37'), # twice a day
         cache_data.s('escalations'),
         name='escalations_sync',
     )
