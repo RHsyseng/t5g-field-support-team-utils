@@ -522,7 +522,7 @@ def cache_bz(cfg):
             except: # restriced access
                 logging.warning("error retrieving bug {} - restriced?".format(bug['bugzillaNumber']))
                 bugs = None
-            if bugs is not None:
+            if bugs:
                 bug['target_release'] = bugs.target_release
                 bug['assignee'] = bugs.assigned_to
                 bug['last_change_time'] = datetime.datetime.strftime(datetime.datetime.strptime(str(bugs.last_change_time), '%Y%m%dT%H:%M:%S'), '%Y-%m-%d') # convert from xmlrpc.client.DateTime to str and reformat
@@ -760,7 +760,7 @@ def cache_details(cfg):
             except:
                 logging.warning("error retrieving bug {} - restriced?".format(bug['bugzillaNumber']))
                 bugs = None
-            if bugs is not None:
+            if bugs:
                 bug['target_release'] = bugs.target_release
                 bug['assignee'] = bugs.assigned_to
                 bug['last_change_time'] = datetime.datetime.strftime(datetime.datetime.strptime(str(bugs.last_change_time), '%Y%m%dT%H:%M:%S'), '%Y-%m-%d') # convert from xmlrpc.client.DateTime to str and reformat
