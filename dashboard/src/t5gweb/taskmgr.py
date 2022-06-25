@@ -180,15 +180,20 @@ def tag_bz():
     for case in bugs:
         if case in telco_cases:
             for bug in bugs[case]:
-                bz = bz_api.getbug(bug['bugzillaNumber'])
-                if "telco" not in bz.internal_whiteboard.lower():
-                    update = bz_api.build_update(internal_whiteboard="Telco Telco:Case " + bz.internal_whiteboard, minor_update=True)
-                    logging.warning("tagging BZ:" + str(bz.id))
-                    bz_api.update_bugs([bz.id], update)
-                elif "telco:case" not in bz.internal_whiteboard.lower():
-                    update = bz_api.build_update(internal_whiteboard=bz.internal_whiteboard + " Telco:Case", minor_update=True)
-                    logging.warning("tagging BZ:" + str(bz.id))
-                    bz_api.update_bugs([bz.id], update)
+                try:
+                    bz = bz_api.getbug(bug['bugzillaNumber'])
+                except:
+                    logging.warning("error: {} is restricted".format(bug['bugzillaNumber']))
+                    bz = None
+                if bz:
+                    if "telco" not in bz.internal_whiteboard.lower():
+                        update = bz_api.build_update(internal_whiteboard="Telco Telco:Case " + bz.internal_whiteboard, minor_update=True)
+                        logging.warning("tagging BZ:" + str(bz.id))
+                        bz_api.update_bugs([bz.id], update)
+                    elif "telco:case" not in bz.internal_whiteboard.lower():
+                        update = bz_api.build_update(internal_whiteboard=bz.internal_whiteboard + " Telco:Case", minor_update=True)
+                        logging.warning("tagging BZ:" + str(bz.id))
+                        bz_api.update_bugs([bz.id], update)
 
 @mgr.task
 def cache_stats():
