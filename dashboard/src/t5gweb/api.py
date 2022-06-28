@@ -11,6 +11,7 @@ from t5gweb.libtelco5g import(
     cache_details,
     cache_escalations,
     cache_watchlist,
+    cache_issues,
     redis_get,
     generate_stats
 )
@@ -28,6 +29,7 @@ def index():
         "{}refresh/details".format(request.base_url),
         "{}refresh/escalations".format(request.base_url),
         "{}refresh/watchlist".format(request.base_url),
+        "{}refresh/issues".format(request.base_url),
         "{}cards/telco5g".format(request.base_url),
         "{}cards/cnv".format(request.base_url),
         "{}cases/telco5g".format(request.base_url),
@@ -35,6 +37,7 @@ def index():
         "{}bugs".format(request.base_url),
         "{}details".format(request.base_url),
         "{}escalations".format(request.base_url),
+        "{}issues".format(request.base_url),
         "{}stats/telco5g".format(request.base_url),
         "{}stats/cnv".format(request.base_url)
     ]}
@@ -59,6 +62,11 @@ def refresh(data_type):
     elif data_type == 'watchlist':
         cache_watchlist(cfg)
         return {"caching watchlist":"ok"}
+    elif data_type == 'issues':
+        cache_issues(cfg)
+        return {"caching issues":"ok"}
+    else:
+        return {'error': 'unknown data type: {}'.format(data_type)}
 
 @BP.route('/cards/<string:card_type>')
 def get_cards(card_type):
@@ -111,6 +119,12 @@ def get_details():
     """Retrieves CritSit and Group Name for each case"""
     details = redis_get('details')
     return json.dumps(details)
+
+@BP.route('/issues')
+def get_issues():
+    """Retrieves all JIRA issues associated with open cases"""
+    issues = redis_get('issues')
+    return json.dumps(issues)
 
 @BP.route('/stats/<string:case_type>')
 def get_stats(case_type):

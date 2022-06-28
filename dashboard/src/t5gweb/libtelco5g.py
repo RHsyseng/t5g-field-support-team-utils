@@ -535,6 +535,40 @@ def cache_bz(cfg):
 
     redis_set('bugs', json.dumps(bz_dict))
 
+def cache_issues(cfg):
+
+    logging.warning("caching issues")
+    cases = redis_get('cases')
+    if cases is None:
+        redis_set('issues', json.dumps(None))
+        return
+    
+    token = get_token(cfg['offline_token'])
+    headers = {"Accept": "application/json", "Authorization": "Bearer " + token}
+
+    jira_issues = {}
+    open_cases = [case for case in cases if cases[case]['status'] != 'Closed']
+    for case in open_cases:
+        issues_url = "https://access.redhat.com/hydra/rest/cases/{}/jiras".format(case)
+        issues = requests.get(issues_url, headers=headers)
+        if issues.status_code == 200 and len(issues.json()) > 0:
+            case_issues = []
+            for issue in issues.json():
+                if 'title' in issue.keys():
+                    case_issues.append({
+                        'id': issue['resourceKey'],
+                        'url': issue['resourceURL'],
+                        'title': issue['title'],
+                        'status': issue['status'],
+                        'updated': datetime.datetime.strftime(datetime.datetime.strptime(str(issue['lastModifiedDate']), '%Y-%m-%dT%H:%M:%SZ'), '%Y-%m-%d')
+                    })
+            if len(case_issues) > 0:
+                jira_issues[case] = case_issues
+    
+    redis_set('issues', json.dumps(jira_issues))
+    logging.warning("issues cached")
+                   
+
 def cache_escalations(cfg):
     '''Get cases that have been escalated from Smartsheet'''
     cases = redis_get('cases')
@@ -575,6 +609,7 @@ def cache_cards(cfg, self=None, background=False):
 
     cases = redis_get('cases')
     bugs = redis_get('bugs')
+    issues = redis_get('issues')
     escalations = redis_get('escalations')
     watchlist = redis_get('watchlist')
     details = redis_get('details')
@@ -648,6 +683,11 @@ def cache_cards(cfg, self=None, background=False):
             bugzilla = bugs[case_number]
         else:
             bugzilla = None
+        
+        if case_number in issues:
+            case_issues = issues[case_number]
+        else:
+            case_issues = None
 
         if case_number in escalations:
             escalated = True
@@ -677,6 +717,7 @@ def cache_cards(cfg, self=None, background=False):
             "tags": tags,
             "labels": issue.fields.labels,
             "bugzilla": bugzilla,
+            "issues": case_issues,
             "severity": re.search(r'[a-zA-Z]+', cases[case_number]['severity']).group(),
             "escalated": escalated,
             "watched": watched,
@@ -775,6 +816,8 @@ def cache_details(cfg):
     
     redis_set('bugs', json.dumps(bz_dict))
     redis_set('details', json.dumps(case_details))
+    
+    cache_issues(cfg)
 
 def get_case_from_link(jira_conn, card):
 

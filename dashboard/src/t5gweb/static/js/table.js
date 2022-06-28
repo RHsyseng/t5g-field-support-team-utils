@@ -11,6 +11,13 @@ function format(data) {
         }
         result += '</tbody></table>';
     }
+    if (data.issues != null) {
+        result += '<h3>JIRA Issues:</h3><table class="table table-bordered table-hover table-responsive w-100"><thead><tr><th>#</th><th>Summary</th><th>Last Updated</th><th>Status</th></tr></thead><tbody>';
+        for (let issue = 0; issue < data.issues.length; issue++) {
+            result += '<tr><td><a href="' + data.issues[issue].url + '" target="_blank">' + data.issues[issue].id + '</a></td><td>' + data.issues[issue].title + '</td><td>' + data.issues[issue].updated + '</td><td>' + data.issues[issue].status + '</td></tr>';
+        }
+        result += '</tbody></table>';
+    }
     result += '<h3>Comments:</h3><ul>';
     for (let comment = data.comments.length - 1; comment >= 0; comment--) {
         result += '<li class="text-break"><span class="fw-bold fst-italic">' + data.comments[comment][1].substring(0, 10) + '</span> - ' + data.comments[comment][0] + '</li>';
