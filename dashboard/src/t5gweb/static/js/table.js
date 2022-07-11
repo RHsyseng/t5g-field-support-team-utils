@@ -66,8 +66,8 @@ $(document).ready(function () {
         "order": [[2, "desc"], [3, "desc"], [4, "desc"], [5, "desc"]],
         "lengthMenu": [[10, 25, 50, -1], [10, 25, 50, "All"]],
         "searchPanes": {
-            order: ['On Prio-list?', 'On Watchlist?', 'Crit Sit?', 'Escalated?', 'Account', 'Internal Status'],
-            columns: [3, 4, 5, 8, 10],
+            order: ['Severity', 'On Prio-list?', 'Escalated?', 'Account', 'Internal Status'],
+            columns: [2, 3, 8, 10],
             initCollapsed: true,
             panes: [{
                 name: 'Escalated?',
