@@ -37,7 +37,7 @@
                     {% for status in new_comments[account] %}
                         {% for card in new_comments[account][status]%}
                             {% if new_comments[account][status][card]['severity'] == 'Low' %}
-                               {% set severity_order = 1 %}
+                                {% set severity_order = 1 %}
                             {% elif  new_comments[account][status][card]['severity'] == 'Normal' %}
                                 {% set severity_order = 2 %}
                             {% elif new_comments[account][status][card]['severity'] == 'High' %}
