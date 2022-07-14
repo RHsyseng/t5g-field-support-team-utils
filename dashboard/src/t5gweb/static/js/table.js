@@ -26,33 +26,6 @@ function format(data) {
     return result + "</div>";
 }
 
-// Sort Severities Correctly (https://datatables.net/examples/plug-ins/sorting_auto.html)
-$.fn.dataTable.ext.type.detect.unshift(
-    function (d) {
-        let d_text;
-        d = String(d);
-        if (d.includes("Low") || d.includes("Normal") || d.includes("High") || d.includes("Urgent")) {
-            d_text = jQuery(d).text();
-        } else {
-            d_text = d;
-        }
-        return d_text == 'Low' || d_text == 'Normal' || d_text == 'High' || d_text == 'Urgent' ?
-            'severity-grade' :
-            null;
-    }
-);
-
-$.fn.dataTable.ext.type.order['severity-grade-pre'] = function (d) {
-    let d_text = jQuery(d).text();
-    switch (d_text) {
-        case 'Low': return 1;
-        case 'Normal': return 2;
-        case 'High': return 3;
-        case 'Urgent': return 4;
-    }
-    return 0;
-};
-
 // Initialize DataTable
 $(document).ready(function () {
     let deeplinkList = [
@@ -86,11 +59,12 @@ $(document).ready(function () {
             $($.fn.dataTable.tables(true)).DataTable().columns.adjust();
         },
         "columnDefs": [
+            {type: 'html', targets: 2},
             {
                 searchPanes: {
                     show: true
                 },
-                targets: [3, 4, 5, 8, 10]
+                targets: [2, 3, 8, 10]
             }
         ]
     };
