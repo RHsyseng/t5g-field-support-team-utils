@@ -248,3 +248,5 @@ def adjust_time_off():
 
     libtelco5g.redis_set('telco_team', json.dumps(telco_availability))
     libtelco5g.redis_set('cnv_team', json.dumps(cnv_availability))
+    logging.warning("Telco Team: {}".format(telco_availability))
+    logging.warning("CNV Team: {}".format(cnv_availability))
