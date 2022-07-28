@@ -29,6 +29,11 @@ import logging
 import time
 import bugzilla
 import smartsheet
+from google.auth.transport.requests import Request
+from google.oauth2.credentials import Credentials
+from google_auth_oauthlib.flow import InstalledAppFlow
+from googleapiclient.discovery import build
+from googleapiclient.errors import HttpError
 
 # for portal to jira mapping
 portal2jira_sevs = {
@@ -193,7 +198,18 @@ def get_case_number(link, pfilter='cases'):
     return ''
 
 def get_random_member(team):
-    return random.choice(team)
+    ''' If no engineer is available, randomly select from all engineers. 
+        Otherwise, randomly select from only available engineers
+    '''
+    availability = [engineer['available'] for engineer in team]
+    if True not in availability:
+        return random.choice(team)
+    else:
+        while True:
+            choice = random.choice(team)
+            if choice['available'] == True:
+                break
+        return choice
 
 def create_cards(cfg, new_cases, action='none'):
     '''
@@ -992,6 +1008,77 @@ def exists_or_zero(data, key):
         return data[key]
     else:
         return 0
+
+def login_calendar():
+    '''Login to the Google Calendar API'''
+    
+    SCOPES = ['https://www.googleapis.com/auth/calendar.readonly']
+    creds = None
+    # The file token.json stores the user's access and refresh tokens, and is
+    # created automatically when the authorization flow completes for the first
+    # time.
+    if os.path.exists('token.json'):
+        creds = Credentials.from_authorized_user_file('token.json', SCOPES)
+    # If there are no (valid) credentials available, let the user log in.
+    if not creds or not creds.valid:
+        if creds and creds.expired and creds.refresh_token:
+            creds.refresh(Request())
+        else:
+            flow = InstalledAppFlow.from_client_secrets_file(
+                'credentials.json', SCOPES)
+            creds = flow.run_local_server(port=0)
+        # Save the credentials for the next run
+        with open('token.json', 'w') as token:
+            token.write(creds.to_json())
+
+    try:
+        service = build('calendar', 'v3', credentials=creds)
+    except HttpError as error:
+        print('An error occurred: %s' % error)
+
+    return service
+
+def change_availability(team, service, cfg):
+    ''' Update team with time off from Google Calendar'''
+
+    # Call the Calendar API
+    now = datetime.datetime.utcnow()
+    timeMin = now.isoformat() + 'Z'  # 'Z' indicates UTC time
+
+    # Prints the start and name of the next 10 events
+    page_token = None
+    emails = [engineer['email'] for engineer in team]
+    
+    # On weekdays, check for time off until the next day. 
+    # On weekends, check for off on the following Monday.
+    if now.weekday() < 5:
+        tomorrow = now + datetime.timedelta(hours=24)
+        timeMax = tomorrow.isoformat() + 'Z' # 'Z' indicates UTC time
+    elif now.weekday() == 5:
+        monday = now + datetime.timedelta(hours=72)
+        timeMax = monday.isoformat() + 'Z' # 'Z' indicates UTC time
+    else:
+        monday = now + datetime.timedelta(hours=48)
+        timeMax = monday.isoformat() + 'Z' # 'Z' indicates UTC time
+    
+    # Set all members to be true to avoid false negatives
+    for member in team:
+        member['available'] = True
+
+    # Get time off events and set availability accordingly    
+    while True:
+            events = service.events().list(calendarId=cfg['calendar_id'], pageToken=page_token, timeMin=timeMin, timeMax=timeMax).execute()
+            for event in events['items']:
+                if event['creator']['email'] in emails and 'start' in event and 'end' in event:
+                    duration = (datetime.datetime.strptime(event['end']['dateTime'], '%Y-%m-%dT%H:%M:%S%z') - datetime.datetime.strptime(event['start']['dateTime'], '%Y-%m-%dT%H:%M:%S%z')).total_seconds() / 3600
+                    if duration >= 24:
+                        for engineer in team:
+                            if engineer['email'] == event['creator']['email']:
+                                engineer['available'] = False
+            page_token = events.get('nextPageToken')
+            if not page_token:
+                break
+    return team
 
 def main():
     print("libtelco5g")

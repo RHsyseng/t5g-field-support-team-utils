@@ -31,6 +31,7 @@ def set_cfg():
     cfg['bz_key'] = os.environ.get('bz_key')
     cfg['smartsheet_access_token'] = os.environ.get('smartsheet_access_token')
     cfg['sheet_id'] = os.environ.get('sheet_id')
+    cfg['calendar_id'] = os.environ.get('calendar_id')
 
     return cfg
 

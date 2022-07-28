@@ -50,6 +50,8 @@ spec:
           value: SMARTSHEET_ACCESS_TOKEN
         - name: sheet_id
           value: SHEET_ID
+        - name: calendar_id
+          value: CALENDAR_ID
         volumeMounts:
         - mountPath: /celery
           name: tasks-vol

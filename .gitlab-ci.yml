@@ -53,7 +53,7 @@ k8s_deploy:
   - sed -i 's/TASKS_URL/'"$URL"'/g' dashboard/yaml/*.yml
   - sed -i 's/SMARTSHEET_ACCESS_TOKEN/'"$Smartsheet_access_token"'/g' dashboard/yaml/*.yml
   - sed -i 's/SHEET_ID/'"$Sheet_id"'/g' dashboard/yaml/*.yml
-
+  - sed -i 's/CALENDAR_ID/'"$Calendar_id"'/g' dashboard/yaml/*.yml
   script:
   - oc apply -f dashboard/yaml/03_t5gweb-app-deployment.yml
   - oc apply -f dashboard/yaml/06_t5gweb-tasks-deployment.yml

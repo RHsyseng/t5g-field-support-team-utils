@@ -80,6 +80,13 @@ def setup_scheduled_tasks(sender, **kwargs):
         name='watchlist_sync',
     )
 
+    # Take engineers on time off out of rotation
+    sender.add_periodic_task(
+        crontab(hour='*/24', minute='12'), # once a day + 12 for randomness
+        adjust_time_off.s(),
+        name='adjust_time_off',
+    )
+
 @mgr.task
 def portal_jira_sync(job_type):
     
@@ -93,12 +100,12 @@ def portal_jira_sync(job_type):
     cards = libtelco5g.redis_get('cards')
     
     if job_type == 'telco5g':
-        cfg['team'] = json.loads(os.environ.get('telco_team'))
+        cfg['team'] = libtelco5g.redis_get('telco_team')
         cfg['to'] = os.environ.get('telco_email')
         open_cases = [case for case in cases if cases[case]['status'] != 'Closed' and 'shift_telco5g' in cases[case]['tags']]
     elif job_type == 'cnv':
         open_cases = [case for case in cases if cases[case]['status'] != 'Closed' and 'cnv' in cases[case]['tags']]
-        cfg['team'] = json.loads(os.environ.get('cnv_team'))
+        cfg['team'] = libtelco5g.redis_get('cnv_team')
         cfg['to'] = os.environ.get('cnv_email')
         cfg['subject'] = 'New Card(s) Have Been Created to Track CNV Issues'
         cfg['labels'] = ['cnv', 'no-qe', 'no-doc']
@@ -224,3 +231,20 @@ def refresh_background(self):
         if have_lock:
             refresh_lock.release()
     return response
+
+@mgr.task
+def adjust_time_off():
+
+    cfg = t5gweb.set_cfg()
+
+    logging.warning("Logging into Google Calendar")
+    service = libtelco5g.login_calendar()
+
+    logging.warning("Updating availabilities of teams")
+    telco_team = libtelco5g.redis_get('telco_team')
+    cnv_team = libtelco5g.redis_get('cnv_team')
+    telco_availability = libtelco5g.change_availability(telco_team, service, cfg)
+    cnv_availability = libtelco5g.change_availability(cnv_team, service, cfg)
+
+    libtelco5g.redis_set('telco_team', json.dumps(telco_availability))
+    libtelco5g.redis_set('cnv_team', json.dumps(cnv_availability))

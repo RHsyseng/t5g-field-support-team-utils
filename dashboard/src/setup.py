@@ -18,6 +18,9 @@ setup(
         'python_bugzilla==3.2.0',
         'celery==5.2.3',
         'smartsheet-python-sdk==2.105.1',
-        'flower==1.0.0'
+        'flower==1.0.0',
+        'google-api-python-client==2.54.0',
+        'google-auth-httplib2==0.1.0',
+        'google-auth-oauthlib==0.5.2'
     ],
 )

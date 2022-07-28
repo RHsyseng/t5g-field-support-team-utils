@@ -33,6 +33,8 @@ spec:
           value: SMARTSHEET_ACCESS_TOKEN
         - name: sheet_id
           value: SHEET_ID
+        - name: calendar_id
+          value: CALENDAR_ID
       containers:
       - name: t5gweb-app
         image: image-registry.openshift-image-registry.svc.cluster.local:5000/t5g-web/t5gweb:latest
@@ -53,3 +55,5 @@ spec:
           value: SMARTSHEET_ACCESS_TOKEN
         - name: sheet_id
           value: SHEET_ID
+        - name: calendar_id
+          value: CALENDAR_ID
