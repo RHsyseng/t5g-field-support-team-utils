@@ -197,13 +197,9 @@ def get_random_member(team):
 
     last_choice = redis_get('last_choice')
     if len(team) > 1: 
-        if len(last_choice) > 1:
-            while True:
-                current_choice = random.choice(team)
-                if last_choice['name'] != current_choice['name']: 
-                    break
-        else:
-            current_choice = random.choice(team)
+        if last_choice is not None:
+            team = [member for member in team if member != last_choice]
+        current_choice = random.choice(team)
     elif len(team) == 1:
         current_choice = team[0]
     else:
