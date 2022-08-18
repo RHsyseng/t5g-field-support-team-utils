@@ -193,7 +193,22 @@ def get_case_number(link, pfilter='cases'):
     return ''
 
 def get_random_member(team):
-    return random.choice(team)
+    '''Randomly pick team member and avoid picking the same person twice in a row'''
+
+    last_choice = redis_get('last_choice')
+    if len(team) > 1: 
+        if last_choice is not None:
+            team = [member for member in team if member != last_choice]
+        current_choice = random.choice(team)
+    elif len(team) == 1:
+        current_choice = team[0]
+    else:
+        logging.warning("No team variable is available, cannot assign case.")
+        current_choice = None
+    redis_set('last_choice', json.dumps(current_choice))
+
+    return current_choice
+
 
 def create_cards(cfg, new_cases, action='none'):
     '''
