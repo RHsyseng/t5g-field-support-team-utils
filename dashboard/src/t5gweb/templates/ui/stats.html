@@ -191,7 +191,7 @@
             </table>
             <table class="table table-bordered table-hover table-responsive mt-5 w-100 display" id="status">
                 <thead>
-                    <tr><th class="text-center">Status</th><th class="text-center">Number of Cases</th></tr>
+                    <tr><th class="text-center">Status</th><th class="text-center">Number of Open Cases</th></tr>
                 </thead>
                 <tbody class="list">
                         {% for status in stats['by_status'] %}
@@ -205,7 +205,7 @@
 
             <table class="table table-bordered table-hover table-responsive mt-5 w-100 display" id="engineers">
                 <thead>
-                    <tr><th class="text-center">Engineer</th><th class="text-center">Number of Cases</th></tr>
+                    <tr><th class="text-center">Engineer</th><th class="text-center">Number of Open Cases</th></tr>
                 </thead>
                 <tbody class="list">
                         {% for engineer in stats['by_engineer'] %}
