@@ -178,7 +178,7 @@
         <div class="col-12 col-xl-6">
             <table class="table table-bordered table-hover table-responsive mt-5 w-100" id="severity">
                 <thead>
-                    <tr><th class="text-center">Severity</th><th class="text-center">Number of Cases</th></tr>
+                    <tr><th class="text-center">Severity</th><th class="text-center">Number of Open Cases</th></tr>
                 </thead>
                 <tbody class="list">
                         {% for severity in stats['by_severity'] %}
@@ -191,7 +191,7 @@
             </table>
             <table class="table table-bordered table-hover table-responsive mt-5 w-100 display" id="status">
                 <thead>
-                    <tr><th class="text-center">Status</th><th class="text-center">Number of Open Cases</th></tr>
+                    <tr><th class="text-center">Status</th><th class="text-center">Number of Cases</th></tr>
                 </thead>
                 <tbody class="list">
                         {% for status in stats['by_status'] %}
