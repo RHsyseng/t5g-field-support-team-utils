@@ -907,12 +907,12 @@ def generate_stats(case_type):
         severity = data['severity']
         status = data['case_status']
     
-        stats['by_customer'][account] += 1
-        stats['by_engineer'][engineer] += 1
-        stats['by_severity'][severity] += 1
         stats['by_status'][status] += 1
 
         if status != 'Closed':
+            stats['by_customer'][account] += 1
+            stats['by_engineer'][engineer] += 1
+            stats['by_severity'][severity] += 1
             if severity == "High" or severity == "Urgent":
                 stats['high_prio'] += 1
             if cards[card]['escalated']:
