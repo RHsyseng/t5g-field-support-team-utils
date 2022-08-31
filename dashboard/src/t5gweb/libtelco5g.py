@@ -15,6 +15,7 @@ import datetime
 from jira import JIRA
 from jira.client import ResultList
 from jira.resources import Issue
+from jira.exceptions import JIRAError
 import re
 import pprint
 import requests
@@ -561,6 +562,9 @@ def cache_issues(cfg):
     token = get_token(cfg['offline_token'])
     headers = {"Accept": "application/json", "Authorization": "Bearer " + token}
 
+    logging.warning("attempting to connect to jira...")
+    jira_conn = jira_connection(cfg)
+
     jira_issues = {}
     open_cases = [case for case in cases if cases[case]['status'] != 'Closed']
     for case in open_cases:
@@ -570,12 +574,41 @@ def cache_issues(cfg):
             case_issues = []
             for issue in issues.json():
                 if 'title' in issue.keys():
+                    try:
+                        bug = jira_conn.issue(issue['resourceKey'])
+                    except JIRAError:
+                        logging.warning("Can't access {}".format(issue['resourceKey']))
+                        continue
+
+                    # Retrieve QA contact from Jira card
+                    try:
+                        qa_contact = bug.fields.customfield_12315948.emailAddress
+                    except AttributeError:
+                        qa_contact = None
+
+                    # Retrieve assignee from Jira card
+                    if bug.fields.assignee is not None:
+                        assignee = bug.fields.assignee.emailAddress
+                    else:
+                        assignee = None
+
+                    # Retrieve target release from Jira card
+                    if len(bug.fields.fixVersions) > 0:
+                        fix_versions = []
+                        for version in bug.fields.fixVersions:
+                            fix_versions.append(version.name)
+                    else:
+                        fix_versions = None
+
                     case_issues.append({
                         'id': issue['resourceKey'],
                         'url': issue['resourceURL'],
                         'title': issue['title'],
                         'status': issue['status'],
-                        'updated': datetime.datetime.strftime(datetime.datetime.strptime(str(issue['lastModifiedDate']), '%Y-%m-%dT%H:%M:%SZ'), '%Y-%m-%d')
+                        'updated': datetime.datetime.strftime(datetime.datetime.strptime(str(issue['lastModifiedDate']), '%Y-%m-%dT%H:%M:%SZ'), '%Y-%m-%d'),
+                        'qa_contact': qa_contact,
+                        'assignee': assignee,
+                        'fix_versions': fix_versions
                     })
             if len(case_issues) > 0:
                 jira_issues[case] = case_issues
