@@ -12,9 +12,9 @@ function format(data) {
         result += '</tbody></table>';
     }
     if (data.issues != null) {
-        result += '<h3>JIRA Issues:</h3><table class="table table-bordered table-hover table-responsive w-100"><thead><tr><th>#</th><th>Summary</th><th>Last Updated</th><th>Status</th></tr></thead><tbody>';
+        result += '<h3>JIRA Issues:</h3><table class="table table-bordered table-hover table-responsive w-100"><thead><tr><th>#</th><th>Summary</th><th>Target Release</th><th>Assignee</th><th>QA Contact</th><th>Last Updated</th><th>Status</th></tr></thead><tbody>';
         for (let issue = 0; issue < data.issues.length; issue++) {
-            result += '<tr><td><a href="' + data.issues[issue].url + '" target="_blank">' + data.issues[issue].id + '</a></td><td>' + data.issues[issue].title + '</td><td>' + data.issues[issue].updated + '</td><td>' + data.issues[issue].status + '</td></tr>';
+            result += '<tr><td><a href="' + data.issues[issue].url + '" target="_blank">' + data.issues[issue].id + '</a></td><td>' + data.issues[issue].title + '</td><td>' + ((data.issues[issue].fix_versions != null) ? data.issues[issue].fix_versions : '---') + '</td><td>' + ((data.issues[issue].assignee != null) ? data.issues[issue].assignee : '---') + '</td><td>' + ((data.issues[issue].qa_contact != null) ? data.issues[issue].qa_contact : '---') + '</td><td>' +data.issues[issue].updated + '</td><td>' + data.issues[issue].status + '</td></tr>';
         }
         result += '</tbody></table>';
     }
@@ -173,7 +173,7 @@ $(document).ready(function () {
                     colIndex = extraCol + 1;
                 }
                 let column = { 'column': colIndex, 'rows': [] };
-                let rows = [];
+                let rows = [];table.js
                 $.each($('tr.selected', col), function (j, row) {
 
                     rows.push($('span:eq(0)', row).text());
