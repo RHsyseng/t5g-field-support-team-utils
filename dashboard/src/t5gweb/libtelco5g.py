@@ -579,16 +579,20 @@ def cache_issues(cfg):
                     except JIRAError:
                         logging.warning("Can't access {}".format(issue['resourceKey']))
                         continue
+
+                    # Retrieve QA contact from Jira card
                     try:
                         qa_contact = bug.fields.customfield_12315948.emailAddress
                     except AttributeError:
                         qa_contact = None
 
+                    # Retrieve assignee from Jira card
                     if bug.fields.assignee is not None:
                         assignee = bug.fields.assignee.emailAddress
                     else:
                         assignee = None
-                        
+
+                    # Retrieve target release from Jira card
                     if len(bug.fields.fixVersions) > 0:
                         fix_versions = []
                         for version in bug.fields.fixVersions:

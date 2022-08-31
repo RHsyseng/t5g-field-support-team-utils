@@ -173,7 +173,7 @@ $(document).ready(function () {
                     colIndex = extraCol + 1;
                 }
                 let column = { 'column': colIndex, 'rows': [] };
-                let rows = [];table.js
+                let rows = [];
                 $.each($('tr.selected', col), function (j, row) {
 
                     rows.push($('span:eq(0)', row).text());
