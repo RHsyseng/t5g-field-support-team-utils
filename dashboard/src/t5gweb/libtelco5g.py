@@ -741,6 +741,12 @@ def cache_cards(cfg, self=None, background=False):
             escalated = True
         else:
             escalated = False
+        
+        if 'PotentialEscalation' in issue.fields.labels and escalated is False:
+            potenial_escalation = True
+        else:
+            potenial_escalation = False
+
         if case_number in watchlist:
             watched = True
         else:
@@ -768,6 +774,7 @@ def cache_cards(cfg, self=None, background=False):
             "issues": case_issues,
             "severity": re.search(r'[a-zA-Z]+', cases[case_number]['severity']).group(),
             "escalated": escalated,
+            "potenial_escalation": potenial_escalation,
             "watched": watched,
             "product": cases[case_number]['product'],
             "case_status": cases[case_number]['status'],
