@@ -52,9 +52,6 @@ $(document).ready(function () {
                         return rowData[3] === 'Yes' || rowData[4] === 'Yes' || rowData[5] === 'Yes';
                     }
                 }]
-            },
-            {
-
             }]
         },
         "initComplete": function (settings, json) {
