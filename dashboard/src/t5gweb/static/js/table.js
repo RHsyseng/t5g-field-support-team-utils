@@ -64,12 +64,16 @@ $(document).ready(function () {
         },
         "columnDefs": [
             { type: 'html', targets: 2 },
+            
+            // Make sure filters are always shown
             {
                 searchPanes: {
                     show: true
                 },
                 targets: [2, 8, 10]
             },
+
+            // Include cards marked as 'Potentially' in 'No' category
             {
                 searchPanes: {
                     show: true,
