@@ -60,12 +60,36 @@ $(document).ready(function () {
             $($.fn.dataTable.tables(true)).DataTable().columns.adjust();
         },
         "columnDefs": [
-            {type: 'html', targets: 2},
+            { type: 'html', targets: 2 },
+            
+            // Make sure filters are always shown
             {
                 searchPanes: {
                     show: true
                 },
-                targets: [2, 3, 8, 10]
+                targets: [2, 8, 10]
+            },
+
+            // Include cards marked as 'Potentially' in 'No' category
+            {
+                searchPanes: {
+                    show: true,
+                    options: [
+                        {
+                            label: 'No',
+                            value: function (rowData, rowIdx) {
+                                return rowData[3] == 'No' || rowData[3] == 'Potentially';
+                            }
+                        },
+                        {
+                            label: 'Yes',
+                            value: function (rowData, rowIdx) {
+                                return rowData[3] == 'Yes';
+                            }
+                        }
+                    ]
+                },
+                targets: [3]
             }
         ]
     };
