@@ -317,6 +317,7 @@ def create_cards(cfg, new_cases, action='none'):
                 "labels": cfg['labels'],
                 "bugzilla": bz,
                 "severity": re.search(r'[a-zA-Z]+', cases[case]['severity']).group(),
+                "priority": issue.fields.priority.name,
                 "case_status": cases[case]['status'],
                 "escalated": False,
                 "watched": False,
@@ -773,6 +774,7 @@ def cache_cards(cfg, self=None, background=False):
             "bugzilla": bugzilla,
             "issues": case_issues,
             "severity": re.search(r'[a-zA-Z]+', cases[case_number]['severity']).group(),
+            "priority": issue.fields.priority.name,
             "escalated": escalated,
             "potenial_escalation": potenial_escalation,
             "watched": watched,
@@ -1047,6 +1049,19 @@ def exists_or_zero(data, key):
         return data[key]
     else:
         return 0
+
+def sync_priority(cfg):
+    cards = redis_get("cards")
+    sev_map = {re.search(r'[a-zA-Z]+', k).group(): v for k, v in portal2jira_sevs.items()}
+    out_of_sync = {card:data for (card, data) in cards.items() if data['card_status'] != 'Done' and data['priority'] != sev_map[data['severity']]}
+    for (card, data) in out_of_sync.items():
+        new_priority = sev_map[data['severity']]
+        logging.warning("{} has priority of {}, but case is {}".format(card, data['priority'], data['severity']))
+        logging.warning("updating {} to a priority of {}".format(card, new_priority))
+        jira_conn = jira_connection(cfg)
+        oos_issue = jira_conn.issue(card)
+        oos_issue.update(fields={'priority': {'name': new_priority}})
+    return out_of_sync
 
 def main():
     print("libtelco5g")
