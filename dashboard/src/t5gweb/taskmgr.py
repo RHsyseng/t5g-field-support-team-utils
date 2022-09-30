@@ -79,6 +79,13 @@ def setup_scheduled_tasks(sender, **kwargs):
         cache_data.s('watchlist'),
         name='watchlist_sync',
     )
+    
+    # ensure case severities match card priorities
+    sender.add_periodic_task(
+        crontab(hour='3', minute='12'), # everyday at 3:12
+        t_sync_priority.s(),
+        name='priority_sync',
+    )
 
 @mgr.task
 def portal_jira_sync(job_type):
@@ -224,3 +231,11 @@ def refresh_background(self):
         if have_lock:
             refresh_lock.release()
     return response
+
+@mgr.task
+def t_sync_priority():
+    '''Ensure that the severity of a case matches the priority of the card'''
+    logging.warning("sync case severity to card priority...")
+    cfg = t5gweb.set_cfg()
+    libtelco5g.sync_priority(cfg)
+    logging.warning("...sync completed")
