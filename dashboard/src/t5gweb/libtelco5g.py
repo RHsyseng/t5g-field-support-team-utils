@@ -317,7 +317,7 @@ def create_cards(cfg, new_cases, action='none'):
                 "labels": cfg['labels'],
                 "bugzilla": bz,
                 "severity": re.search(r'[a-zA-Z]+', cases[case]['severity']).group(),
-                "priority": issue.fields.priority.name,
+                "priority": new_card.fields.priority.name,
                 "case_status": cases[case]['status'],
                 "escalated": False,
                 "watched": False,
