@@ -709,20 +709,15 @@ def cache_cards(cfg, self=None, background=False):
         }
 
         # Get contributors
+
+        contributor = []
         if issue.fields.customfield_12315950:
             for engineer in issue.fields.customfield_12315950:
-                contributor = {
+                contributor.append({
                     "displayName": engineer.displayName,
                     "key": engineer.key,
                     "name": engineer.name
-                }
-        else:
-            contributor = {
-                "displayName": None,
-                "key": None,
-                "name": None
-            }
-        
+                })     
         tags = []
         if 'tags' in cases[case_number].keys():
             tags = cases[case_number]['tags']
