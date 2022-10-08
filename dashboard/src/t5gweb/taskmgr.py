@@ -10,6 +10,11 @@ from celery import Celery
 from celery.schedules import crontab
 import bugzilla
 import redis
+from t5gweb.utils import (
+    email_notify,
+    slack_notify,
+    set_cfg
+)
 
 mgr = Celery('t5gweb', broker='redis://redis:6379/0', backend='redis://redis:6379/0')
 
@@ -91,7 +96,7 @@ def setup_scheduled_tasks(sender, **kwargs):
 def portal_jira_sync(job_type):
     
     logging.warning("job: checking for new {} cases".format(job_type))
-    cfg = t5gweb.set_cfg()
+    cfg = set_cfg()
     max_to_create = os.environ.get('max_to_create')
 
     start = time.time()
@@ -121,7 +126,7 @@ def portal_jira_sync(job_type):
         email_content = ['Warning: more than {} cases ({}) will be created, so refusing to proceed. Please check log output\n"'.format(max_to_create, len(new_cases))]
         cfg['to'] = os.environ.get('alert_email')
         cfg['subject'] = 'High New Case Count Detected'
-        libtelco5g.notify(cfg, email_content)
+        email_notify(cfg, email_content)
     elif len(new_cases) > 0:
         logging.warning("need to create {} cases".format(len(new_cases)))
         message_content, new_cards = libtelco5g.create_cards(cfg, new_cases, action='create')
@@ -129,9 +134,9 @@ def portal_jira_sync(job_type):
         cfg['slack_channel'] = os.environ.get('slack_channel')
         if message_content:
             logging.warning("notifying team about new JIRA cards")
-            libtelco5g.notify(cfg, message_content)
+            email_notify(cfg, message_content)
             if cfg['slack_token'] and cfg['slack_channel']:
-                libtelco5g.slack_notify(cfg, message_content)
+                slack_notify(cfg, message_content)
             else:
                 logging.warning("no slack token or channel specified")
             cards.update(new_cards)
@@ -148,7 +153,7 @@ def cache_data(data_type):
     
     logging.warning("job: sync {}".format(data_type))
 
-    cfg = t5gweb.set_cfg()
+    cfg = set_cfg()
 
     if data_type == 'cases':
         libtelco5g.cache_cases(cfg)
@@ -178,7 +183,7 @@ def tag_bz():
     
     logging.warning("getting bugzillas")
     bz_url = "bugzilla.redhat.com"
-    cfg = t5gweb.set_cfg()
+    cfg = set_cfg()
     bz_api = bugzilla.Bugzilla(bz_url, api_key=cfg['bz_key'])
     cases = libtelco5g.redis_get("cases")
     telco_cases = [case for case in cases if "shift_telco5g" in cases[case]['tags']]
@@ -222,7 +227,7 @@ def refresh_background(self):
         have_lock = refresh_lock.acquire(blocking=False)
         if have_lock:
             libtelco5g.redis_set('refresh_id', json.dumps(self.request.id))
-            cfg = t5gweb.set_cfg()
+            cfg = set_cfg()
             libtelco5g.cache_cards(cfg, self, background=True)
             response = {'current': 100, 'total': 100, 'status': 'Done', 'result': 'Refresh Complete'}
         else:
@@ -236,6 +241,6 @@ def refresh_background(self):
 def t_sync_priority():
     '''Ensure that the severity of a case matches the priority of the card'''
     logging.warning("sync case severity to card priority...")
-    cfg = t5gweb.set_cfg()
+    cfg = set_cfg()
     libtelco5g.sync_priority(cfg)
     logging.warning("...sync completed")

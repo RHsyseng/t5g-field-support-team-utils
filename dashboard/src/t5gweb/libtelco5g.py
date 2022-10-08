@@ -31,6 +31,12 @@ import time
 import bugzilla
 import smartsheet
 
+from t5gweb.utils import (
+    get_random_member,
+    get_token,
+    exists_or_zero
+)
+
 # for portal to jira mapping
 portal2jira_sevs = {
     "1 (Urgent)"    : "Critical",
@@ -193,24 +199,6 @@ def get_case_number(link, pfilter='cases'):
                 return parsed_url.path.split('/')[3]
     return ''
 
-def get_random_member(team):
-    '''Randomly pick team member and avoid picking the same person twice in a row'''
-
-    last_choice = redis_get('last_choice')
-    if len(team) > 1: 
-        if last_choice is not None:
-            team = [member for member in team if member != last_choice]
-        current_choice = random.choice(team)
-    elif len(team) == 1:
-        current_choice = team[0]
-    else:
-        logging.warning("No team variable is available, cannot assign case.")
-        current_choice = None
-    redis_set('last_choice', json.dumps(current_choice))
-
-    return current_choice
-
-
 def create_cards(cfg, new_cases, action='none'):
     '''
     cfg    - configuration
@@ -237,7 +225,9 @@ def create_cards(cfg, new_cases, action='none'):
                 if account.lower() in cases[case]['account'].lower():
                     assignee = member
         if assignee == None:
-            assignee = get_random_member(cfg['team'])
+            last_choice = redis_get('last_choice')
+            assignee = get_random_member(cfg['team'], last_choice)
+            redis_set('last_choice', json.dumps(assignee))
         assignee['displayName'] = assignee['name']
         priority = portal2jira_sevs[cases[case]['severity']]
         card_info = {
@@ -325,121 +315,6 @@ def create_cards(cfg, new_cases, action='none'):
             }
     
     return email_content, new_cards
-
-def notify(ini,blist):
-    
-    body = ''
-    for line in blist:
-        body += f"{line}\n"
-
-    msg = EmailMessage()
-    msg.set_content(body)
-
-    msg['Subject'] = ini['subject']
-    msg['From'] = ini['from']
-    msg['to'] = ini['to']
-
-    s = smtplib.SMTP(ini['smtp'])
-    s.send_message(msg)
-    s.quit()
-
-def slack_notify(ini, blist):
-    body = ''
-    for line in blist:
-        body += f"{line}\n"
-
-    client = WebClient(token = ini['slack_token'])
-    msgs = re.split(r'A JIRA issue \(https:\/\/issues\.redhat\.com\/browse\/|Description: ', body)
-
-    #Adding the text removed by re.split() and adding ping to assignee 
-    for i in range(1, len(msgs)):
-        if i % 2 == 1:
-            msgs[i] = "A JIRA issue (https://issues.redhat.com/browse/" + msgs[i]
-        if i % 2 == 0:
-            msgs[i] = "Description: " + msgs[i]
-            assign = re.findall(r'(?<=\nIt is initially being tracked by )[\w ]*', msgs[i])
-            for j in ini['team']:
-                if j['name'] == assign[0]:
-                    userid = j['slack_user']
-            msgs[i] = re.sub(r'\nIt is initially being tracked by.*', '', msgs[i])
-            msgs[i-1] = msgs[i-1] + f"\nIt is initially being tracked by <@{userid}>"
-
-    #Posting Summaries + reply with Description
-    for k in range(1, len(msgs)-1, 2):
-        message = client.chat_postMessage(channel = ini['slack_channel'], text = msgs[k])
-        reply = client.chat_postMessage(channel = ini['slack_channel'], text = msgs[k+1], thread_ts = message['ts'])
-
-def set_defaults():
-    defaults = {}
-    defaults['smtp']        = 'smtp.corp.redhat.com'
-    defaults['from']        = 't5g_jira@redhat.com'
-    defaults['to']          = ''
-    defaults['alert_to']    = 'dcritch@redhat.com'
-    defaults['subject']     = 'New Card(s) Have Been Created to Track Telco5G Issues'
-    defaults['sprintname']  = 'T5GFE' #Previous Sprintname: 'Labs and Field Sprint' 
-    defaults['server']      = 'https://issues.redhat.com'
-    defaults['project']     = 'KNIECO'
-    defaults['component']   = 'KNI Labs & Field'
-    defaults['board']       = 'KNI-ECO Labs & Field'
-    defaults['email']       = ''
-    defaults['type']        = 'Story'
-    defaults['labels']      = 'field, no-qe, no-doc'
-    defaults['priority']    = 'High'
-    defaults['points']      = 3
-    defaults['password']    = ''
-    defaults['card_action'] = 'none'
-    defaults['debug']       = 'False'
-    defaults['fields']      =  ["case_account_name","case_summary","case_number","case_status","case_owner","case_severity","case_createdDate","case_lastModifiedDate","case_bugzillaNumber","case_description","case_tags", "case_product", "case_version", "case_closedDate"]
-    defaults['query']       = "case_summary:*webscale* OR case_tags:*shift_telco5g* OR case_tags:*cnv*"
-    defaults['slack_token']   = ''
-    defaults['slack_channel'] = ''
-    defaults['max_jira_results'] = 500
-    defaults['max_portal_results'] = 5000
-    return defaults
-
-def read_config(file):
-    '''
-    Takes a filename as input and reads the values into a dictionary.
-    file should be in the format of "key: value" pairs. no value will
-    simply set the key in the dictionary.
-    e.g.
-        debug
-        email : me@redhat.com, you@redhat.com
-        email: me@redhat.com, you@redhat.com
-        email:me@redhat.com, you@redhat.com
-    '''
-
-    cfg_dict = {}
-    with open(file) as filep:
-        for line in filep:
-            if not line.startswith("#") and not line.startswith(";"):
-                a = line.split(':', 1)
-                key = a[0].replace('\n', '').strip()
-
-                if len(a) > 1:
-                    value = a[1].replace('\n', '').strip()
-                    cfg_dict[key] = value
-                elif len(key) > 0:
-                    cfg_dict[key] = True
-    return cfg_dict
-
-def read_env_config(keys):
-    ecfg = {}
-
-    for key in keys:
-        if 't5g_' + key in os.environ:
-            ecfg[key] = os.environ.get('t5g_' + key)
-
-    return ecfg
-
-def get_token(offline_token):
-  # https://access.redhat.com/articles/3626371
-  data = { 'grant_type' : 'refresh_token', 'client_id' : 'rhsm-api', 'refresh_token': offline_token }
-  url = 'https://sso.redhat.com/auth/realms/redhat-external/protocol/openid-connect/token'
-  r = requests.post(url, data=data)
-  # It returns 'application/x-www-form-urlencoded'
-  token = r.json()['access_token']
-  return(token)
 
 def redis_set(key, value):
 
@@ -617,7 +492,6 @@ def cache_issues(cfg):
     redis_set('issues', json.dumps(jira_issues))
     logging.warning("issues cached")
                    
-
 def cache_escalations(cfg):
     '''Get cases that have been escalated from Smartsheet'''
     cases = redis_get('cases')
@@ -1037,13 +911,6 @@ def plot_stats(case_type):
         y_values['total_escalations'].append(exists_or_zero(stat, 'total_escalations'))
     
     return x_values, y_values
-        
-def exists_or_zero(data, key):
-    ''' hack for when a new data point is added, so history does not exist'''
-    if key in data.keys():
-        return data[key]
-    else:
-        return 0
 
 def sync_priority(cfg):
     cards = redis_get("cards")
