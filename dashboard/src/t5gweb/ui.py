@@ -9,8 +9,7 @@ from t5gweb.t5gweb import (
     get_new_cases,
     get_new_comments,
     get_trending_cards,
-    plots,
-    set_cfg
+    plots
 )
 from t5gweb.libtelco5g import(
     cache_cases,
@@ -19,6 +18,9 @@ from t5gweb.libtelco5g import(
     redis_get,
     generate_stats,
     plot_stats
+)
+from t5gweb.utils import (
+    set_cfg
 )
 
 BP = Blueprint('ui', __name__, url_prefix='/')

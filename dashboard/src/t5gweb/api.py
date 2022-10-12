@@ -2,7 +2,7 @@
 from flask import (
     Blueprint, request
 )
-from t5gweb.t5gweb import (
+from t5gweb.utils import (
     set_cfg
 )
 from t5gweb.libtelco5g import(

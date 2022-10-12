@@ -12,27 +12,7 @@ from . import libtelco5g
 import json
 import sys
 from copy import deepcopy
-
-def set_cfg():
-        # Set the default configuration values
-    cfg = libtelco5g.set_defaults()
-
-    # Override the defaults and configuration file settings 
-    # with any environmental settings
-    trcfg = libtelco5g.read_env_config(cfg.keys())
-    for key in trcfg:
-        cfg[key] = trcfg[key]
-
-    # Fix some of the settings so they are easier to use
-    cfg['labels'] = cfg['labels'].split(',')
-
-    cfg['offline_token'] = os.environ.get('offline_token')
-    cfg['password'] = os.environ.get('jira_pass')
-    cfg['bz_key'] = os.environ.get('bz_key')
-    cfg['smartsheet_access_token'] = os.environ.get('smartsheet_access_token')
-    cfg['sheet_id'] = os.environ.get('sheet_id')
-
-    return cfg
+from t5gweb.utils import set_cfg
 
 def get_new_cases(case_tag):
     """get new cases created since X days ago"""
@@ -137,19 +117,6 @@ def organize_cards(detailed_cards, telco_account_list, cnv_account_list=None):
             cnv_accounts[account][status][i] = detailed_cards[i]
   
     return telco_accounts, cnv_accounts
-
-def get_previous_quarter():
-    """Creates JIRA query to get cards from previous quarter"""
-    day = date.today()
-    if 1 <= day.month <= 3:
-        query_range = '((updated >= "{}-10-01" AND updated <= "{}-12-31") OR (created >= "{}-10-01" AND created <= "{}-12-31"))'.format(day.year-1, day.year-1, day.year-1, day.year-1)
-    elif 4 <= day.month <= 6:
-        query_range = '((updated >= "{}-1-01" AND updated <= "{}-3-30") OR (created >= "{}-1-01" AND created <= "{}-3-30"))'.format(day.year, day.year, day.year, day.year)
-    elif 7 <= day.month <= 9:
-        query_range = '((updated >= "{}-4-01" AND updated <= "{}-6-30") OR (created >= "{}-4-01" AND created <= "{}-6-30"))'.format(day.year, day.year, day.year, day.year)
-    elif 10 <= day.month <= 12:
-        query_range = '((updated >= "{}-7-01" AND updated <= "{}-9-30") OR (created >= "{}-7-01" AND created <= "{}-9-30"))'.format(day.year, day.year, day.year, day.year)
-    return query_range
 
 @click.command('init-cache')
 @with_appcontext
