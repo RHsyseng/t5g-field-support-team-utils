@@ -158,12 +158,6 @@ def get_sprint_summary(conn, bid, sprintname, team):
         user = user.replace('@', '\\u0040')
         completed_cards = conn.search_issues('sprint=' + str(sid) + ' and assignee = ' + str(user) + ' and status = "DONE"', 0, 1000).iterable
         print("%s completed %d cards" % (member['name'], len(completed_cards)))
-    # kobi
-    user = 'kgershon@redhat.com'
-    user = user.replace('@', '\\u0040')
-    name = 'Kobi Gershon'
-    completed_cards = conn.search_issues('sprint=' + str(sid) + ' and assignee = ' + str(user) + ' and status = "DONE"', 0, 1000).iterable
-    print("%s completed %d cards" % (name, len(completed_cards)))
 
 def get_card_summary():
 

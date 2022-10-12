@@ -1,5 +1,4 @@
 #! /usr/bin/python -W ignore
-# #! /usr/bin/python -W ignore
 
 '''
 This script takes a configuration file name as its only argument.
@@ -10,23 +9,36 @@ Setting set in the environment override the ones in the configuration file.
 '''
 
 
-import libtelco5g
+#import t5gweb.utils
 import sys
 import os
 import getpass
 import pprint
 import json
+from t5gweb.libtelco5g import (
+    jira_connection,
+    get_project_id,
+    get_component_id,
+    get_board_id,
+    get_latest_sprint,
+    get_sprint_summary
+)
+from t5gweb.utils import (
+    set_defaults,
+    read_config,
+    read_env_config
+)
 
 def main():
     print('Generating sprint summary')
 
-    cfg = libtelco5g.set_defaults()
+    cfg = set_defaults()
     dpp = pprint.PrettyPrinter(indent=2)
 
     # Override the defaults with the setting from the configuration file
     if len(sys.argv) > 1:
         if os.path.isfile(sys.argv[1]):
-            tfcfg = libtelco5g.read_config(sys.argv[1])
+            tfcfg = read_config(sys.argv[1])
             for key in tfcfg:
                 cfg[key] = tfcfg[key]
         else:
@@ -35,7 +47,7 @@ def main():
 
     # Override the defaults and configuration file settings 
     # with any environmental settings
-    trcfg = libtelco5g.read_env_config(cfg.keys())
+    trcfg = read_env_config(cfg.keys())
     for key in trcfg:
         cfg[key] = trcfg[key]
 
@@ -58,14 +70,14 @@ def main():
 
     print('Connecting to Jira instance')
 
-    conn = libtelco5g.jira_connection(cfg)
+    conn = jira_connection(cfg)
     
     if cfg['debug']:
         print('\nDEBUG: Connection')
         dpp.pprint(vars(conn))
     
     print('\nFetching ID for project:', cfg['project'])
-    project = libtelco5g.get_project_id(conn, cfg['project'])
+    project = get_project_id(conn, cfg['project'])
     print('    Id:', project.id)
 
     if cfg['debug']:
@@ -73,7 +85,7 @@ def main():
         dpp.pprint(vars(project))
 
     print('\nFetching ID for component:', cfg['component'])
-    component = libtelco5g.get_component_id(conn, project.id, cfg['component'])
+    component = get_component_id(conn, project.id, cfg['component'])
     print('    Id:', component.id)
 
     if cfg['debug']:
@@ -81,7 +93,7 @@ def main():
         dpp.pprint(vars(component))
 
     print('\nFetching ID for board:', cfg['board'])
-    board = libtelco5g.get_board_id(conn, cfg['board'])
+    board = get_board_id(conn, cfg['board'])
     print('    Id:', board.id)
 
     if cfg['debug']:
@@ -89,7 +101,7 @@ def main():
         dpp.pprint(vars(board))
 
     print('\nFetching latest sprint for board:', cfg['board'])
-    sprint = libtelco5g.get_latest_sprint(conn, board.id, cfg['sprintname'])
+    sprint = get_latest_sprint(conn, board.id, cfg['sprintname'])
     print('    Latest:', sprint)
 
     if cfg['debug']:
@@ -98,7 +110,7 @@ def main():
     
     
     print('\nFetching sprint summary')
-    sprint_summary = libtelco5g.get_sprint_summary(conn, board.id, cfg['sprintname'], cfg['team'])
+    sprint_summary = get_sprint_summary(conn, board.id, cfg['sprintname'], cfg['team'])
 
 
    
