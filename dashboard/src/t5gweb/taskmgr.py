@@ -188,6 +188,9 @@ def tag_bz():
     cases = libtelco5g.redis_get("cases")
     telco_cases = [case for case in cases if "shift_telco5g" in cases[case]['tags']]
     bugs = libtelco5g.redis_get('bugs')
+    issues = libtelco5g.redis_get('issues')
+    jira_conn = libtelco5g.jira_connection(cfg)
+
     logging.warning("tagging bugzillas")
     for case in bugs:
         if case in telco_cases:
@@ -206,6 +209,33 @@ def tag_bz():
                         update = bz_api.build_update(internal_whiteboard=bz.internal_whiteboard + " Telco:Case", minor_update=True)
                         logging.warning("tagging BZ:" + str(bz.id))
                         bz_api.update_bugs([bz.id], update)
+
+    logging.warning("tagging Jira Bugs")
+    count = 0
+    for case in issues:
+        if case in telco_cases:
+            for issue in issues[case]:
+                if count < 5:
+                    try:
+                        card = jira_conn.issue(issue['id'])
+                        internal_whiteboard = card.fields.customfield_12322040
+                    except AttributeError:
+                        logging.warning("No Internal Whiteboard field for {}, skipping".format(jira_conn.issue(issue['id'])))
+                        continue
+                    if internal_whiteboard is None:
+                        internal_whiteboard = ""
+                    if "telco" not in internal_whiteboard.lower():
+                        count+=1
+                        logging.warning("tagging Jira Bug:" + str(card))
+                        internal_whiteboard = "Telco Telco:Case " + internal_whiteboard
+                        update = card.update(customfield_12322040=internal_whiteboard, notify=False)
+                    elif "telco:case" not in internal_whiteboard.lower():
+                        count+=1
+                        logging.warning("tagging Jira Bug:" + str(card))
+                        internal_whiteboard = internal_whiteboard + " Telco:Case"
+                        update = card.update(customfield_12322040=internal_whiteboard, notify=False)
+                else:
+                    break
 
 @mgr.task
 def cache_stats():
