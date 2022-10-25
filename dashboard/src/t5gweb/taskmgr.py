@@ -201,14 +201,18 @@ def tag_bz():
                     logging.warning("error: {} is restricted".format(bug['bugzillaNumber']))
                     bz = None
                 if bz:
+                    update = None
                     if "telco" not in bz.internal_whiteboard.lower():
                         update = bz_api.build_update(internal_whiteboard="Telco Telco:Case " + bz.internal_whiteboard, minor_update=True)
-                        logging.warning("tagging BZ:" + str(bz.id))
-                        bz_api.update_bugs([bz.id], update)
                     elif "telco:case" not in bz.internal_whiteboard.lower():
                         update = bz_api.build_update(internal_whiteboard=bz.internal_whiteboard + " Telco:Case", minor_update=True)
+                    if update:
                         logging.warning("tagging BZ:" + str(bz.id))
-                        bz_api.update_bugs([bz.id], update)
+                        try:
+                            bz_api.update_bugs([bz.id], update)
+                        except:
+                            logging.warning("Tried and failed to tag " + str(bz.id))
+                            continue
 
     logging.warning("tagging Jira Bugs")
     count = 0
