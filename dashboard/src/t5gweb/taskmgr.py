@@ -66,7 +66,7 @@ def setup_scheduled_tasks(sender, **kwargs):
 
     # tag bugzillas with 'Telco' and/or 'Telco:Case'
     sender.add_periodic_task(
-        crontab(hour='*/24', minute='33'), # once a day + 33 for randomness
+        crontab(hour='*', minute='33'), # once a day + 33 for randomness
         tag_bz.s(),
         name='tag_bz',
     )
@@ -232,12 +232,12 @@ def tag_bz():
                         count+=1
                         logging.warning("tagging Jira Bug:" + str(card))
                         internal_whiteboard = "Telco Telco:Case " + internal_whiteboard
-                        update = card.update(customfield_12322040=internal_whiteboard, notify=False)
+                        update = card.update(customfield_12322040=internal_whiteboard)
                     elif "telco:case" not in internal_whiteboard.lower():
                         count+=1
                         logging.warning("tagging Jira Bug:" + str(card))
                         internal_whiteboard = internal_whiteboard + " Telco:Case"
-                        update = card.update(customfield_12322040=internal_whiteboard, notify=False)
+                        update = card.update(customfield_12322040=internal_whiteboard)
                 else:
                     break
 
