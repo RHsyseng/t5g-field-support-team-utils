@@ -27,10 +27,12 @@ def get_new_cases(case_tag):
         new_cases[case]['severity'] = re.sub('\(|\)| |[0-9]', '', new_cases[case]['severity'])
     return new_cases
 
-def get_new_comments(new_comments_only=True):
+def get_new_comments(new_comments_only=True, account=None):
 
     # fetch cards from redis cache
     cards = libtelco5g.redis_get('cards')
+    if account is not None:
+        cards = {c:d for (c,d) in cards.items() if d['account'] == account}
     logging.warning("found %d JIRA cards" % (len(cards)))
     time_now = datetime.now(timezone.utc)
 

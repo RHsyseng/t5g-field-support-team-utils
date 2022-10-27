@@ -169,3 +169,17 @@ def get_stats(case_type):
         return render_template('ui/stats.html', now=now, stats=stats, x_values=x_values, y_values=y_values, page_title='stats/{}'.format(case_type))
     else:
         return {'error': 'unknown card type: {}'.format(case_type)}
+
+@BP.route('/account/<string:account>')
+def get_account(account):
+    '''show bugs, cases and stats by for a given account'''
+    stats = generate_stats('telco5g')
+    #all_cards = redis_get('cards')
+    #cases = redis_get('cases')
+    telco_accounts_all, cnv_accounts_all = get_new_comments(new_comments_only=False, account=account)
+    #logging.warning(cards)
+    #cards = {c:d for (c,d) in all_cards.items() if d['account'] == account}
+    #logging.warning(cards)
+    #logging.warning(cases)
+    return render_template('ui/account.html', page_title=account, account=account, stats=stats, new_comments=telco_accounts_all)
+

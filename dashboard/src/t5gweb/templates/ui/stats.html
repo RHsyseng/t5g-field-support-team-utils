@@ -168,7 +168,7 @@
                 <tbody class="list">
                         {% for customer in stats['by_customer'] %}
                         <tr>
-                            <td class="align-middle">{{ customer }}</td>
+                            <td class="align-middle"><a href="{{ url_for('ui.get_account', account=customer) }}">{{ customer }}</a></td>
                             <td class="align-middle text-center">{{ stats['by_customer'][customer] }}</td>
                         </tr>
                         {% endfor %}
