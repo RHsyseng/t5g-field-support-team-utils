@@ -750,7 +750,7 @@ def get_case_from_link(jira_conn, card):
                 return case_number
     return None
 
-def generate_stats(case_type):
+def generate_stats(case_type, account=None):
     ''' generate some stats '''
     
     logging.warning("generating stats for {}".format(case_type))
@@ -775,6 +775,11 @@ def generate_stats(case_type):
         return {}
     
     bugs = redis_get('bugs')
+
+    if account is not None:
+        logging.warning("filtering cases for {}".format(account))
+        cards = {c:d for (c,d) in cards.items() if d['account'] == account}
+        cases = {c:d for (c,d) in cases.items() if d['account'] == account}
 
     today = datetime.date.today()
     

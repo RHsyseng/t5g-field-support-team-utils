@@ -173,7 +173,7 @@ def get_stats(case_type):
 @BP.route('/account/<string:account>')
 def get_account(account):
     '''show bugs, cases and stats by for a given account'''
-    stats = generate_stats('telco5g')
+    stats = generate_stats('telco5g', account)
     #all_cards = redis_get('cards')
     #cases = redis_get('cases')
     telco_accounts_all, cnv_accounts_all = get_new_comments(new_comments_only=False, account=account)
