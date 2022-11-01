@@ -9,6 +9,7 @@ import pkg_resources
 import re
 from werkzeug.exceptions import abort
 from . import libtelco5g
+from . import cache
 import json
 import sys
 from copy import deepcopy
@@ -128,6 +129,7 @@ def init_cache():
     cases = libtelco5g.redis_get('cases')
     cards = libtelco5g.redis_get('cards')
     bugs = libtelco5g.redis_get('bugs')
+    issues = libtelco5g.redis_get('issues')
     details = libtelco5g.redis_get('details')
     escalations = libtelco5g.redis_get('escalations')
     watchlist = libtelco5g.redis_get('watchlist')
@@ -135,25 +137,31 @@ def init_cache():
     cnv_stats = libtelco5g.redis_get('cnv_stats')
     if cases == {}:
         logging.warning("no cases found in cache. refreshing...")
-        libtelco5g.cache_cases(cfg)
-    if bugs == {} or details == {}:
+        cache.get_cases(cfg)
+    if details == {}:
         logging.warning("no details found in cache. refreshing...")
-        libtelco5g.cache_details(cfg)
+        cache.get_case_details(cfg)
+    if bugs == {}:
+        logging.warning("no bugs found in cache. refreshing...")
+        cache.get_bz_details(cfg)
+    if issues == {}:
+        logging.warning("no issues found in cache. refreshing...")
+        cache.get_issue_details(cfg)
     if escalations == {}:
         logging.warning("no escalations found in cache. refreshing...")
-        libtelco5g.cache_escalations(cfg)
+        cache.get_escalations(cfg)
     if watchlist == {}:
         logging.warning("no watchlist found in cache. refreshing...")
-        libtelco5g.cache_watchlist(cfg)
+        cache.get_watchlist(cfg)
     if cards == {}:
         logging.warning("no cards found in cache. refreshing...")
-        libtelco5g.cache_cards(cfg)
+        cache.get_cards(cfg)
     if t5g_stats == {}:
         logging.warning("no t5g stats found in cache. refreshing...")
-        libtelco5g.cache_stats('telco5g')
+        cache.get_stats('telco5g')
     if cnv_stats == {}:
         logging.warning("no cnv stats found in cache. refreshing...")
-        libtelco5g.cache_stats('cnv')
+        cache.get_stats('cnv')
 
 
 def init_app(app):
