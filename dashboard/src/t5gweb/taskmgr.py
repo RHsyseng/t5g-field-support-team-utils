@@ -5,6 +5,7 @@ import datetime
 import os
 import json
 import t5gweb.libtelco5g as libtelco5g
+import t5gweb.cache as cache
 import t5gweb.t5gweb as t5gweb
 from celery import Celery
 from celery.schedules import crontab
@@ -50,11 +51,25 @@ def setup_scheduled_tasks(sender, **kwargs):
         name='case_sync',
     )
 
-    # update bugzilla/details cache
+    # update details cache
     sender.add_periodic_task(
-        crontab(hour='*/12', minute='48'), # twice a day
+        crontab(hour='*/12', minute='24'), # twice a day
         cache_data.s('details'),
         name='details_sync',
+    )
+
+    # update bugzilla details cache
+    sender.add_periodic_task(
+        crontab(hour='*/12', minute='48'), # twice a day
+        cache_data.s('bugs'),
+        name='bugs_sync',
+    )
+
+    # update Jira bug details cache
+    sender.add_periodic_task(
+        crontab(hour='*/12', minute='54'), # twice a day
+        cache_data.s('issues'),
+        name='issues_sync',
     )
 
     # update escalations cache
@@ -156,7 +171,7 @@ def cache_data(data_type):
     cfg = set_cfg()
 
     if data_type == 'cases':
-        libtelco5g.cache_cases(cfg)
+        cache.get_cases(cfg)
     elif data_type == 'cards':
         # Use redis locks to prevent concurrent refreshes
 
@@ -165,16 +180,20 @@ def cache_data(data_type):
         try:
             have_lock = refresh_lock.acquire(blocking=False)
             if have_lock:
-                libtelco5g.cache_cards(cfg)
+               cache.get_cards(cfg)
         finally:
             if have_lock:
                 refresh_lock.release()
     elif data_type == 'details':
-        libtelco5g.cache_details(cfg)
+        cache.get_case_details(cfg)
+    elif data_type == 'bugs':
+        cache.get_bz_details(cfg)
+    elif data_type == 'issues':
+        cache.get_issue_details(cfg)
     elif data_type == 'escalations':
-        libtelco5g.cache_escalations(cfg)
+        cache.get_escalations(cfg)
     elif data_type == 'watchlist':
-        libtelco5g.cache_watchlist(cfg)
+        cache.get_watchlist(cfg)
     else:
         logging.warning("unknown data type")
 
@@ -246,7 +265,7 @@ def cache_stats():
 
     for case_type in ['telco5g', 'cnv']:
         logging.warning("job: cache {} stats".format(case_type))
-        libtelco5g.cache_stats(case_type)
+        cache.get_stats(case_type)
 
 @mgr.task(bind=True)
 def refresh_background(self):
@@ -262,7 +281,7 @@ def refresh_background(self):
         if have_lock:
             libtelco5g.redis_set('refresh_id', json.dumps(self.request.id))
             cfg = set_cfg()
-            libtelco5g.cache_cards(cfg, self, background=True)
+            cache.get_cards(cfg, self, background=True)
             response = {'current': 100, 'total': 100, 'status': 'Done', 'result': 'Refresh Complete'}
         else:
             response = {'locked': 'Task is Locked'}

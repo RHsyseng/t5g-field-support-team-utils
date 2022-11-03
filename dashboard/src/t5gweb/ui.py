@@ -12,9 +12,6 @@ from t5gweb.t5gweb import (
     plots
 )
 from t5gweb.libtelco5g import(
-    cache_cases,
-    cache_cards,
-    cache_bz,
     redis_get,
     generate_stats,
     plot_stats

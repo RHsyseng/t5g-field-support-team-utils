@@ -5,13 +5,17 @@ from flask import (
 from t5gweb.utils import (
     set_cfg
 )
-from t5gweb.libtelco5g import(
-    cache_cases,
-    cache_cards,
-    cache_details,
-    cache_escalations,
-    cache_watchlist,
-    cache_issues,
+from t5gweb.cache import(
+    get_bz_details,
+    get_cases,
+    get_cards,
+    get_case_details,
+    get_escalations,
+    get_issue_details,
+    get_watchlist,
+    get_issue_details,
+)
+from t5gweb.libtelco5g import (
     redis_get,
     generate_stats
 )
@@ -48,22 +52,24 @@ def refresh(data_type):
     """Forces an update to the dashboard"""
     cfg = set_cfg()
     if data_type == 'cards':
-        cache_cards(cfg)
+        get_cards(cfg)
         return {"caching cards":"ok"}
     elif data_type == 'cases':
-        cache_cases(cfg)
+        get_cases(cfg)
         return {"caching cases":"ok"}
-    elif data_type == 'details' or data_type == 'bugs':
-        cache_details(cfg)
+    elif data_type == 'details':
+        get_case_details(cfg)
         return {"caching details":"ok"}
+    elif data_type == 'bugs':
+        get_bz_details(cfg)
     elif data_type == 'escalations':
-        cache_escalations(cfg)
+        get_escalations(cfg)
         return {"caching escalations":"ok"}
     elif data_type == 'watchlist':
-        cache_watchlist(cfg)
+        get_watchlist(cfg)
         return {"caching watchlist":"ok"}
     elif data_type == 'issues':
-        cache_issues(cfg)
+        get_issue_details(cfg)
         return {"caching issues":"ok"}
     else:
         return {'error': 'unknown data type: {}'.format(data_type)}
