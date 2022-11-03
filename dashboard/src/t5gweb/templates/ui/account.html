@@ -10,12 +10,11 @@
    <script type="text/javascript" charset="utf8" src="{{ url_for('static', filename='node_modules/datatables.net-searchpanes-bs5/js/searchPanes.bootstrap5.min.js') }}"></script>
    <script type="text/javascript" charset="utf8" src="{{ url_for('static', filename='node_modules/datatables.net-select/js/dataTables.select.min.js') }}"></script>
    <script type="text/javascript" charset="utf8" src="{{ url_for('static', filename='js/table.js') }}"></script>
-
 <div class="container-fluid copy mt-5">
     <h2>Account Stats:</h2>
     <div class="row">
-        <div class="col-12 col-xl-6">
-            <table class="table table-bordered table-hover table-responsive mt-5 w-100" id="overall">
+        <div class="col-sm-4">
+        <table class="table table-bordered table-hover table-responsive mt-5 w-100" id="overall">
         <thead>
             <tr><th class="text-center">Metric</th><th class="text-center">Count</th></tr>
         </thead>
@@ -68,35 +67,90 @@
                     <td class="align-middle">Bugs With No Target</td>
                     <td class="align-middle text-center">{{ stats['bugs']['no_target'] }}</td>
         </tbody>
-            </table>
+        </table>
         </div>
-        <div class="col-12 col-xl-6">
-            <table class="table table-bordered table-hover table-responsive mt-5 w-100" id="severity">
-                <thead>
-                    <tr><th class="text-center">Severity</th><th class="text-center">Number of Open Cases</th></tr>
-                </thead>
-                <tbody class="list">
-                        {% for severity in stats['by_severity'] %}
-                        <tr>
-                            <td class="align-middle">{{ severity }}</td>
-                            <td class="align-middle text-center">{{ stats['by_severity'][severity] }}</td>
-                        </tr>
-                        {% endfor %}
-                </tbody>
-            </table>
-            <table class="table table-bordered table-hover table-responsive mt-5 w-100 display" id="status">
-                <thead>
-                    <tr><th class="text-center">Status</th><th class="text-center">Number of Cases</th></tr>
-                </thead>
-                <tbody class="list">
-                        {% for status in stats['by_status'] %}
-                        <tr>
-                            <td class="align-middle">{{ status }}</td>
-                            <td class="align-middle text-center">{{ stats['by_status'][status] }}</td>
-                        </tr>
-                        {% endfor %}
-                </tbody>
-            </table>
+        <div class="col-12 col-sm-4">
+            <div class="card">
+                <div class="card-body">
+                    <div class="chart-container">
+                        <canvas id="severityChart"></canvas>
+                        <script>
+                            var ctx = document.getElementById('severityChart').getContext('2d');
+                            var myChart = new Chart(ctx, {
+                                type: 'pie',
+                                data: {  labels: {{pie_stats['by_severity'][0] | safe}},
+                                datasets: [{
+                                    label: 'Severity',
+                                    data: {{pie_stats['by_severity'][1] | safe}} ,
+                                    backgroundColor: [
+                                    'rgb(255, 99, 132)',
+                                    'rgb(54, 162, 235)',
+                                    'rgb(255, 205, 86)'
+                                    ],
+                                    hoverOffset: 4
+                                }]
+                            },
+                            options: {
+                                maintainAspectRatio: false,
+                                plugins: {
+                                    title: {
+                                        display: true,
+                                        text: "Number of Cards in Each Category",
+                                        color: "black",
+                                        font: {
+                                            size: 22,
+                                            weight: "normal"
+                                        }
+                                    }
+                                }
+                            }
+                            });
+                        </script>
+                    </div>
+                </div>
+            </div>
+        </div>
+        <div class="col-12 col-sm-4">
+
+                    <div class="card">
+                <div class="card-body">
+                    <div class="chart-container">
+                        <canvas id="statusChart"></canvas>
+                        <script>
+                            var ctx = document.getElementById('statusChart').getContext('2d');
+                            var myChart = new Chart(ctx, {
+                                type: 'pie',
+                                data: {  labels: {{pie_stats['by_status'][0] | safe}},
+                                datasets: [{
+                                    label: 'Status',
+                                    data: {{pie_stats['by_status'][1] | safe}} ,
+                                    backgroundColor: [
+                                    'rgb(255, 99, 132)',
+                                    'rgb(54, 162, 235)',
+                                    'rgb(255, 205, 86)'
+                                    ],
+                                    hoverOffset: 4
+                                }]
+                            },
+                            options: {
+                                maintainAspectRatio: false,
+                                plugins: {
+                                    title: {
+                                        display: true,
+                                        text: "Number of Cards in Each Category",
+                                        color: "black",
+                                        font: {
+                                            size: 22,
+                                            weight: "normal"
+                                        }
+                                    }
+                                }
+                            }
+                            });
+                        </script>
+                    </div>
+                </div>
+            </div>
         </div>  
     </div>
 </div>

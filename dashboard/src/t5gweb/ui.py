@@ -181,5 +181,16 @@ def get_account(account):
     #cards = {c:d for (c,d) in all_cards.items() if d['account'] == account}
     #logging.warning(cards)
     #logging.warning(cases)
-    return render_template('ui/account.html', page_title=account, account=account, stats=stats, new_comments=telco_accounts_all)
+
+    pie_stats = {
+        "by_severity": (
+            list(stats["by_severity"].keys()),
+            list(stats["by_severity"].values()),
+        ),
+        "by_status": (
+            list(stats["by_status"].keys()),
+            list(stats["by_status"].values()),
+        ),
+    }
+    return render_template('ui/account.html', page_title=account, account=account, stats=stats, new_comments=telco_accounts_all, pie_stats=pie_stats)
 
