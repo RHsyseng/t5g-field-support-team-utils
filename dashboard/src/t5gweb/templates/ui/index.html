@@ -11,7 +11,7 @@
         {% for case in new_t5g_cases %}
         <tr>
             <td><a href=https://access.redhat.com/support/cases/#/case/{{ case }} target="_blank">{{ case }}</a></td>
-            <td>{{ new_t5g_cases[case]['account'] }}</td>
+            <td><a href="{{ url_for('ui.get_account', account=new_t5g_cases[case]['account']) }}">{{ new_t5g_cases[case]['account'] }}</a></td>
             <td>{{ new_t5g_cases[case]['severity'] }}</td>
             <td>{{ new_t5g_cases[case]['problem'] }}</td>
         </tr>
@@ -26,7 +26,7 @@
         {% for case in new_cnv_cases %}
         <tr>
             <td><a href=https://access.redhat.com/support/cases/#/case/{{ case }} target="_blank">{{ case }}</a></td>
-            <td>{{ new_cnv_cases[case]['account'] }}</td>
+            <td><a href="{{ url_for('ui.get_account', account=new_cnv_cases[case]['account']) }}">{{ new_cnv_cases[case]['account'] }}</a></td>
             <td>{{ new_cnv_cases[case]['severity'] }}</td>
             <td>{{ new_cnv_cases[case]['problem'] }}</td>
         </tr>
