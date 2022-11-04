@@ -36,7 +36,7 @@
             <div class="copy pt-5">
               {% for account in new_comments %}
                   <ul>
-                  <li><span class = "account">{{ account }}</span></li>
+                  <li><span class = "account"><a href="{{ url_for('ui.get_account', account=account) }}">{{ account }}</a></span></li>
                   {% if new_comments[account] != "No Updates" %}
                      {% for status in new_comments[account] %}
                      

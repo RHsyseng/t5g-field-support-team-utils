@@ -8,7 +8,7 @@
             <div class="copy pt-5">
               {% for account in new_comments %}
                   <ul>
-                  <li>{{ account }}</li>
+                  <li><a href="{{ url_for('ui.get_account', account=account) }}">{{ account }}</a></li>
                   {% if new_comments[account] != "No Updates" %}
                      {% for status in new_comments[account] %}
                         {% if new_comments[account][status] | length > 0 %}

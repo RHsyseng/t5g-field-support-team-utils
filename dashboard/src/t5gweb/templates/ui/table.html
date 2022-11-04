@@ -68,7 +68,7 @@
                                 {% endif %}
                                 <td class="align-middle">{{ new_comments[account][status][card]['summary'] }}</td>
                                 <td class="align-middle text-center">{{ new_comments[account][status][card]['product'] }}</td>
-                                <td class="align-middle text-center">{{ new_comments[account][status][card]['account'] }}</td>
+                                <td class="align-middle text-center"><a href="{{ url_for('ui.get_account', account=new_comments[account][status][card]['account']) }}">{{ new_comments[account][status][card]['account'] }}</a></td>
                                 <td class="align-middle text-center">{{ new_comments[account][status][card]['case_status'] }}</td>
                                 <td class="align-middle text-center">{{ new_comments[account][status][card]['card_status'] }}</td>
                                 <td class="align-middle text-center">{{ new_comments[account][status][card]['assignee']['displayName'] }} {% if new_comments[account][status][card]['contributor'] | length %} <br><br> <span class="fw-bold">Contributor(s):</span> {% endif %} {% for contributor in new_comments[account][status][card]['contributor'] %} {{ contributor['displayName'] }}{{ ", " if not loop.last else "" }} {% endfor %}</td>
