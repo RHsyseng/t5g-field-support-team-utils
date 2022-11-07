@@ -81,7 +81,7 @@ def setup_scheduled_tasks(sender, **kwargs):
 
     # tag bugzillas with 'Telco' and/or 'Telco:Case'
     sender.add_periodic_task(
-        crontab(hour='*', minute='33'), # once a day + 33 for randomness
+        crontab(hour='*/24', minute='33'), # once a day + 33 for randomness
         tag_bz.s(),
         name='tag_bz',
     )
@@ -197,7 +197,7 @@ def cache_data(data_type):
     else:
         logging.warning("unknown data type")
 
-@mgr.task
+@mgr.task(autoretry_for=(Exception,), max_retries=3, retry_backoff=30)
 def tag_bz():
     
     logging.warning("getting bugzillas")
@@ -234,31 +234,26 @@ def tag_bz():
                             continue
 
     logging.warning("tagging Jira Bugs")
-    count = 0
     for case in issues:
         if case in telco_cases:
             for issue in issues[case]:
-                if count < 5:
-                    try:
-                        card = jira_conn.issue(issue['id'])
-                        internal_whiteboard = card.fields.customfield_12322040
-                    except AttributeError:
-                        logging.warning("No Internal Whiteboard field for {}, skipping".format(jira_conn.issue(issue['id'])))
-                        continue
-                    if internal_whiteboard is None:
-                        internal_whiteboard = ""
-                    if "telco" not in internal_whiteboard.lower():
-                        count+=1
-                        logging.warning("tagging Jira Bug:" + str(card))
-                        internal_whiteboard = "Telco Telco:Case " + internal_whiteboard
-                        update = card.update(customfield_12322040=internal_whiteboard)
-                    elif "telco:case" not in internal_whiteboard.lower():
-                        count+=1
-                        logging.warning("tagging Jira Bug:" + str(card))
-                        internal_whiteboard = internal_whiteboard + " Telco:Case"
-                        update = card.update(customfield_12322040=internal_whiteboard)
-                else:
-                    break
+                try:
+                    card = jira_conn.issue(issue['id'])
+                    internal_whiteboard = card.fields.customfield_12322040
+                except AttributeError:
+                    logging.warning("No Internal Whiteboard field for {}, skipping".format(jira_conn.issue(issue['id'])))
+                    continue
+                if internal_whiteboard is None:
+                    internal_whiteboard = ""
+                if "telco" not in internal_whiteboard.lower():
+                    logging.warning("tagging Jira Bug:" + str(card))
+                    internal_whiteboard = "Telco Telco:Case " + internal_whiteboard
+                    update = card.update(customfield_12322040=internal_whiteboard)
+                elif "telco:case" not in internal_whiteboard.lower():
+                    logging.warning("tagging Jira Bug:" + str(card))
+                    internal_whiteboard = internal_whiteboard + " Telco:Case"
+                    update = card.update(customfield_12322040=internal_whiteboard)
+
 
 @mgr.task
 def cache_stats():
