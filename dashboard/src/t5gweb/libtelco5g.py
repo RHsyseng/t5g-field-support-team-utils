@@ -221,6 +221,19 @@ def create_cards(cfg, new_cases, action='none'):
             redis_set('last_choice', json.dumps(assignee))
         assignee['displayName'] = assignee['name']
         priority = portal2jira_sevs[cases[case]['severity']]
+        full_description = 'This card was automatically created from the Field Engineering Sync Job.\r\n\r\n'
+        + 'This card was created because it had a severity of '
+        + cases[case]['severity']
+        + '\r\n'
+        + 'The account for the case is '
+        + cases[case]['account']
+        + '\r\n'
+        + 'The case had an internal status of: '
+        + cases[case]['status']
+        + '\r\n\r\n'
+        + '*Description:* \r\n\r\n'
+        + cases[case]['description']
+        + '\r\n'
         card_info = {
             'project': {'key': cfg['project']},
             'issuetype': {'name': cfg['type']},
@@ -228,21 +241,8 @@ def create_cards(cfg, new_cases, action='none'):
             'priority': {'name': priority},
             'labels': cfg['labels'],
             'assignee': {'name': assignee['jira_user']},
-            'customfield_12310243': float(cfg['points']),
             'summary': case + ': ' + cases[case]['problem'],
-            'description': 'This card was automatically created from the Field Engineering Sync Job.\r\n\r\n'
-            + 'This card was created because it had a severity of '
-            + cases[case]['severity']
-            + '\r\n'
-            + 'The account for the case is '
-            + cases[case]['account']
-            + '\r\n'
-            + 'The case had an internal status of: '
-            + cases[case]['status']
-            + '\r\n\r\n'
-            + '*Description:* \r\n\r\n'
-            + cases[case]['description']
-            + '\r\n'
+            'description': full_description[:253] + '..' if len(full_description) > 253 else full_description
             }
 
         logging.warning('A card needs created for case {}'.format(case))
