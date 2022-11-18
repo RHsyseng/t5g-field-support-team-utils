@@ -166,7 +166,7 @@ def set_defaults():
     defaults['query'] = "case_summary:*webscale* OR case_tags:*shift_telco5g* OR case_tags:*cnv*"
     defaults['slack_token'] = ''
     defaults['slack_channel'] = ''
-    defaults['max_jira_results'] = 500
+    defaults['max_jira_results'] = 1000
     defaults['max_portal_results'] = 5000
     return defaults
 

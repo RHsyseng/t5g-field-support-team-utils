@@ -134,11 +134,15 @@ def portal_jira_sync(job_type):
         return None
     
     card_cases = [cards[card]['case_number'] for card in cards]
+    logging.warning("found {} cases in JIRA".format(len(card_cases)))
     new_cases = [case for case in open_cases if case not in card_cases]
+    logging.warning("new cases: {}".format(new_cases))
+
 
     if len(new_cases) > int(max_to_create):
         logging.warning("Warning: more than {} cases ({}) will be created, so refusing to proceed. Please check log output\n".format(max_to_create, len(new_cases)))
         email_content = ['Warning: more than {} cases ({}) will be created, so refusing to proceed. Please check log output\n"'.format(max_to_create, len(new_cases))]
+        email_content += ['New cases: {}\n"'.format(new_cases)]
         cfg['to'] = os.environ.get('alert_email')
         cfg['subject'] = 'High New Case Count Detected'
         email_notify(cfg, email_content)
