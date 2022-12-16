@@ -22,7 +22,7 @@
   <link rel="stylesheet" href="{{ url_for('static', filename='node_modules/datatables.net-bs5/css/dataTables.bootstrap5.min.css') }}"/>
   <link rel="stylesheet" href="{{ url_for('static', filename='node_modules/datatables.net-searchpanes-bs5/css/searchPanes.bootstrap5.min.css') }}"/>
   <link rel="stylesheet" href="{{ url_for('static', filename='node_modules/datatables.net-select-bs5/css/select.bootstrap5.min.css') }}"/>
-  <title>t5gweb://{% block title %}{% endblock %}</title>
+  <title>dashboard://{% block title %}{% endblock %}</title>
   <nav class="navbar navbar-expand-md navbar-dark fixed-top bg-dark">
     <div class="container-fluid">
        <a class="navbar-brand" href="#top">New Card Updates</a>
@@ -43,10 +43,8 @@
                  Tables
                </a>
                <ul class="dropdown-menu dropdown-menu-dark" aria-labelledby="navbarDropdown">
-                 <li><a class="dropdown-item" href="{{ url_for('ui.telco_severity') }}">Telco5G Updates</a></li>
-                 <li><a class="dropdown-item" href="{{ url_for('ui.cnv_severity') }}">CNV Updates</a></li>
-                 <li><a class="dropdown-item" href="{{ url_for('ui.telco_all_severity') }}">All Telco5g Cards</a></li>
-                 <li><a class="dropdown-item" href="{{ url_for('ui.cnv_all_severity') }}">All CNV Cards</a></li>
+                 <li><a class="dropdown-item" href="{{ url_for('ui.severity') }}">Recent Updates</a></li>
+                 <li><a class="dropdown-item" href="{{ url_for('ui.all_severity') }}">All Cards</a></li>
                </ul>
              </li>
              <li class="nav-item dropdown">
@@ -54,23 +52,14 @@
                  Reports
                </a>
                <ul class="dropdown-menu dropdown-menu-dark" aria-labelledby="navbarDropdown">
-                 <li><a class="dropdown-item" href="{{ url_for('ui.telco5g') }}">Telco5G Updates</a></li>
-                 <li><a class="dropdown-item" href="{{ url_for('ui.cnv') }}">CNV Updates</a></li>
-                 <li><a class="dropdown-item" href="{{ url_for('ui.all_telco5g') }}">All Telco5g Cards</a></li>
-                 <li><a class="dropdown-item" href="{{ url_for('ui.all_cnv') }}">All CNV Cards</a></li>
+                 <li><a class="dropdown-item" href="{{ url_for('ui.recent_updates') }}">Recent Updates</a></li>
+                 <li><a class="dropdown-item" href="{{ url_for('ui.all_cards') }}">All Cards</a></li>
                  <li><a class="dropdown-item" href="{{ url_for('ui.weekly_updates') }}">Weekly Report</a></li>
                </ul>
              </li>
-             <li class="nav-item dropdown">
-               <a class="nav-link dropdown-toggle active" href="#" id="navbarDropdown" role="button" data-bs-toggle="dropdown" aria-expanded="false">
-                 Stats
-               </a>
-               <ul class="dropdown-menu dropdown-menu-dark" aria-labelledby="navbarDropdown">
-                 <li><a class="dropdown-item" href="{{ url_for('ui.get_stats', case_type='telco5g') }}">Telco5G</a></li>
-                 <li><a class="dropdown-item" href="{{ url_for('ui.get_stats', case_type='cnv') }}">CNV</a></li>
-               </ul>
+             <li class="nav-item ms-2">
+              <a class="nav-link active" href="{{ url_for('ui.get_stats') }}">Stats</a>
              </li>
-             
              <li class="nav-item ms-2">
                <a role="button" class="btn btn-dark" href="{{ url_for('ui.trends') }}"><svg xmlns="http://www.w3.org/2000/svg" width="25" height="25" fill="currentColor" role="img" aria-label="Trends" class="bi bi-graph-up-arrow" viewBox="0 0 16 16">
                   <path fill-rule="evenodd" clip-rule="evenodd" d="M0 0h1v15h15v1H0V0Zm10 3.5a.5.5 0 0 1 .5-.5h4a.5.5 0 0 1 .5.5v4a.5.5 0 0 1-1 0V4.9l-3.613 4.417a.5.5 0 0 1-.74.037L7.06 6.767l-3.656 5.027a.5.5 0 0 1-.808-.588l4-5.5a.5.5 0 0 1 .758-.06l2.609 2.61L13.445 4H10.5a.5.5 0 0 1-.5-.5Z"/>

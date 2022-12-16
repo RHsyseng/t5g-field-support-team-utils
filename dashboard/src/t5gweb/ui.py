@@ -26,17 +26,19 @@ def load_data():
     """Load data for dashboard"""
     
     cfg = set_cfg()
-    #new_cases = get_new_cases()
-    load_data.new_cnv_cases = get_new_cases('cnv')
-    load_data.new_t5g_cases = get_new_cases('shift_telco5g')
+    load_data.new_cases = get_new_cases()
+    #load_data.new_cnv_cases = get_new_cases('cnv')
+    #load_data.new_t5g_cases = get_new_cases('shift_telco5g')
     plot_data = plots()
     load_data.y = list(plot_data.values())
-    telco_accounts, cnv_accounts = get_new_comments()
-    load_data.telco_comments = telco_accounts
-    load_data.cnv_comments = cnv_accounts
-    telco_accounts_all, cnv_accounts_all = get_new_comments(new_comments_only=False)
-    load_data.telco_comments_all = telco_accounts_all
-    load_data.cnv_comments_all = cnv_accounts_all
+    #telco_accounts, cnv_accounts = get_new_comments()
+    #load_data.telco_comments = telco_accounts
+    #load_data.cnv_comments = cnv_accounts
+    load_data.accounts = get_new_comments()
+    #telco_accounts_all, cnv_accounts_all = get_new_comments(new_comments_only=False)
+    #load_data.telco_comments_all = telco_accounts_all
+    #load_data.cnv_comments_all = cnv_accounts_all
+    load_data.accounts_all = get_new_comments(new_comments_only=False)
     load_data.trending_cards = get_trending_cards()
     load_data.now = redis_get('timestamp')
 
@@ -44,7 +46,7 @@ def load_data():
 def index():
     """list new cases"""
     load_data()
-    return render_template('ui/index.html', new_cnv_cases=load_data.new_cnv_cases, new_t5g_cases=load_data.new_t5g_cases, values=load_data.y, now=load_data.now)
+    return render_template('ui/index.html', new_cases=load_data.new_cases, values=load_data.y, now=load_data.now)
 
 @BP.route('/progress/status', methods=['POST'])
 def progress_status():
@@ -96,29 +98,17 @@ def refresh():
     return jsonify({}), 202, {'Location': url_for('ui.refresh_status', task_id=task.id)}
 
 
-@BP.route('/updates/telco5g')
-def telco5g():
+@BP.route('/updates/')
+def recent_updates():
     """Retrieves cards that have been updated within the last week and creates report"""
     load_data()
-    return render_template('ui/updates.html', now=load_data.now, new_comments=load_data.telco_comments, page_title='telco5g')
+    return render_template('ui/updates.html', now=load_data.now, new_comments=load_data.accounts, page_title='recent updates')
 
-@BP.route('/updates/telco5g/all')
-def all_telco5g():
+@BP.route('/updates/all')
+def all_cards():
     """Retrieves all cards and creates report"""
     load_data()
-    return render_template('ui/updates.html', now=load_data.now, new_comments=load_data.telco_comments_all, page_title='all-telco5g')
-
-@BP.route('/updates/cnv')
-def cnv():
-    """Retrieves cards that have been updated within the last week and creates report"""
-    load_data()
-    return render_template('ui/updates.html', now=load_data.now, new_comments=load_data.cnv_comments, page_title='cnv')
-
-@BP.route('/updates/cnv/all')
-def all_cnv():
-    """Retrieves all cards and creates report"""
-    load_data()
-    return render_template('ui/updates.html', now=load_data.now, new_comments=load_data.cnv_comments_all, page_title='all-cnv')
+    return render_template('ui/updates.html', now=load_data.now, new_comments=load_data.accounts_all, page_title='all cards')
 
 @BP.route('/trends')
 def trends():
@@ -126,29 +116,17 @@ def trends():
     load_data()
     return render_template('ui/updates.html', now=load_data.now, new_comments=load_data.trending_cards, page_title='trends')
 
-@BP.route('/updates/telco5g/severity')
-def telco_severity():
+@BP.route('/updates/severity')
+def severity():
     """Sorts new telco5g cards by severity and creates table"""
     load_data()
-    return render_template('ui/table.html', now=load_data.now, new_comments=load_data.telco_comments, page_title='telco5g-severity')
+    return render_template('ui/table.html', now=load_data.now, new_comments=load_data.accounts, page_title='severity')
 
-@BP.route('/updates/telco5g/all/severity')
-def telco_all_severity():
+@BP.route('/updates/all/severity')
+def all_severity():
     """Sorts all telco5g cards by severity and creates table"""
     load_data()
-    return render_template('ui/table.html', now=load_data.now, new_comments=load_data.telco_comments_all, page_title='all-telco5g-severity')
-
-@BP.route('/updates/cnv/severity')
-def cnv_severity():
-    """Sorts all telco5g cards by severity and creates table"""
-    load_data()
-    return render_template('ui/table.html', now=load_data.now, new_comments=load_data.cnv_comments, page_title='cnv-severity')
-
-@BP.route('/updates/cnv/all/severity')
-def cnv_all_severity():
-    """Retrieves all cards and creates report"""
-    load_data()
-    return render_template('ui/table.html', now=load_data.now, new_comments=load_data.cnv_comments_all, page_title='all-cnv-severity')
+    return render_template('ui/table.html', now=load_data.now, new_comments=load_data.accounts_all, page_title='all-severity')
 
 @BP.route('/updates/weeklyupdates')
 def weekly_updates():
@@ -156,28 +134,19 @@ def weekly_updates():
     load_data()
     return render_template('ui/weekly_report.html', now=load_data.now, new_comments=load_data.telco_comments, page_title='weekly-update')
 
-@BP.route('/stats/<string:case_type>')
-def get_stats(case_type):
-    """ generate some stats for a given case type"""
-    if case_type in ['telco5g', 'cnv']:
-        stats = generate_stats(case_type)
-        x_values, y_values = plot_stats(case_type)        
-        now = str(datetime.datetime.utcnow())
-        return render_template('ui/stats.html', now=now, stats=stats, x_values=x_values, y_values=y_values, page_title='stats/{}'.format(case_type))
-    else:
-        return {'error': 'unknown card type: {}'.format(case_type)}
-
+@BP.route('/stats')
+def get_stats():
+    """ generate some stats"""
+    stats = generate_stats()
+    x_values, y_values = plot_stats()
+    now = str(datetime.datetime.utcnow())
+    return render_template('ui/stats.html', now=now, stats=stats, x_values=x_values, y_values=y_values, page_title='stats')
+    
 @BP.route('/account/<string:account>')
 def get_account(account):
     '''show bugs, cases and stats by for a given account'''
-    stats = generate_stats('telco5g', account)
-    #all_cards = redis_get('cards')
-    #cases = redis_get('cases')
-    telco_accounts_all, cnv_accounts_all = get_new_comments(new_comments_only=False, account=account)
-    #logging.warning(cards)
-    #cards = {c:d for (c,d) in all_cards.items() if d['account'] == account}
-    #logging.warning(cards)
-    #logging.warning(cases)
+    stats = generate_stats(account)
+    comments = get_new_comments(new_comments_only=False, account=account)
 
     pie_stats = {
         "by_severity": (
@@ -189,5 +158,5 @@ def get_account(account):
             list(stats["by_status"].values()),
         ),
     }
-    return render_template('ui/account.html', page_title=account, account=account, stats=stats, new_comments=telco_accounts_all, pie_stats=pie_stats)
+    return render_template('ui/account.html', page_title=account, account=account, stats=stats, new_comments=comments, pie_stats=pie_stats)
 

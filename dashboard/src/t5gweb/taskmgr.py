@@ -23,18 +23,11 @@ mgr = Celery('t5gweb', broker='redis://redis:6379/0', backend='redis://redis:637
 @mgr.on_after_configure.connect
 def setup_scheduled_tasks(sender, **kwargs):
 
-    # check for new telco cases
+    # check for new cases
     sender.add_periodic_task(
         crontab(hour='*', minute='15'), # 15 mins after every hour
-        portal_jira_sync.s('telco5g'),
-        name='telco5g_sync',
-    )
-
-    # check for new cnv cases
-    sender.add_periodic_task(
-        crontab(hour='*', minute='30'), # 30 mins after every hour
-        portal_jira_sync.s('cnv'),
-        name='cnv_sync',
+        portal_jira_sync.s(),
+        name='case_sync',
     )
 
     # update card cache
@@ -79,7 +72,7 @@ def setup_scheduled_tasks(sender, **kwargs):
         name='escalations_sync',
     )
 
-    # tag bugzillas with 'Telco' and/or 'Telco:Case'
+    # tag telco5g bugzillas and JIRAs with 'Telco' and/or 'Telco:Case'
     sender.add_periodic_task(
         crontab(hour='*/24', minute='33'), # once a day + 33 for randomness
         tag_bz.s(),
@@ -108,9 +101,9 @@ def setup_scheduled_tasks(sender, **kwargs):
     )
 
 @mgr.task
-def portal_jira_sync(job_type):
+def portal_jira_sync():
     
-    logging.warning("job: checking for new {} cases".format(job_type))
+    logging.warning("job: checking for new cases")
     cfg = set_cfg()
     max_to_create = os.environ.get('max_to_create')
 
@@ -119,20 +112,7 @@ def portal_jira_sync(job_type):
     cases = libtelco5g.redis_get('cases')
     cards = libtelco5g.redis_get('cards')
     
-    if job_type == 'telco5g':
-        cfg['team'] = json.loads(os.environ.get('telco_team'))
-        cfg['to'] = os.environ.get('telco_email')
-        open_cases = [case for case in cases if cases[case]['status'] != 'Closed' and 'shift_telco5g' in cases[case]['tags']]
-    elif job_type == 'cnv':
-        open_cases = [case for case in cases if cases[case]['status'] != 'Closed' and 'cnv' in cases[case]['tags']]
-        cfg['team'] = json.loads(os.environ.get('cnv_team'))
-        cfg['to'] = os.environ.get('cnv_email')
-        cfg['subject'] = 'New Card(s) Have Been Created to Track CNV Issues'
-        cfg['labels'] = ['cnv', 'no-qe', 'no-doc']
-    else:
-        logging.warning("unknown team: {}".format(team))
-        return None
-    
+    open_cases = [case for case in cases if cases[case]['status'] != 'Closed']
     card_cases = [cards[card]['case_number'] for card in cards]
     logging.warning("found {} cases in JIRA".format(len(card_cases)))
     new_cases = [case for case in open_cases if case not in card_cases]
@@ -149,8 +129,6 @@ def portal_jira_sync(job_type):
     elif len(new_cases) > 0:
         logging.warning("need to create {} cases".format(len(new_cases)))
         message_content, new_cards = libtelco5g.create_cards(cfg, new_cases, action='create')
-        cfg['slack_token'] = os.environ.get('slack_token')
-        cfg['slack_channel'] = os.environ.get('slack_channel')
         if message_content:
             logging.warning("notifying team about new JIRA cards")
             email_notify(cfg, message_content)
@@ -160,7 +138,6 @@ def portal_jira_sync(job_type):
                 logging.warning("no slack token or channel specified")
             cards.update(new_cards)
             libtelco5g.redis_set('cards', json.dumps(cards))
-
     else:
         logging.warning("no new cards required")
             
@@ -203,20 +180,24 @@ def cache_data(data_type):
 
 @mgr.task(autoretry_for=(Exception,), max_retries=3, retry_backoff=30)
 def tag_bz():
-    
+    ## telco5g specific
+
+    cfg = set_cfg()
+    if cfg['jira_query'] != 'field':
+        logging.warning("bz tagging not enabled for {}".format(cfg['jira_query']))
+        return
+
     logging.warning("getting bugzillas")
     bz_url = "bugzilla.redhat.com"
-    cfg = set_cfg()
     bz_api = bugzilla.Bugzilla(bz_url, api_key=cfg['bz_key'])
     cases = libtelco5g.redis_get("cases")
-    telco_cases = [case for case in cases if "shift_telco5g" in cases[case]['tags']]
     bugs = libtelco5g.redis_get('bugs')
     issues = libtelco5g.redis_get('issues')
     jira_conn = libtelco5g.jira_connection(cfg)
 
     logging.warning("tagging bugzillas")
     for case in bugs:
-        if case in telco_cases:
+        if case in cases:
             for bug in bugs[case]:
                 try:
                     bz = bz_api.getbug(bug['bugzillaNumber'])
@@ -236,10 +217,9 @@ def tag_bz():
                         except:
                             logging.warning("Tried and failed to tag " + str(bz.id))
                             continue
-
     logging.warning("tagging Jira Bugs")
     for case in issues:
-        if case in telco_cases:
+        if case in cases:
             for issue in issues[case]:
                 try:
                     card = jira_conn.issue(issue['id'])
@@ -258,13 +238,10 @@ def tag_bz():
                     internal_whiteboard = internal_whiteboard + " Telco:Case"
                     update = card.update(customfield_12322040=internal_whiteboard)
 
-
 @mgr.task
 def cache_stats():
-
-    for case_type in ['telco5g', 'cnv']:
-        logging.warning("job: cache {} stats".format(case_type))
-        cache.get_stats(case_type)
+    logging.warning("job: cache stats")
+    cache.get_stats()
 
 @mgr.task(bind=True)
 def refresh_background(self):

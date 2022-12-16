@@ -71,7 +71,7 @@ def get_project_id(conn, name):
     Returns Jira object.
     Notable fields:
         .components  - list of Jira objects
-            [<JIRA Component: name='CNV CI and Release', id='12333847'>,...]
+            [<JIRA Component: name='ABC', id='12333847'>,...]
         .description - string
         .id          - numerical string
         .key         - string
@@ -249,10 +249,7 @@ def create_cards(cfg, new_cases, action='none'):
             logging.warning('creating card for case {}'.format(case))
             new_card = jira_conn.create_issue(fields=card_info)
             logging.warning('created {}'.format(new_card.key))
-            if 'field' in card_info['labels']:
-                email_content.append( f"A JIRA issue (https://issues.redhat.com/browse/{new_card}) has been created for a new Telco5G case:\nCase #: {case} (https://access.redhat.com/support/cases/{case})\nAccount: {cases[case]['account']}\nSummary: {cases[case]['problem']}\nSeverity: {cases[case]['severity']}\nDescription: {cases[case]['description']}\n\nIt is initially being tracked by {assignee['name']}.\n")
-            else:
-                email_content.append( f"A JIRA issue (https://issues.redhat.com/browse/{new_card}) has been created for a new CNV case:\nCase #: {case} (https://access.redhat.com/support/cases/{case})\nAccount: {cases[case]['account']}\nSummary: {cases[case]['problem']}\nSeverity: {cases[case]['severity']}\nDescription: {cases[case]['description']}\n\nIt is initially being tracked by {assignee['name']}.\n")
+            email_content.append( f"A JIRA issue (https://issues.redhat.com/browse/{new_card}) has been created for a new case:\nCase #: {case} (https://access.redhat.com/support/cases/{case})\nAccount: {cases[case]['account']}\nSummary: {cases[case]['problem']}\nSeverity: {cases[case]['severity']}\nDescription: {cases[case]['description']}\n\nIt is initially being tracked by {assignee['name']}.\n")
 
             # Add newly create card to the sprint
             logging.warning('moving card to sprint {}'.format(sprint.id))
@@ -336,30 +333,14 @@ def get_case_from_link(jira_conn, card):
                 return case_number
     return None
 
-def generate_stats(case_type, account=None):
+def generate_stats(account=None):
     ''' generate some stats '''
     
-    logging.warning("generating stats for {}".format(case_type))
+    logging.warning("generating stats")
     start = time.time()
     
-    all_cards = redis_get('cards')
-    if case_type == 'telco5g':
-        cards = {c:d for (c,d) in all_cards.items() if 'field' in d['labels']}
-    elif case_type == 'cnv':
-        cards = {c:d for (c,d) in all_cards.items() if 'cnv' in d['labels']}
-    else:
-        logging.warning("unknown case type: {}".format(case_type))
-        return {}
-    
-    all_cases = redis_get('cases')
-    if case_type == 'telco5g':
-        cases = {c:d for (c,d) in all_cases.items() if 'shift_telco5g' in d['tags']}
-    elif case_type == 'cnv':
-        cases = {c:d for (c,d) in all_cases.items() if 'cnv' in d['tags']}
-    else:
-        logging.warning("unknown case type: {}".format(case_type))
-        return {}
-    
+    cards = redis_get('cards')
+    cases = redis_get('cases')
     bugs = redis_get('bugs')
 
     if account is not None:
@@ -453,9 +434,9 @@ def generate_stats(case_type, account=None):
     return stats
 
 
-def plot_stats(case_type):
+def plot_stats():
 
-    historical_stats = redis_get("{}_stats".format(case_type))
+    historical_stats = redis_get("stats")
     x_values = [day for day in historical_stats]
     y_values = {
         'escalated': [],
