@@ -27,20 +27,13 @@ def load_data():
     
     cfg = set_cfg()
     load_data.new_cases = get_new_cases()
-    #load_data.new_cnv_cases = get_new_cases('cnv')
-    #load_data.new_t5g_cases = get_new_cases('shift_telco5g')
     plot_data = plots()
     load_data.y = list(plot_data.values())
-    #telco_accounts, cnv_accounts = get_new_comments()
-    #load_data.telco_comments = telco_accounts
-    #load_data.cnv_comments = cnv_accounts
     load_data.accounts = get_new_comments()
-    #telco_accounts_all, cnv_accounts_all = get_new_comments(new_comments_only=False)
-    #load_data.telco_comments_all = telco_accounts_all
-    #load_data.cnv_comments_all = cnv_accounts_all
     load_data.accounts_all = get_new_comments(new_comments_only=False)
     load_data.trending_cards = get_trending_cards()
     load_data.now = redis_get('timestamp')
+    load_data.jira_server = cfg['server']
 
 @BP.route('/')
 def index():
@@ -102,49 +95,50 @@ def refresh():
 def recent_updates():
     """Retrieves cards that have been updated within the last week and creates report"""
     load_data()
-    return render_template('ui/updates.html', now=load_data.now, new_comments=load_data.accounts, page_title='recent updates')
+    return render_template('ui/updates.html', now=load_data.now, new_comments=load_data.accounts, jira_server=load_data.jira_server, page_title='recent updates')
 
 @BP.route('/updates/all')
 def all_cards():
     """Retrieves all cards and creates report"""
     load_data()
-    return render_template('ui/updates.html', now=load_data.now, new_comments=load_data.accounts_all, page_title='all cards')
+    return render_template('ui/updates.html', now=load_data.now, new_comments=load_data.accounts_all, jira_server=load_data.jira_server, page_title='all cards')
 
 @BP.route('/trends')
 def trends():
     """Retrieves cards that have been labeled with 'Trends' within the previous quarter and creates report"""
     load_data()
-    return render_template('ui/updates.html', now=load_data.now, new_comments=load_data.trending_cards, page_title='trends')
+    return render_template('ui/updates.html', now=load_data.now, new_comments=load_data.trending_cards, jira_server=load_data.jira_server, page_title='trends')
 
 @BP.route('/updates/severity')
 def severity():
     """Sorts new telco5g cards by severity and creates table"""
     load_data()
-    return render_template('ui/table.html', now=load_data.now, new_comments=load_data.accounts, page_title='severity')
+    return render_template('ui/table.html', now=load_data.now, new_comments=load_data.accounts, jira_server=load_data.jira_server, page_title='severity')
 
 @BP.route('/updates/all/severity')
 def all_severity():
     """Sorts all telco5g cards by severity and creates table"""
     load_data()
-    return render_template('ui/table.html', now=load_data.now, new_comments=load_data.accounts_all, page_title='all-severity')
+    return render_template('ui/table.html', now=load_data.now, new_comments=load_data.accounts_all, jira_server=load_data.jira_server, page_title='all-severity')
 
 @BP.route('/updates/weeklyupdates')
 def weekly_updates():
     """Retrieves cards and displays them plainly for easy copy/pasting and distribution"""
     load_data()
-    return render_template('ui/weekly_report.html', now=load_data.now, new_comments=load_data.telco_comments, page_title='weekly-update')
+    return render_template('ui/weekly_report.html', now=load_data.now, new_comments=load_data.accounts, jira_server=load_data.jira_server, page_title='weekly-update')
 
 @BP.route('/stats')
 def get_stats():
     """ generate some stats"""
+    load_data()
     stats = generate_stats()
     x_values, y_values = plot_stats()
-    now = str(datetime.datetime.utcnow())
-    return render_template('ui/stats.html', now=now, stats=stats, x_values=x_values, y_values=y_values, page_title='stats')
+    return render_template('ui/stats.html', now=load_data.now, stats=stats, x_values=x_values, y_values=y_values, page_title='stats')
     
 @BP.route('/account/<string:account>')
 def get_account(account):
     '''show bugs, cases and stats by for a given account'''
+    load_data()
     stats = generate_stats(account)
     comments = get_new_comments(new_comments_only=False, account=account)
 
@@ -158,5 +152,5 @@ def get_account(account):
             list(stats["by_status"].values()),
         ),
     }
-    return render_template('ui/account.html', page_title=account, account=account, stats=stats, new_comments=comments, pie_stats=pie_stats)
+    return render_template('ui/account.html', page_title=account, account=account, now=load_data.now, stats=stats, new_comments=comments, jira_server=load_data.jira_server, pie_stats=pie_stats)
 

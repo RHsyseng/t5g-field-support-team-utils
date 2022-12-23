@@ -25,9 +25,9 @@ def setup_scheduled_tasks(sender, **kwargs):
 
     # check for new cases
     sender.add_periodic_task(
-        crontab(hour='*', minute='15'), # 15 mins after every hour
+        crontab(hour='*', minute='10'), # 10 mins after every hour
         portal_jira_sync.s(),
-        name='case_sync',
+        name='portal2jira_sync',
     )
 
     # update card cache
@@ -81,7 +81,7 @@ def setup_scheduled_tasks(sender, **kwargs):
     
     # generate daily stats
     sender.add_periodic_task(
-        crontab(hour='4', minute='11'), # every day at 4:11
+        crontab(hour='4', minute='40'), # every day at 4:40
         cache_stats.s(),
         name='cache_stats',
     )
@@ -117,7 +117,6 @@ def portal_jira_sync():
     logging.warning("found {} cases in JIRA".format(len(card_cases)))
     new_cases = [case for case in open_cases if case not in card_cases]
     logging.warning("new cases: {}".format(new_cases))
-
 
     if len(new_cases) > int(max_to_create):
         logging.warning("Warning: more than {} cases ({}) will be created, so refusing to proceed. Please check log output\n".format(max_to_create, len(new_cases)))

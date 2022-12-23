@@ -221,7 +221,7 @@ def create_cards(cfg, new_cases, action='none'):
             redis_set('last_choice', json.dumps(assignee))
         assignee['displayName'] = assignee['name']
         priority = portal2jira_sevs[cases[case]['severity']]
-        full_description = 'This card was automatically created from the Field Engineering Sync Job.\r\n\r\n' + \
+        full_description = 'This card was automatically created from the Case Dashboard Sync Job.\r\n\r\n' + \
             'This card was created because it had a severity of ' + \
             cases[case]['severity'] + \
             '\r\nThe account for the case is ' + \
@@ -249,7 +249,7 @@ def create_cards(cfg, new_cases, action='none'):
             logging.warning('creating card for case {}'.format(case))
             new_card = jira_conn.create_issue(fields=card_info)
             logging.warning('created {}'.format(new_card.key))
-            email_content.append( f"A JIRA issue (https://issues.redhat.com/browse/{new_card}) has been created for a new case:\nCase #: {case} (https://access.redhat.com/support/cases/{case})\nAccount: {cases[case]['account']}\nSummary: {cases[case]['problem']}\nSeverity: {cases[case]['severity']}\nDescription: {cases[case]['description']}\n\nIt is initially being tracked by {assignee['name']}.\n")
+            email_content.append( f"A JIRA issue ({cfg['server']}/browse/{new_card}) has been created for a new case:\nCase #: {case} (https://access.redhat.com/support/cases/{case})\nAccount: {cases[case]['account']}\nSummary: {cases[case]['problem']}\nSeverity: {cases[case]['severity']}\nDescription: {cases[case]['description']}\n\nIt is initially being tracked by {assignee['name']}.\n")
 
             # Add newly create card to the sprint
             logging.warning('moving card to sprint {}'.format(sprint.id))
@@ -274,10 +274,10 @@ def create_cards(cfg, new_cases, action='none'):
                     'url': 'https://bugzilla.redhat.com/show_bug.cgi?id=' + cases[case]['bug'],
                     'title': 'BZ ' + cases[case]['bug'] })
 
-            if 'tags' in cases[case].keys():
-                tags = cases[case]['tags']
-            else:
-                tags = ['shift_telco5g'] # trigged by case summary, not tag
+            #if 'tags' in cases[case].keys():
+            #    tags = cases[case]['tags']
+            #else:
+            #    tags = ['shift_telco5g'] # trigged by case summary, not tag
 
             new_cards[new_card.key] = {
                 "card_status": status_map[new_card.fields.status.name],
@@ -288,7 +288,7 @@ def create_cards(cfg, new_cases, action='none'):
                 "comments": None,
                 "assignee": assignee,
                 "case_number": case,
-                "tags": tags,
+                "tags": cases[case]['tags'],
                 "labels": cfg['labels'],
                 "bugzilla": bz,
                 "severity": re.search(r'[a-zA-Z]+', cases[case]['severity']).group(),

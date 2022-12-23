@@ -8,6 +8,7 @@ import re
 import random
 import smtplib
 import requests
+import json
 from slack_sdk import WebClient
 from slack_sdk.errors import SlackApiError
 
@@ -127,6 +128,9 @@ def set_cfg():
         cfg[key] = value
 
     ## env overrides
+    cfg['team'] = json.loads(os.environ.get('team'))
+    #defaults['max_jira_results'] = 1000
+    #defaults['max_portal_results'] = 5000
     # sources
     cfg['offline_token'] = os.environ.get('offline_token') # portal
     cfg['query'] = os.environ.get('case_query')
@@ -150,14 +154,8 @@ def set_cfg():
     cfg['board'] = os.environ.get('jira_board')
     cfg['jira_query'] = os.environ.get('jira_query')
     cfg['password'] = os.environ.get('jira_pass')
-    cfg['jira_label'] = os.environ.get('jira_label')
-    #cfg['labels'] = cfg['labels'].split(',')
+    cfg['labels'] = os.environ.get('jira_labels').split(',')
     
-    
-    # TODO override?
-    #defaults['max_jira_results'] = 1000
-    #defaults['max_portal_results'] = 5000
-
     return cfg
 
 def set_defaults():
@@ -181,6 +179,7 @@ def set_defaults():
     defaults['password'] = ''
     defaults['card_action'] = 'none'
     defaults['debug'] = 'False'
+    defaults['team'] = []
     defaults['fields'] = ["case_account_name", "case_summary", "case_number",
                           "case_status", "case_owner", "case_severity",
                           "case_createdDate", "case_lastModifiedDate",
@@ -199,12 +198,12 @@ def slack_notify(ini, blist):
         body += f"{line}\n"
 
     client = WebClient(token = ini['slack_token'])
-    msgs = re.split(r'A JIRA issue \(https:\/\/issues\.redhat\.com\/browse\/|Description: ', body)
+    msgs = re.split(r'A JIRA issue \(' + ini['server'] + '\/browse\/|Description: ', body)
 
     #Adding the text removed by re.split() and adding ping to assignee
     for i in range(1, len(msgs)):
         if i % 2 == 1:
-            msgs[i] = "A JIRA issue (https://issues.redhat.com/browse/" + msgs[i]
+            msgs[i] = "A JIRA issue (" + ini['server'] + "/browse/" + msgs[i]
         if i % 2 == 0:
             msgs[i] = "Description: " + msgs[i]
             assign = re.findall(r'(?<=\nIt is initially being tracked by )[\w ]*', msgs[i])
