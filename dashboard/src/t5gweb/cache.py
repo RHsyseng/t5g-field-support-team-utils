@@ -53,9 +53,6 @@ def get_cases(cfg):
         else:
             tags = case_tags
         cases[case["case_number"]]["tags"] = tags
-    #else: # assume. came from query, so probably telco
-    #    cases[case["case_number"]]["tags"] = ['shift_telco5g']
-    # Sometimes there is no closed date attached to the case
     if "case_closedDate" in case:
         cases[case["case_number"]]["closeddate"] = case["case_closedDate"]
 
@@ -165,8 +162,7 @@ def get_cards(cfg, self=None, background=False):
         tags = []
         if 'tags' in cases[case_number].keys():
             tags = cases[case_number]['tags']
-        else: # assume telco
-            tags = ['shift_telco5g']
+        
         if 'bug' in cases[case_number].keys() and case_number in bugs.keys():
             bugzilla = bugs[case_number]
         else:

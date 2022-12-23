@@ -111,13 +111,13 @@ def trends():
 
 @BP.route('/updates/severity')
 def severity():
-    """Sorts new telco5g cards by severity and creates table"""
+    """Sorts new cards by severity and creates table"""
     load_data()
     return render_template('ui/table.html', now=load_data.now, new_comments=load_data.accounts, jira_server=load_data.jira_server, page_title='severity')
 
 @BP.route('/updates/all/severity')
 def all_severity():
-    """Sorts all telco5g cards by severity and creates table"""
+    """Sorts all cards by severity and creates table"""
     load_data()
     return render_template('ui/table.html', now=load_data.now, new_comments=load_data.accounts_all, jira_server=load_data.jira_server, page_title='all-severity')
 
