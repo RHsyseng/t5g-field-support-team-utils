@@ -78,7 +78,7 @@ def get_trending_cards():
     for card in trending_cards:
         detailed_cards[card] = cards[card]
         account = cards[card]['account']
-        if account not in telco_account_list:
+        if account not in account_list:
             account_list.append(cards[card]['account'])
 
     accounts = organize_cards(detailed_cards, account_list)

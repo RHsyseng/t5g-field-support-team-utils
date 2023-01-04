@@ -92,36 +92,36 @@ def refresh():
 
 
 @BP.route('/updates/')
-def recent_updates():
+def report_view():
     """Retrieves cards that have been updated within the last week and creates report"""
     load_data()
     return render_template('ui/updates.html', now=load_data.now, new_comments=load_data.accounts, jira_server=load_data.jira_server, page_title='recent updates')
 
 @BP.route('/updates/all')
-def all_cards():
+def report_view_all():
     """Retrieves all cards and creates report"""
     load_data()
     return render_template('ui/updates.html', now=load_data.now, new_comments=load_data.accounts_all, jira_server=load_data.jira_server, page_title='all cards')
 
-@BP.route('/trends')
+@BP.route('/trends/')
 def trends():
     """Retrieves cards that have been labeled with 'Trends' within the previous quarter and creates report"""
     load_data()
     return render_template('ui/updates.html', now=load_data.now, new_comments=load_data.trending_cards, jira_server=load_data.jira_server, page_title='trends')
 
-@BP.route('/updates/severity')
-def severity():
+@BP.route('/table/')
+def table_view():
     """Sorts new cards by severity and creates table"""
     load_data()
     return render_template('ui/table.html', now=load_data.now, new_comments=load_data.accounts, jira_server=load_data.jira_server, page_title='severity')
 
-@BP.route('/updates/all/severity')
-def all_severity():
+@BP.route('/table/all')
+def table_view_all():
     """Sorts all cards by severity and creates table"""
     load_data()
     return render_template('ui/table.html', now=load_data.now, new_comments=load_data.accounts_all, jira_server=load_data.jira_server, page_title='all-severity')
 
-@BP.route('/updates/weeklyupdates')
+@BP.route('/weekly/')
 def weekly_updates():
     """Retrieves cards and displays them plainly for easy copy/pasting and distribution"""
     load_data()

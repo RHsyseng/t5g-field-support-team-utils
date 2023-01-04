@@ -4,7 +4,7 @@
 
 <a id="top"></a>
 <div class="new-cases">
-    <h2>{{ new_cases | length }} <a href="{{ url_for('ui.recent_updates') }}">Cases</a> Opened in the Last 7 Days:</h2>
+    <h2>{{ new_cases | length }} <a href="{{ url_for('ui.report_view') }}">Cases</a> Opened in the Last 7 Days:</h2>
     <div class="copy">
         <table class="table table-borderless table-hover">
         <th>case#</th><th>account</th><th>severity</th><th>summary</th>
@@ -19,8 +19,8 @@
         </table>
     </div>
     <hr class="divide">
-    <a role="button" class="btn btn-outline-dark btn-lg" href="{{ url_for('ui.recent_updates') }}">Recent Updates</a>
-    <a role="button" class="btn btn-outline-dark btn-lg" href="{{ url_for('ui.all_cards') }}">All Cards</a>
+    <a role="button" class="btn btn-outline-dark btn-lg" href="{{ url_for('ui.report_view') }}">Recent Updates</a>
+    <a role="button" class="btn btn-outline-dark btn-lg" href="{{ url_for('ui.report_view_all') }}">All Cards</a>
 
     <div class="chart-container">
         <canvas id="myChart" width="1475px" height="800px"></canvas>
