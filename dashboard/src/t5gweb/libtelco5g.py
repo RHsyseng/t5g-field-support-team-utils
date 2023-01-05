@@ -274,11 +274,6 @@ def create_cards(cfg, new_cases, action='none'):
                     'url': 'https://bugzilla.redhat.com/show_bug.cgi?id=' + cases[case]['bug'],
                     'title': 'BZ ' + cases[case]['bug'] })
 
-            #if 'tags' in cases[case].keys():
-            #    tags = cases[case]['tags']
-            #else:
-            #    tags = ['shift_telco5g'] # trigged by case summary, not tag
-
             new_cards[new_card.key] = {
                 "card_status": status_map[new_card.fields.status.name],
                 "card_created": new_card.fields.created,
