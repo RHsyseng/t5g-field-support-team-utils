@@ -85,7 +85,8 @@
                                     backgroundColor: [
                                     'rgb(255, 99, 132)',
                                     'rgb(54, 162, 235)',
-                                    'rgb(255, 205, 86)'
+                                    'rgb(255, 205, 86)',
+                                    'rgb(75, 192, 192)'
                                     ],
                                     hoverOffset: 4
                                 }]
@@ -303,7 +304,7 @@
                                 <td class="align-middle text-center">{{ new_comments[account][status][card]['case_status'] }}</td>
                                 <td class="align-middle text-center">{{ new_comments[account][status][card]['card_status'] }}</td>
                                 <td class="align-middle text-center">{{ new_comments[account][status][card]['assignee']['displayName'] }} {% if new_comments[account][status][card]['contributor'] | length %} <br><br> <span class="fw-bold">Contributor(s):</span> {% endif %} {% for contributor in new_comments[account][status][card]['contributor'] %} {{ contributor['displayName'] }}{{ ", " if not loop.last else "" }} {% endfor %}</td>
-                                <td class="align-middle text-center"><a href=https://issues.redhat.com/browse/{{ card }} target="_blank">{{ card }}</a></td>
+                                <td class="align-middle text-center"><a href={{ jira_server }}/browse/{{ card }} target="_blank">{{ card }}</a></td>
                                 <td class="align-middle"><span class="fw-bold fst-italic">{{ new_comments[account][status][card]['comments'][-1][1][:10] }}</span> - {{ new_comments[account][status][card]['comments'][-1][0] | safe }}</td>
                                 <td class="align-middle text-center">{{ new_comments[account][status][card]['case_days_open'] }}</td>
                                 <td class="align-middle text-center">{{ new_comments[account][status][card]['case_updated_date'] }}</td>

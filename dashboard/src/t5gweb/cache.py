@@ -53,9 +53,6 @@ def get_cases(cfg):
         else:
             tags = case_tags
         cases[case["case_number"]]["tags"] = tags
-    else: # assume. came from query, so probably telco
-        cases[case["case_number"]]["tags"] = ['shift_telco5g']
-    # Sometimes there is no closed date attached to the case
     if "case_closedDate" in case:
         cases[case["case_number"]]["closeddate"] = case["case_closedDate"]
 
@@ -120,7 +117,8 @@ def get_cards(cfg, self=None, background=False):
 
     logging.warning("pulling cards from jira")
 
-    jira_query = 'sprint=' + str(sprint.id) + ' AND (labels = "field" OR labels = "cnv")'
+    #jira_query = 'sprint=' + str(sprint.id) + ' AND (labels = "field" OR labels = "cnv")'
+    jira_query = 'sprint=' + str(sprint.id) + ' AND labels = "' + cfg['jira_query'] + '"'
     card_list = jira_conn.search_issues(jira_query, 0, max_cards).iterable
     time_now = datetime.datetime.now(datetime.timezone.utc)
 
@@ -164,8 +162,7 @@ def get_cards(cfg, self=None, background=False):
         tags = []
         if 'tags' in cases[case_number].keys():
             tags = cases[case_number]['tags']
-        else: # assume telco
-            tags = ['shift_telco5g']
+        
         if 'bug' in cases[case_number].keys() and case_number in bugs.keys():
             bugzilla = bugs[case_number]
         else:
@@ -385,13 +382,13 @@ def get_issue_details(cfg):
     libtelco5g.redis_set('issues', json.dumps(jira_issues))
     logging.warning("issues cached")
 
-def get_stats(case_type):
+def get_stats():
 
-    logging.warning("caching {} stats".format(case_type))
-    all_stats = libtelco5g.redis_get('{}_stats'.format(case_type))
-    new_stats = libtelco5g.generate_stats(case_type)
+    logging.warning("caching {} stats")
+    all_stats = libtelco5g.redis_get('stats')
+    new_stats = libtelco5g.generate_stats()
     tstamp = datetime.datetime.utcnow()
     today = tstamp.strftime('%Y-%m-%d')
     stats = {today: new_stats}
     all_stats.update(stats)
-    libtelco5g.redis_set('{}_stats'.format(case_type), json.dumps(all_stats))
+    libtelco5g.redis_set('stats', json.dumps(all_stats))

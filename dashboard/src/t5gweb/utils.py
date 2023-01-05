@@ -8,6 +8,7 @@ import re
 import random
 import smtplib
 import requests
+import json
 from slack_sdk import WebClient
 from slack_sdk.errors import SlackApiError
 
@@ -126,44 +127,64 @@ def set_cfg():
     for key, value in trcfg.items():
         cfg[key] = value
 
-    # Fix some of the settings so they are easier to use
-    cfg['labels'] = cfg['labels'].split(',')
-
-    cfg['offline_token'] = os.environ.get('offline_token')
-    cfg['password'] = os.environ.get('jira_pass')
+    ## env overrides
+    cfg['team'] = json.loads(os.environ.get('team'))
+    #defaults['max_jira_results'] = 1000
+    #defaults['max_portal_results'] = 5000
+    # sources
+    cfg['offline_token'] = os.environ.get('offline_token') # portal
+    cfg['query'] = os.environ.get('case_query')
     cfg['bz_key'] = os.environ.get('bz_key')
     cfg['smartsheet_access_token'] = os.environ.get('smartsheet_access_token')
     cfg['sheet_id'] = os.environ.get('sheet_id')
-
+    # email
+    cfg['smtp'] = os.environ.get('smtp_server')
+    cfg['from'] = os.environ.get('source_email')
+    cfg['to'] = os.environ.get('notification_email')
+    cfg['alert_to'] = os.environ.get('alert_email')
+    cfg['subject'] = os.environ.get('email_subject')
+    # slack
+    cfg['slack_token'] = os.environ.get('slack_token')
+    cfg['slack_channel'] = os.environ.get('slack_channel')
+    # jira
+    cfg['sprintname'] = os.environ.get('jira_sprint')
+    cfg['server'] = os.environ.get('jira_server')
+    cfg['project'] = os.environ.get('jira_project')
+    cfg['component'] = os.environ.get('jira_component')
+    cfg['board'] = os.environ.get('jira_board')
+    cfg['jira_query'] = os.environ.get('jira_query')
+    cfg['password'] = os.environ.get('jira_pass')
+    cfg['labels'] = os.environ.get('jira_labels').split(',')
+    
     return cfg
 
 def set_defaults():
     ''' set default configuration values '''
     defaults = {}
-    defaults['smtp'] = 'smtp.corp.redhat.com'
-    defaults['from'] = 't5g_jira@redhat.com'
+    defaults['smtp'] = 'localhost'
+    defaults['from'] = 'dashboard@example.com'
     defaults['to'] = ''
-    defaults['alert_to'] = 'dcritch@redhat.com'
-    defaults['subject'] = 'New Card(s) Have Been Created to Track Telco5G Issues'
-    defaults['sprintname'] = 'T5GFE'
-    defaults['server'] = 'https://issues.redhat.com'
-    defaults['project'] = 'KNIECO'
-    defaults['component'] = 'KNI Labs & Field'
-    defaults['board'] = 'KNI-ECO Labs & Field'
+    defaults['alert_to'] = 'root@localhost'
+    defaults['subject'] = 'New Card(s) Have Been Created to Track Issues'
+    defaults['sprintname'] = ''
+    defaults['server'] = ''
+    defaults['project'] = ''
+    defaults['component'] = ''
+    defaults['board'] = ''
     defaults['email'] = ''
     defaults['type'] = 'Story'
-    defaults['labels'] = 'field, no-qe, no-doc'
+    defaults['labels'] = ''
     defaults['priority'] = 'High'
     defaults['points'] = 3
     defaults['password'] = ''
     defaults['card_action'] = 'none'
     defaults['debug'] = 'False'
+    defaults['team'] = []
     defaults['fields'] = ["case_account_name", "case_summary", "case_number",
                           "case_status", "case_owner", "case_severity",
                           "case_createdDate", "case_lastModifiedDate",
                           "case_bugzillaNumber", "case_description", "case_tags",
                           "case_product", "case_version", "case_closedDate"]
-    defaults['query'] = "case_summary:*webscale* OR case_tags:*shift_telco5g* OR case_tags:*cnv*"
     defaults['slack_token'] = ''
     defaults['slack_channel'] = ''
     defaults['max_jira_results'] = 1000
@@ -177,12 +198,12 @@ def slack_notify(ini, blist):
         body += f"{line}\n"
 
     client = WebClient(token = ini['slack_token'])
-    msgs = re.split(r'A JIRA issue \(https:\/\/issues\.redhat\.com\/browse\/|Description: ', body)
+    msgs = re.split(r'A JIRA issue \(' + ini['server'] + '\/browse\/|Description: ', body)
 
     #Adding the text removed by re.split() and adding ping to assignee
     for i in range(1, len(msgs)):
         if i % 2 == 1:
-            msgs[i] = "A JIRA issue (https://issues.redhat.com/browse/" + msgs[i]
+            msgs[i] = "A JIRA issue (" + ini['server'] + "/browse/" + msgs[i]
         if i % 2 == 0:
             msgs[i] = "Description: " + msgs[i]
             assign = re.findall(r'(?<=\nIt is initially being tracked by )[\w ]*', msgs[i])
