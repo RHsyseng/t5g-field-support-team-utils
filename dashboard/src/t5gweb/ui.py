@@ -36,6 +36,17 @@ def load_data():
     load_data.jira_server = cfg['server']
 
 @BP.route('/')
+## deprecated endpoints to remove
+@BP.route('/updates/telco5g')
+@BP.route('/updates/telco5g/all')
+@BP.route('/updates/cnv')
+@BP.route('/updates/cnv/all')
+@BP.route('/updates/telco5g/severity')
+@BP.route('/updates/telco5g/all/severity')
+@BP.route('/updates/cnv/severity')
+@BP.route('/updates/cnv/all/severity')
+@BP.route('/stats/cnv')
+@BP.route('/stats/telco5g')
 def index():
     """list new cases"""
     load_data()
