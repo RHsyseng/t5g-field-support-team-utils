@@ -35,7 +35,7 @@ def load_data():
     load_data.now = redis_get('timestamp')
     load_data.jira_server = cfg['server']
 
-@BP.route('/')
+
 ## deprecated endpoints to remove
 @BP.route('/updates/telco5g')
 @BP.route('/updates/telco5g/all')
@@ -47,6 +47,8 @@ def load_data():
 @BP.route('/updates/cnv/all/severity')
 @BP.route('/stats/cnv')
 @BP.route('/stats/telco5g')
+## end of deprecated routes
+@BP.route('/')
 def index():
     """list new cases"""
     load_data()
