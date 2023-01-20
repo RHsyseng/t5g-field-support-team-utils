@@ -61,7 +61,7 @@ def get_cases(cfg):
 def get_escalations(cfg):
     '''Get cases that have been escalated from Smartsheet'''
     cases = libtelco5g.redis_get('cases')
-    if cases is None or cfg['smartsheet_access_token'] is not None or cfg['smartsheet_access_token'] != '':
+    if cases is None or cfg['smartsheet_access_token'] is None or cfg['smartsheet_access_token'] == '':
         libtelco5g.redis_set('escalations', json.dumps(None))
         return
 
@@ -229,7 +229,7 @@ def get_cards(cfg, self=None, background=False):
 def get_watchlist(cfg):
 
     cases = libtelco5g.redis_get('cases')
-    if cases is None or cfg['watchlist_url'] is not None or cfg['watchlist_url'] != '':
+    if cases is None or cfg['watchlist_url'] is None or cfg['watchlist_url'] == '':
         libtelco5g.redis_set('watchlist', json.dumps(None))
         return
 
