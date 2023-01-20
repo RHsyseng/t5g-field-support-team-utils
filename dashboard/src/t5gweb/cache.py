@@ -61,7 +61,7 @@ def get_cases(cfg):
 def get_escalations(cfg):
     '''Get cases that have been escalated from Smartsheet'''
     cases = libtelco5g.redis_get('cases')
-    if cases is None:
+    if cases is None or cfg['smartsheet_access_token'] is not None or cfg['smartsheet_access_token'] != '':
         libtelco5g.redis_set('escalations', json.dumps(None))
         return
 
@@ -173,7 +173,7 @@ def get_cards(cfg, self=None, background=False):
         else:
             case_issues = None
 
-        if case_number in escalations:
+        if escalations and case_number in escalations:
             escalated = True
         else:
             escalated = False
@@ -183,7 +183,7 @@ def get_cards(cfg, self=None, background=False):
         else:
             potenial_escalation = False
 
-        if case_number in watchlist:
+        if watchlist and case_number in watchlist:
             watched = True
         else:
             watched = False
@@ -229,6 +229,10 @@ def get_cards(cfg, self=None, background=False):
 def get_watchlist(cfg):
 
     cases = libtelco5g.redis_get('cases')
+    if cases is None or cfg['watchlist_url'] is not None or cfg['watchlist_url'] != '':
+        libtelco5g.redis_set('watchlist', json.dumps(None))
+        return
+
     token = libtelco5g.get_token(cfg['offline_token'])
     num_cases = cfg['max_portal_results']
     payload = {"rows": num_cases}
@@ -290,9 +294,10 @@ def get_bz_details(cfg):
     '''Get details about Bugzillas from API'''
     logging.warning("getting additional info via bugzilla API")
     bz_dict = libtelco5g.redis_get('case_bz')
-    if bz_dict is None:
+    if bz_dict is None or cfg['bz_key'] is None or cfg['bz_key'] == '':
         libtelco5g.redis_set('bugs', json.dumps(None))
         return
+    
     bz_url = "bugzilla.redhat.com"
     bz_api = bugzilla.Bugzilla(bz_url, api_key=cfg['bz_key'])
     for case in bz_dict:

@@ -23,11 +23,20 @@ mgr = Celery('t5gweb', broker='redis://redis:6379/0', backend='redis://redis:637
 @mgr.on_after_configure.connect
 def setup_scheduled_tasks(sender, **kwargs):
 
+    cfg = set_cfg()
+
     # check for new cases
     sender.add_periodic_task(
         crontab(hour='*', minute='10'), # 10 mins after every hour
         portal_jira_sync.s(),
         name='portal2jira_sync',
+    )
+
+    # ensure case severities match card priorities
+    sender.add_periodic_task(
+        crontab(hour='3', minute='12'), # everyday at 3:12
+        t_sync_priority.s(),
+        name='priority_sync',
     )
 
     # update card cache
@@ -51,13 +60,6 @@ def setup_scheduled_tasks(sender, **kwargs):
         name='details_sync',
     )
 
-    # update bugzilla details cache
-    sender.add_periodic_task(
-        crontab(hour='*/12', minute='48'), # twice a day
-        cache_data.s('bugs'),
-        name='bugs_sync',
-    )
-
     # update Jira bug details cache
     sender.add_periodic_task(
         crontab(hour='*/12', minute='54'), # twice a day
@@ -65,20 +67,6 @@ def setup_scheduled_tasks(sender, **kwargs):
         name='issues_sync',
     )
 
-    # update escalations cache
-    sender.add_periodic_task(
-        crontab(hour='*/12', minute='37'), # twice a day
-        cache_data.s('escalations'),
-        name='escalations_sync',
-    )
-
-    # tag telco5g bugzillas and JIRAs with 'Telco' and/or 'Telco:Case'
-    sender.add_periodic_task(
-        crontab(hour='*/24', minute='33'), # once a day + 33 for randomness
-        tag_bz.s(),
-        name='tag_bz',
-    )
-    
     # generate daily stats
     sender.add_periodic_task(
         crontab(hour='4', minute='40'), # every day at 4:40
@@ -86,19 +74,40 @@ def setup_scheduled_tasks(sender, **kwargs):
         name='cache_stats',
     )
 
-    # update watchlist cache
-    sender.add_periodic_task(
-        crontab(hour='*/12', minute='7'), # twice a day + 7 mins
-        cache_data.s('watchlist'),
-        name='watchlist_sync',
-    )
+
+    ## optional tasks
+
+    # update bugzilla details cache
+    if cfg['bz_key'] is not None and cfg['bz_key'] != '':
+        sender.add_periodic_task(
+            crontab(hour='*/12', minute='48'), # twice a day
+            cache_data.s('bugs'),
+            name='bugs_sync',
+        )
+
+    # update escalations cache
+    if cfg['smartsheet_access_token'] is not None and cfg['smartsheet_access_token'] != '':
+        sender.add_periodic_task(
+            crontab(hour='*/12', minute='37'), # twice a day
+            cache_data.s('escalations'),
+            name='escalations_sync',
+        )
+
+    # tag telco5g bugzillas and JIRAs with 'Telco' and/or 'Telco:Case'
+    if 'telco5g' in cfg['query']:
+        sender.add_periodic_task(
+            crontab(hour='*/24', minute='33'), # once a day + 33 for randomness
+            tag_bz.s(),
+            name='tag_bz',
+        )
     
-    # ensure case severities match card priorities
-    sender.add_periodic_task(
-        crontab(hour='3', minute='12'), # everyday at 3:12
-        t_sync_priority.s(),
-        name='priority_sync',
-    )
+    # update watchlist cache
+    if cfg['watchlist_url'] is not None and cfg['watchlist_url'] != '':
+        sender.add_periodic_task(
+            crontab(hour='*/12', minute='7'), # twice a day + 7 mins
+            cache_data.s('watchlist'),
+            name='watchlist_sync',
+        )
 
 @mgr.task
 def portal_jira_sync():
