@@ -112,13 +112,14 @@ def get_cards(cfg, self=None, background=False):
     logging.warning("component: {}".format(component))
     board = libtelco5g.get_board_id(jira_conn, cfg['board'])
     logging.warning("board: {}".format(board))
-    sprint = libtelco5g.get_latest_sprint(jira_conn, board.id, cfg['sprintname'])
-    logging.warning("sprint: {}".format(sprint))
+    if cfg['sprintname'] and cfg['sprintname'] != '':
+        sprint = libtelco5g.get_latest_sprint(jira_conn, board.id, cfg['sprintname'])
+        jira_query = 'sprint=' + str(sprint.id) + ' AND labels = "' + cfg['jira_query'] + '"'
+        logging.warning("sprint: {}".format(sprint))
+    else:
+        jira_query = 'project=' + str(project.id) + ' AND labels = "' + cfg['jira_query'] + '"'
 
-    logging.warning("pulling cards from jira")
-
-    #jira_query = 'sprint=' + str(sprint.id) + ' AND (labels = "field" OR labels = "cnv")'
-    jira_query = 'sprint=' + str(sprint.id) + ' AND labels = "' + cfg['jira_query'] + '"'
+    logging.warning("pulling cards from jira")  
     card_list = jira_conn.search_issues(jira_query, 0, max_cards).iterable
     time_now = datetime.datetime.now(datetime.timezone.utc)
 

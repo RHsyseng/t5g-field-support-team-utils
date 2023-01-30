@@ -205,7 +205,10 @@ def create_cards(cfg, new_cases, action='none'):
     project = get_project_id(jira_conn, cfg['project'])
     component = get_component_id(jira_conn, project.id, cfg['component'])
     board = get_board_id(jira_conn, cfg['board'])
-    sprint = get_latest_sprint(jira_conn, board.id, cfg['sprintname'])
+
+    if cfg['sprintname'] and cfg['sprintname'] != '':
+        sprint = get_latest_sprint(jira_conn, board.id, cfg['sprintname'])
+
     
     cases = redis_get('cases')
 
@@ -252,8 +255,9 @@ def create_cards(cfg, new_cases, action='none'):
             email_content.append( f"A JIRA issue ({cfg['server']}/browse/{new_card}) has been created for a new case:\nCase #: {case} (https://access.redhat.com/support/cases/{case})\nAccount: {cases[case]['account']}\nSummary: {cases[case]['problem']}\nSeverity: {cases[case]['severity']}\nDescription: {cases[case]['description']}\n\nIt is initially being tracked by {assignee['name']}.\n")
 
             # Add newly create card to the sprint
-            logging.warning('moving card to sprint {}'.format(sprint.id))
-            jira_conn.add_issues_to_sprint(sprint.id, [new_card.key])
+            if cfg['sprintname'] and cfg['sprintname'] != '':
+                logging.warning('moving card to sprint {}'.format(sprint.id))
+                jira_conn.add_issues_to_sprint(sprint.id, [new_card.key])
 
             # Move the card from backlog to the To Do column
             logging.warning('moving card from backlog to "To Do" column')
@@ -414,10 +418,11 @@ def generate_stats(account=None):
                 stats['no_updates'] += 1
     
     all_bugs = {}
-    for (case, bzs) in bugs.items():
-        if case in cases and cases[case]['status'] != 'Closed':
-            for bug in bzs:
-                all_bugs[bug['bugzillaNumber']] = bug
+    if bugs:
+        for (case, bzs) in bugs.items():
+            if case in cases and cases[case]['status'] != 'Closed':
+                for bug in bzs:
+                    all_bugs[bug['bugzillaNumber']] = bug
     no_target = {b: d for (b, d) in all_bugs.items() if d['target_release'][0] == '---'}
     stats['bugs']['unique'] = len(all_bugs)
     stats['bugs']['no_target'] = len(no_target)
