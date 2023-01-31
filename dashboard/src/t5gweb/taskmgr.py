@@ -88,7 +88,7 @@ def setup_scheduled_tasks(sender, **kwargs):
     # update escalations cache
     if cfg['smartsheet_access_token'] is not None and cfg['smartsheet_access_token'] != '':
         sender.add_periodic_task(
-            crontab(hour='*/12', minute='37'), # twice a day
+            crontab(hour='*/6', minute='37'), # 4x a day
             cache_data.s('escalations'),
             name='escalations_sync',
         )
