@@ -44,6 +44,7 @@ portal2jira_sevs = {
 
 # card status mappings
 status_map = {
+    "New": "New",
     "To Do": "Backlog",
     "Open": "Debugging",
     "In Progress": "Eng Working",
@@ -260,8 +261,10 @@ def create_cards(cfg, new_cases, action='none'):
                 jira_conn.add_issues_to_sprint(sprint.id, [new_card.key])
 
             # Move the card from backlog to the To Do column
-            logging.warning('moving card from backlog to "To Do" column')
-            jira_conn.transition_issue(new_card.key, 'To Do')
+            if new_card.fields.status.name != 'New' and new_card.fields.status.name != 'To Do':
+                logging.warning(new_card.fields.status)
+                logging.warning('moving card from backlog to "To Do" column')
+                jira_conn.transition_issue(new_card.key, 'To Do')
 
             # Add links to case, etc
             logging.warning('adding link to support case {}'.format(case))
@@ -277,6 +280,10 @@ def create_cards(cfg, new_cases, action='none'):
                 jira_conn.add_simple_link(new_card.key, { 
                     'url': 'https://bugzilla.redhat.com/show_bug.cgi?id=' + cases[case]['bug'],
                     'title': 'BZ ' + cases[case]['bug'] })
+            
+            tags = []
+            if 'tags' in cases[case]:
+                cases[case]['tags']
 
             new_cards[new_card.key] = {
                 "card_status": status_map[new_card.fields.status.name],
@@ -287,7 +294,7 @@ def create_cards(cfg, new_cases, action='none'):
                 "comments": None,
                 "assignee": assignee,
                 "case_number": case,
-                "tags": cases[case]['tags'],
+                "tags": tags,
                 "labels": cfg['labels'],
                 "bugzilla": bz,
                 "severity": re.search(r'[a-zA-Z]+', cases[case]['severity']).group(),
