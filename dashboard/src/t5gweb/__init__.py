@@ -9,6 +9,8 @@ def create_app(test_config=None):
     """factory functions to launch app"""
     # create and configure the app
     app = Flask(__name__, instance_relative_config=True)
+    app.config['SECRET_KEY'] = os.environ.get('secret_key')
+    ui.login_manager.init_app(app)
     #scheduler.init_app(app)
     if test_config is None:
         # load the instance config, if it exists, when not testing

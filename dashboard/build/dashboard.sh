@@ -12,7 +12,7 @@ if [[ $BASE == "true" ]]; then
   container=$(buildah from registry.fedoraproject.org/fedora:37)
   echo "building container with id $container"
   buildah config --label maintainer="David Critch <dcritch@redhat.com.com>" $container
-  buildah run $container dnf -y install python3-pip gcc redhat-rpm-config python3-devel npm
+  buildah run $container dnf -y install python3-pip gcc redhat-rpm-config python3-devel npm libxml2-devel xmlsec1-devel xmlsec1-openssl-devel libtool-ltdl-devel
   buildah copy $container ../src/ /srv/
   buildah config --workingdir /srv $container
   buildah run $container pip3 install .
