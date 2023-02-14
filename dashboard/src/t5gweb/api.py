@@ -20,10 +20,12 @@ from t5gweb.libtelco5g import (
     generate_stats
 )
 import json
+from flask_login import login_required
 
 BP = Blueprint('api', __name__, url_prefix='/api')
 
 @BP.route('/')
+# @login_required
 def index():
     """list api endpoints"""
     endpoints = {"endpoints": [
@@ -45,6 +47,7 @@ def index():
     return endpoints
 
 @BP.route('/refresh/<string:data_type>')
+# @login_required
 def refresh(data_type):
     """Forces an update to the dashboard"""
     cfg = set_cfg()
@@ -72,48 +75,56 @@ def refresh(data_type):
         return {'error': 'unknown data type: {}'.format(data_type)}
 
 @BP.route('/cards')
+# @login_required
 def show_cards():
     """Retrieves all cards"""
     cards = redis_get('cards')
     return cards
 
 @BP.route('/cases')
+# @login_required
 def show_cases():
     """Retrieves all cases"""
     cases = redis_get('cases')
     return cases
     
 @BP.route('/bugs')
+# @login_required
 def show_bugs():
     """Retrieves all bugs"""
     bugs = redis_get('bugs')
     return bugs
 
 @BP.route('/escalations')
+# @login_required
 def show_escalations():
     """Retrieves all escalations"""
     escalations = redis_get('escalations')
     return json.dumps(escalations)
 
 @BP.route('/watchlist')
+# @login_required
 def show_watched():
     """Retrieves all cases on the watchlist"""
     watchlist = redis_get('watchlist')
     return json.dumps(watchlist)
 
 @BP.route('/details')
+# @login_required
 def show_details():
     """Retrieves CritSit and Group Name for each case"""
     details = redis_get('details')
     return json.dumps(details)
 
 @BP.route('/issues')
+# @login_required
 def show_issues():
     """Retrieves all JIRA issues associated with open cases"""
     issues = redis_get('issues')
     return json.dumps(issues)
 
 @BP.route('/stats')
+# @login_required
 def show_stats():
     stats = generate_stats()
     return stats
