@@ -16,6 +16,8 @@ setup(
         'python_bugzilla==3.2.0',
         'smartsheet-python-sdk==2.177.1',
         'celery==5.2.7',
-        'flower==1.2.0'
+        'flower==1.2.0',
+        'python3-saml==1.15.0',
+        'flask-login==0.6.2'
     ],
 )
