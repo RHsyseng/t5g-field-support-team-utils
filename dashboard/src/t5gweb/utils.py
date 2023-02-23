@@ -138,6 +138,8 @@ def set_cfg():
     cfg['smartsheet_access_token'] = os.environ.get('smartsheet_access_token')
     cfg['sheet_id'] = os.environ.get('sheet_id')
     cfg['watchlist_url'] = os.environ.get('watchlist_url')
+    cfg['jira_escalations_project'] = os.environ.get('jira_escalations_project')
+    cfg['jira_escalations_label'] = os.environ.get('jira_escalations_label')
     # email
     cfg['smtp'] = os.environ.get('smtp_server')
     cfg['from'] = os.environ.get('source_email')
