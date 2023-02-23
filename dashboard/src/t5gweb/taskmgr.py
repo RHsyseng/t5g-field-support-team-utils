@@ -86,7 +86,7 @@ def setup_scheduled_tasks(sender, **kwargs):
         )
 
     # update escalations cache
-    if cfg['smartsheet_access_token'] is not None and cfg['smartsheet_access_token'] != '':
+    if cfg['smartsheet_access_token'] or (cfg['jira_escalations_project'] and cfg['jira_escalations_label']):
         sender.add_periodic_task(
             crontab(hour='*/6', minute='37'), # 4x a day
             cache_data.s('escalations'),

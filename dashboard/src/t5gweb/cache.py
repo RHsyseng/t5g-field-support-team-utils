@@ -92,7 +92,38 @@ def get_escalations(cfg):
             elif cell['columnId'] == case_col and 'value' in cell and cell['value'][:8] in cases.keys():
                 escalations.append(cell['value'][:8])
 
+    
+    more_escalations = get_escalations_from_jira(cfg)
+    logging.warning("new: {}".format(more_escalations))
+    logging.warning("old: {}".format(escalations))
+    all_escalations = escalations + more_escalations
+    
+    escalations = list(set(all_escalations))
     libtelco5g.redis_set('escalations', json.dumps(escalations))
+
+def get_escalations_from_jira(cfg):
+    '''Get cases that have been escalated by querying the escalations JIRA board'''
+    cases = libtelco5g.redis_get('cases')
+    if cases is None or cfg['jira_escalations_project'] is None or cfg['jira_escalations_label'] is None:
+        libtelco5g.redis_set('escalations', json.dumps(None))
+        return
+    
+    jira_conn = libtelco5g.jira_connection(cfg)
+    max_cards = cfg['max_jira_results']
+    project = libtelco5g.get_project_id(jira_conn, cfg['jira_escalations_project'])
+    jira_query = 'project = {} AND labels = "{}" AND status != "Done"'.format(project.id, cfg['jira_escalations_label'])
+    escalated_cards = jira_conn.search_issues(jira_query, 0, max_cards).iterable
+    
+    escalations = []
+    for card in escalated_cards:
+        issue = jira_conn.issue(card)
+        case = issue.fields.customfield_12313441
+        if case is not None:
+            escalations.append(case)
+    # TODO: uncomment when removing smartsheet call
+    #libtelco5g.redis_set('escalations', json.dumps(escalations))
+    return escalations
+    
 
 def get_cards(cfg, self=None, background=False):
 
