@@ -211,9 +211,9 @@ def get_cards(cfg, self=None, background=False):
             escalated = False
         
         if 'PotentialEscalation' in issue.fields.labels and escalated is False:
-            potenial_escalation = True
+            potential_escalation = True
         else:
-            potenial_escalation = False
+            potential_escalation = False
 
         if watchlist and case_number in watchlist:
             watched = True
@@ -243,7 +243,7 @@ def get_cards(cfg, self=None, background=False):
             "severity": re.search(r'[a-zA-Z]+', cases[case_number]['severity']).group(),
             "priority": issue.fields.priority.name,
             "escalated": escalated,
-            "potenial_escalation": potenial_escalation,
+            "potential_escalation": potential_escalation,
             "watched": watched,
             "product": cases[case_number]['product'],
             "case_status": cases[case_number]['status'],

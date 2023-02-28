@@ -51,7 +51,7 @@
                                 <td data-order="{{ severity_order }}" class="align-middle text-center"><span class="badge severity {{ new_comments[account][status][card]['severity'] | lower() }}">{{ new_comments[account][status][card]['severity'] }}</span></td>
                                 {% if new_comments[account][status][card]['escalated'] %}
                                     <td class="align-middle text-center">Yes</td>
-                                {% elif new_comments[account][status][card]['potenial_escalation'] %}
+                                {% elif new_comments[account][status][card]['potential_escalation'] %}
                                     <td class="align-middle text-center">Potentially</td>
                                 {% else %}
                                     <td class="align-middle text-center">No</td>
