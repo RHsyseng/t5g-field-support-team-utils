@@ -40,6 +40,7 @@ def get_cases(cfg):
         "createdate": case["case_createdDate"],
         "last_update": case["case_lastModifiedDate"],
         "description": case["case_description"],
+        "notifiedUsers": case["notifiedUsers"],
         "product": case["case_product"][0] + " " + case["case_version"]
     }
     # Sometimes there is no BZ attached to the case

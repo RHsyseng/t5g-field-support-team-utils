@@ -191,6 +191,29 @@ def get_case_number(link, pfilter='cases'):
                 return parsed_url.path.split('/')[3]
     return ''
 
+def add_watcher_to_case(case, username, token):
+
+    # Intenal Apps
+    API_URL = 'https://api.enterprise.redhat.com'
+    headers = {'Authorization': 'Bearer ' + token, 'Content-Type': 'application/json'}
+
+    # Check if the watcher is already added
+    current_watchers = {user['ssoUsername'] for user in case.get('notifiedUsers', [])}
+    case_number = case.get('caseNumber')
+    if username in current_watchers:
+        logging.warning(f"User {username} already watches case {case_number}")
+        return True
+
+    # Add the new watcher to the list of notified users
+    case['notifiedUsers'].append({'ssoUsername': username})
+
+    # Send the POST request to add the watcher
+    url = f"{API_URL}/hydra/rest/v1/cases/{case_number}/notifiedusers"
+    response = requests.post(url, headers=headers, json=case)
+    response.raise_for_status()
+
+    return True
+
 def create_cards(cfg, new_cases, action='none'):
     '''
     cfg    - configuration
@@ -206,6 +229,9 @@ def create_cards(cfg, new_cases, action='none'):
     project = get_project_id(jira_conn, cfg['project'])
     component = get_component_id(jira_conn, project.id, cfg['component'])
     board = get_board_id(jira_conn, cfg['board'])
+
+    # Obtain the authentication token for RedHat API (add_watcher_to_case)
+    token = get_token()
 
     if cfg['sprintname'] and cfg['sprintname'] != '':
         sprint = get_latest_sprint(jira_conn, board.id, cfg['sprintname'])
@@ -224,6 +250,13 @@ def create_cards(cfg, new_cases, action='none'):
             assignee = get_random_member(cfg['team'], last_choice)
             redis_set('last_choice', json.dumps(assignee))
         assignee['displayName'] = assignee['name']
+
+        # Check if the user wants to be notified
+        notifieduser = assignee.get('notifieduser', True)
+        # Add the user as a watcher only if they want to be notified
+        if notifieduser and case:
+            add_watcher_to_case(cases[case], assignee['jira_user'], token)
+
         priority = portal2jira_sevs[cases[case]['severity']]
         full_description = 'This card was automatically created from the Case Dashboard Sync Job.\r\n\r\n' + \
             'This card was created because it had a severity of ' + \
