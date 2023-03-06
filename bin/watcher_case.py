@@ -6,7 +6,7 @@ Also allows you to add or delete users as watchers to the specified support case
 Requirements and Examples:
 
 $ pip install -r requirements.txt
-$ export API_OFFLINE_TOKEN=<your_token> # Get your token https://access.redhat.com/management/api
+$ export REDHAT_API_TOKEN=<your_token> # Get your token https://access.redhat.com/management/api
 $ watcher_case.py list --users rhn-support-jclaretm --case 03112577
 $ watcher_case.py list -f file.json
 $ watcher_case.py add --users rhn-support-jclaretm --case 03112577
@@ -79,7 +79,7 @@ class WatcherCase:
 
         # Define the application credentials
         CLIENT_ID = "rhsm-api"
-        REFRESH_TOKEN = os.environ.get('API_OFFLINE_TOKEN')
+        REFRESH_TOKEN = os.environ.get('REDHAT_API_TOKEN')
 
         # Define the authorization URL
         AUTH_URL = "https://sso.redhat.com/auth/realms/redhat-external/protocol/openid-connect/token"
@@ -107,7 +107,7 @@ class WatcherCase:
         response.raise_for_status()
         case_data = json.loads(response.text).get('notifiedUsers', [])
         # Extract the ssoUsername values
-        sso_usernames = [user['ssoUsername'] for user in case_data]
+        sso_usernames = [user.get('ssoUsername', '') for user in case_data]
         # Add the sso_usernames to the case cache
         self.case_cache[case_id] = sso_usernames
         return sso_usernames

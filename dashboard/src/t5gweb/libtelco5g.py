@@ -191,27 +191,47 @@ def get_case_number(link, pfilter='cases'):
                 return parsed_url.path.split('/')[3]
     return ''
 
-def add_watcher_to_case(case, username, token):
+def add_watcher_to_case(cfg, case, username, token):
+    """
+    Add a new watcher to a Red Hat support case.
 
-    # Intenal Apps
-    API_URL = 'https://api.enterprise.redhat.com'
-    headers = {'Authorization': 'Bearer ' + token, 'Content-Type': 'application/json'}
+    :param cfg: The configuration dictionary.
+    :param case: The case number.
+    :param username: The SSO username of the user to add as a watcher.
+    :param token: The Red Hat API token.
+
+    :return: True if the user was successfully added as a watcher, False otherwise.
+    """
+
+    # Get the details of the cases from Redis
+    cases_details = redis_get('details')
+
+    # Get details of the case
+    case_detail = cases_details.get(case)
 
     # Check if the watcher is already added
-    current_watchers = {user['ssoUsername'] for user in case.get('notifiedUsers', [])}
-    case_number = case.get('caseNumber')
+    current_watchers = {user.get('ssoUsername', '') for user in case_detail.get('notified_users', [])}
     if username in current_watchers:
-        logging.warning(f"User {username} already watches case {case_number}")
+        # If the watcher is already added, log a warning and return True
+        logging.warning(f"User {username} already watches case {case}")
         return True
 
     # Add the new watcher to the list of notified users
-    case['notifiedUsers'].append({'ssoUsername': username})
+    payload = {"user": [{"ssoUsername": username}]}
 
     # Send the POST request to add the watcher
-    url = f"{API_URL}/hydra/rest/v1/cases/{case_number}/notifiedusers"
-    response = requests.post(url, headers=headers, json=case)
-    response.raise_for_status()
+    headers = {'Authorization': 'Bearer ' + token, 'Content-Type': 'application/json'}
+    url = f"{cfg['redhat_api']}/v1/cases/{case}/notifiedusers"
+    response = requests.post(url, headers=headers, json=payload)
 
+    # Check the response status code
+    if response.status_code != 200:
+        logging.error(f"Failed to add user {username} as a watcher - case {case}: {response.text}")
+        return False
+ 
+    logging.warning(f"User {username} added as a watcher - case {case}")
+
+    # If the request is successful, return True
     return True
 
 def create_cards(cfg, new_cases, action='none'):
@@ -230,7 +250,7 @@ def create_cards(cfg, new_cases, action='none'):
     component = get_component_id(jira_conn, project.id, cfg['component'])
     board = get_board_id(jira_conn, cfg['board'])
 
-    # Obtain the authentication token for RedHat API (add_watcher_to_case)
+    # Obtain the authentication token for RedHat Api
     token = get_token()
 
     if cfg['sprintname'] and cfg['sprintname'] != '':
@@ -254,8 +274,11 @@ def create_cards(cfg, new_cases, action='none'):
         # Check if the user wants to be notified
         notifieduser = assignee.get('notifieduser', True)
         # Add the user as a watcher only if they want to be notified
-        if notifieduser and case:
-            add_watcher_to_case(cases[case], assignee['jira_user'], token)
+        if notifieduser == "true" and case:
+            add_watcher_to_case(cfg, case, assignee['jira_user'], token)
+            logging.warning("Adding watcher {assignee['jira_user']} to case {case}")
+        else:
+            logging.warning(f"Not adding watcher {assignee['jira_user']} to case {case}")
 
         priority = portal2jira_sevs[cases[case]['severity']]
         full_description = 'This card was automatically created from the Case Dashboard Sync Job.\r\n\r\n' + \
