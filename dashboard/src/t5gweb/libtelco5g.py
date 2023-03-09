@@ -203,19 +203,6 @@ def add_watcher_to_case(cfg, case, username, token):
     :return: True if the user was successfully added as a watcher, False otherwise.
     """
 
-    # Get the details of the cases from Redis
-    cases_details = redis_get('details')
-
-    # Get details of the case
-    case_detail = cases_details.get(case)
-
-    # Check if the watcher is already added
-    current_watchers = {user.get('ssoUsername', '') for user in case_detail.get('notified_users', [])}
-    if username in current_watchers:
-        # If the watcher is already added, log a warning and return True
-        logging.warning(f"User {username} already watches case {case}")
-        return True
-
     # Add the new watcher to the list of notified users
     payload = {"user": [{"ssoUsername": username}]}
 
@@ -224,12 +211,12 @@ def add_watcher_to_case(cfg, case, username, token):
     url = f"{cfg['redhat_api']}/v1/cases/{case}/notifiedusers"
     response = requests.post(url, headers=headers, json=payload)
 
-    # Check the response status code
-    if response.status_code != 200:
-        logging.error(f"Failed to add user {username} as a watcher - case {case}: {response.text}")
+    # Check the response status code.
+    if response.status_code != 201:
+        logging.error(f"Failed to add user {username} as a watcher - case {case}: {response}")
         return False
- 
-    logging.warning(f"User {username} added as a watcher - case {case}")
+    else:
+        logging.warning(f"User {username} added as a watcher - case {case}")
 
     # If the request is successful, return True
     return True
@@ -251,7 +238,7 @@ def create_cards(cfg, new_cases, action='none'):
     board = get_board_id(jira_conn, cfg['board'])
 
     # Obtain the authentication token for RedHat Api
-    token = get_token()
+    token = get_token(cfg['offline_token'])
 
     if cfg['sprintname'] and cfg['sprintname'] != '':
         sprint = get_latest_sprint(jira_conn, board.id, cfg['sprintname'])
@@ -272,11 +259,11 @@ def create_cards(cfg, new_cases, action='none'):
         assignee['displayName'] = assignee['name']
 
         # Check if the user wants to be notified
-        notifieduser = assignee.get('notifieduser', True)
+        notifieduser = assignee.get('notifieduser', "true")
         # Add the user as a watcher only if they want to be notified
         if notifieduser == "true" and case:
+            logging.warning(f"Adding watcher {assignee['jira_user']} to case {case}")
             add_watcher_to_case(cfg, case, assignee['jira_user'], token)
-            logging.warning("Adding watcher {assignee['jira_user']} to case {case}")
         else:
             logging.warning(f"Not adding watcher {assignee['jira_user']} to case {case}")
 
