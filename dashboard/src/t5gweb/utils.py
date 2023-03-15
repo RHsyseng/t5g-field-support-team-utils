@@ -133,6 +133,7 @@ def set_cfg():
     #defaults['max_portal_results'] = 5000
     # sources
     cfg['offline_token'] = os.environ.get('offline_token') # portal
+    cfg['redhat_api'] = os.environ.get('redhat_api') # redhat api url
     cfg['query'] = os.environ.get('case_query')
     cfg['bz_key'] = os.environ.get('bz_key')
     cfg['smartsheet_access_token'] = os.environ.get('smartsheet_access_token')

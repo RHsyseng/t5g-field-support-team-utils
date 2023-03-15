@@ -21,7 +21,7 @@ def get_cases(cfg):
   num_cases = cfg['max_portal_results']
   payload = {"q": query, "partnerSearch": "false", "rows": num_cases, "fl": fields}
   headers = {"Accept": "application/json", "Authorization": "Bearer " + token}
-  url = "https://access.redhat.com/hydra/rest/search/cases"
+  url = f"{cfg['redhat_api']}/search/cases"
 
   logging.warning("searching the portal for cases")
   start = time.time()
@@ -269,7 +269,8 @@ def get_watchlist(cfg):
     num_cases = cfg['max_portal_results']
     payload = {"rows": num_cases}
     headers = {"Accept": "application/json", "Authorization": "Bearer " + token}
-    url = "https://access.redhat.com/hydra/rest/eh/escalations?highlight=true"
+    url = f"{cfg['redhat_api']}/eh/escalations?highlight=true"
+
     r = requests.get(url, headers=headers, params=payload)
     
     watchlist = []
@@ -297,24 +298,21 @@ def get_case_details(cfg):
     logging.warning("getting all bugzillas and case details")
     for case in cases:
         if cases[case]['status'] != "Closed":
-            case_endpoint = "https://access.redhat.com/hydra/rest/v1/cases/" + case
+            case_endpoint = f"{cfg['redhat_api']}/v1/cases/{case}"
             r_case = requests.get(case_endpoint, headers=headers)
             if r_case.status_code == 401:
                 token = libtelco5g.get_token(cfg['offline_token'])
                 headers = {"Accept": "application/json", "Authorization": "Bearer " + token}
                 r_case = requests.get(case_endpoint, headers=headers)
-            if "critSit" in r_case.json():
-                crit_sit = r_case.json()['critSit']
-            else:
-                crit_sit = False
-            if "groupName" in r_case.json():
-                group_name = r_case.json()['groupName']
-            else:
-                group_name = None
-            
+
+            crit_sit = r_case.json().get('critSit', False)
+            group_name = r_case.json().get('groupName', None)
+            notified_users = r_case.json().get('notifiedUsers', [])
+
             case_details[case] = {
                 "crit_sit": crit_sit,
-                "group_name": group_name
+                "group_name": group_name,
+                "notified_users": notified_users
             }
             if "bug" in cases[case]:
                 bz_dict[case] = r_case.json()['bugzillas']
@@ -371,7 +369,7 @@ def get_issue_details(cfg):
     jira_issues = {}
     open_cases = [case for case in cases if cases[case]['status'] != 'Closed']
     for case in open_cases:
-        issues_url = "https://access.redhat.com/hydra/rest/cases/{}/jiras".format(case)
+        issues_url = f"{cfg['redhat_api']}/cases/{case}/jiras"
         issues = requests.get(issues_url, headers=headers)
         if issues.status_code == 200 and len(issues.json()) > 0:
             case_issues = []
