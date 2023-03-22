@@ -352,12 +352,14 @@ def get_bz_details(cfg):
                 bug['last_change_time'] = datetime.datetime.strftime(datetime.datetime.strptime(str(bugs.last_change_time), '%Y%m%dT%H:%M:%S'), '%Y-%m-%d') # convert from xmlrpc.client.DateTime to str and reformat
                 bug['internal_whiteboard'] = bugs.internal_whiteboard
                 bug['qa_contact'] = bugs.qa_contact
+                bug['severity'] = bugs.severity
             else:
                 bug['target_release'] = ['unavailable']
                 bug['assignee'] = 'unavailable'
                 bug['last_change_time'] = 'unavailable'
                 bug['internal_whiteboard'] = 'unavailable'
                 bug['qa_contact'] = 'unavailable'
+                bug['severity'] = 'unavailable'
     
     libtelco5g.redis_set('bugs', json.dumps(bz_dict))
 
@@ -409,6 +411,10 @@ def get_issue_details(cfg):
                             fix_versions.append(version.name)
                     else:
                         fix_versions = None
+                    
+                    priority = None
+                    if issue.fields.priority:
+                        priority = issue.fields.priority.name
 
                     case_issues.append({
                         'id': issue['resourceKey'],
@@ -418,7 +424,8 @@ def get_issue_details(cfg):
                         'updated': datetime.datetime.strftime(datetime.datetime.strptime(str(issue['lastModifiedDate']), '%Y-%m-%dT%H:%M:%SZ'), '%Y-%m-%d'),
                         'qa_contact': qa_contact,
                         'assignee': assignee,
-                        'fix_versions': fix_versions
+                        'fix_versions': fix_versions,
+                        'priority': priority
                     })
             if len(case_issues) > 0:
                 jira_issues[case] = case_issues
