@@ -50,8 +50,12 @@
                                 <td class="align-middle text-center"><a href=https://access.redhat.com/support/cases/#/case/{{new_comments[account][status][card]['case_number'] }} target="_blank">{{ new_comments[account][status][card]['case_number'] }}</a></td>
                                 <td data-order="{{ severity_order }}" class="align-middle text-center"><span class="badge severity {{ new_comments[account][status][card]['severity'] | lower() }}">{{ new_comments[account][status][card]['severity'] }}</span></td>
                                 {% if new_comments[account][status][card]['escalated'] %}
-                                    <td class="align-middle text-center">Yes</td>
-                                {% elif new_comments[account][status][card]['potenial_escalation'] %}
+                                    {% if new_comments[account][status][card]['escalated_link'] %}
+                                        <td class="align-middle text-center"><a href="{{new_comments[account][status][card]['escalated_link']}}">Yes</a></td>
+                                    {% else %}
+                                        <td class="align-middle text-center">Yes</td>
+                                    {% endif %}
+                                {% elif new_comments[account][status][card]['potential_escalation'] %}
                                     <td class="align-middle text-center">Potentially</td>
                                 {% else %}
                                     <td class="align-middle text-center">No</td>

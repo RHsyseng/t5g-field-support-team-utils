@@ -209,11 +209,19 @@ def get_cards(cfg, self=None, background=False):
             escalated = True
         else:
             escalated = False
-        
-        if 'PotentialEscalation' in issue.fields.labels and escalated is False:
-            potenial_escalation = True
+        if case_issues:
+            for case_issue in case_issues:
+                if cfg['jira_escalations_project'] in case_issue['id']:
+                    escalated_link = case_issue['url']
+                    break
+                else:
+                    escalated_link = None
         else:
-            potenial_escalation = False
+            escalated_link = None
+        if 'PotentialEscalation' in issue.fields.labels and escalated is False:
+            potential_escalation = True
+        else:
+            potential_escalation = False
 
         if watchlist and case_number in watchlist:
             watched = True
@@ -243,7 +251,8 @@ def get_cards(cfg, self=None, background=False):
             "severity": re.search(r'[a-zA-Z]+', cases[case_number]['severity']).group(),
             "priority": issue.fields.priority.name,
             "escalated": escalated,
-            "potenial_escalation": potenial_escalation,
+            "escalated_link": escalated_link,
+            "potential_escalation": potential_escalation,
             "watched": watched,
             "product": cases[case_number]['product'],
             "case_status": cases[case_number]['status'],
