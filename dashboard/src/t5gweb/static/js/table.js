@@ -84,7 +84,7 @@ $(document).ready(function () {
                         {
                             label: 'Yes',
                             value: function (rowData, rowIdx) {
-                                return rowData[3] == 'Yes';
+                                return rowData[3].includes("Yes");
                             }
                         }
                     ]
