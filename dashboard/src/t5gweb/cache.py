@@ -111,7 +111,7 @@ def get_escalations_from_jira(cfg):
     jira_conn = libtelco5g.jira_connection(cfg)
     max_cards = cfg['max_jira_results']
     project = libtelco5g.get_project_id(jira_conn, cfg['jira_escalations_project'])
-    jira_query = 'project = {} AND labels = "{}" AND status != "Done"'.format(project.id, cfg['jira_escalations_label'])
+    jira_query = 'project = {} AND labels = "{}" AND status != "Closed"'.format(project.id, cfg['jira_escalations_label'])
     escalated_cards = jira_conn.search_issues(jira_query, 0, max_cards).iterable
     
     escalations = []
