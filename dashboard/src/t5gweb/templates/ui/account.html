@@ -161,6 +161,7 @@
             <tr>
                 <th class="text-center">BZ/JIRA#</th>
                 <th class="text-center">Summary</th>
+                <th class="text-center">Priority/Severity</th>
                 <th class="text-center">Target Release</th>
                 <th class="text-center">Assignee</th>
                 <th class="text-center">QA Contact</th>
@@ -180,6 +181,9 @@
                                     </td>
                                     <td class="align-middle text-center">
                                         {{ bug['summary'] }}
+                                    </td>
+                                    <td class="align-middle text-center">
+                                        {{ bug['severity'] }}
                                     </td>
                                     <td class="align-middle text-center">
                                         {{ bug['target_release'][0] }}
@@ -207,6 +211,9 @@
                                     </td>
                                     <td class="align-middle text-center">
                                         {{ issue['title'] }}
+                                    </td>
+                                    <td class="align-middle text-center">
+                                        {{ issue['priority'] }}
                                     </td>
                                     <td class="align-middle text-center">
                                         {{ issue['fix_versions'] }}

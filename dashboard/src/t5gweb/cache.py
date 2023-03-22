@@ -413,8 +413,8 @@ def get_issue_details(cfg):
                         fix_versions = None
                     
                     priority = None
-                    if issue.fields.priority:
-                        priority = issue.fields.priority.name
+                    if bug.fields.priority:
+                        priority = bug.fields.priority.name
 
                     case_issues.append({
                         'id': issue['resourceKey'],

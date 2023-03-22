@@ -5,16 +5,16 @@ function format(data) {
         result += "<h3>Case Group: " + data.group_name + "</h3>"
     }
     if (data.bugzilla != null) {
-        result += '<h3>Bugzillas:</h3><table class="table table-bordered table-hover table-responsive w-100"><thead><tr><th>#</th><th>Summary</th><th>Target Release</th><th>Assignee</th><th>QA Contact</th><th>Last Updated</th><th>Status</th></tr></thead><tbody>';
+        result += '<h3>Bugzillas:</h3><table class="table table-bordered table-hover table-responsive w-100"><thead><tr><th>#</th><th>Summary</th><th>Severity</th><th>Target Release</th><th>Assignee</th><th>QA Contact</th><th>Last Updated</th><th>Status</th></tr></thead><tbody>';
         for (let bug = 0; bug < data.bugzilla.length; bug++) {
-            result += '<tr><td><a href="' + data.bugzilla[bug].bugzillaLink + '" target="_blank">' + data.bugzilla[bug].bugzillaNumber + '</a></td><td>' + data.bugzilla[bug].summary + '</td><td>' + data.bugzilla[bug].target_release[0] + '</td><td>' + data.bugzilla[bug].assignee + '</td><td>' + data.bugzilla[bug].qa_contact + '</td><td>' + data.bugzilla[bug].last_change_time + '</td><td>' + data.bugzilla[bug].status + '</td></tr>';
+            result += '<tr><td><a href="' + data.bugzilla[bug].bugzillaLink + '" target="_blank">' + data.bugzilla[bug].bugzillaNumber + '</a></td><td>' + data.bugzilla[bug].summary + '</td><td>'  + data.bugzilla[bug].severity + '</td><td>' + data.bugzilla[bug].target_release[0] + '</td><td>' + data.bugzilla[bug].assignee + '</td><td>' + data.bugzilla[bug].qa_contact + '</td><td>' + data.bugzilla[bug].last_change_time + '</td><td>' + data.bugzilla[bug].status + '</td></tr>';
         }
         result += '</tbody></table>';
     }
     if (data.issues != null) {
-        result += '<h3>JIRA Issues:</h3><table class="table table-bordered table-hover table-responsive w-100"><thead><tr><th>#</th><th>Summary</th><th>Target Release</th><th>Assignee</th><th>QA Contact</th><th>Last Updated</th><th>Status</th></tr></thead><tbody>';
+        result += '<h3>JIRA Issues:</h3><table class="table table-bordered table-hover table-responsive w-100"><thead><tr><th>#</th><th>Summary</th><th>Priority</th><th>Target Release</th><th>Assignee</th><th>QA Contact</th><th>Last Updated</th><th>Status</th></tr></thead><tbody>';
         for (let issue = 0; issue < data.issues.length; issue++) {
-            result += '<tr><td><a href="' + data.issues[issue].url + '" target="_blank">' + data.issues[issue].id + '</a></td><td>' + data.issues[issue].title + '</td><td>' + ((data.issues[issue].fix_versions != null) ? data.issues[issue].fix_versions : '---') + '</td><td>' + ((data.issues[issue].assignee != null) ? data.issues[issue].assignee : '---') + '</td><td>' + ((data.issues[issue].qa_contact != null) ? data.issues[issue].qa_contact : '---') + '</td><td>' +data.issues[issue].updated + '</td><td>' + data.issues[issue].status + '</td></tr>';
+            result += '<tr><td><a href="' + data.issues[issue].url + '" target="_blank">' + data.issues[issue].id + '</a></td><td>' + data.issues[issue].title + '</td><td>' + data.issues[issue].priority + '</td><td>' + ((data.issues[issue].fix_versions != null) ? data.issues[issue].fix_versions : '---') + '</td><td>' + ((data.issues[issue].assignee != null) ? data.issues[issue].assignee : '---') + '</td><td>' + ((data.issues[issue].qa_contact != null) ? data.issues[issue].qa_contact : '---') + '</td><td>' +data.issues[issue].updated + '</td><td>' + data.issues[issue].status + '</td></tr>';
         }
         result += '</tbody></table>';
     }
