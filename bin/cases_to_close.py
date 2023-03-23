@@ -6,17 +6,17 @@ import os
 import sys
 import requests
 
-def check_cases(api_url, case_tag):
+def check_cases(api_url):
     '''
     Compare cases to cards for a given tag
     '''
-    cases = requests.get("{}/api/cases/{}".format(api_url, case_tag))
+    cases = requests.get("{}/api/cases".format(api_url))
     if cases.status_code == 200:
         closed_cases = {c: d for (c, d) in cases.json().items() if d['status'] == 'Closed'}
     else:
         print("could not retrieve cases: {}".format(cases.status_code))
         sys.exit(1)
-    cards = requests.get("{}/api/cards/{}".format(api_url, case_tag))
+    cards = requests.get("{}/api/cards".format(api_url))
     if cases.status_code == 200:
         open_cards = {c: d for (c, d) in cards.json().items() if d['card_status'] not in ('Done', 'Won\'t Fix / Obsolete')}
     else:
@@ -31,20 +31,13 @@ def main():
     '''
     sets some things and then runs check_cases
     '''
-    api_url = os.environ.get('T5G_API')
+    api_url = os.environ.get('DASH_API')
     if api_url is None:
-        print('No API URL specified. Please export T5G_API=<host> and try again')
+        print('No API URL specified. Please export DASH_API=<host> and try again')
         sys.exit(1)
 
-    if len(sys.argv) == 2:
-        case_tag = sys.argv[1]
-    else:
-        sys.exit('no case tag specified')
-    print("searching {} for closed cases / open cards ({})".format(api_url, case_tag))
-    if case_tag in ['cnv', 'telco5g']:
-        check_cases(api_url, case_tag)
-    else:
-        sys.exit('invalid case tag specified: {}'.format(case_tag))
+    print("searching {} for closed cases / open cards".format(api_url))
+    check_cases(api_url)
 
 if __name__ == '__main__':
     main()
