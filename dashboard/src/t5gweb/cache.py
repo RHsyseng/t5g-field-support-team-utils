@@ -5,7 +5,6 @@ import requests
 import json
 import bugzilla
 import datetime
-import smartsheet
 import t5gweb.libtelco5g as libtelco5g
 from jira import JIRA
 from jira.exceptions import JIRAError
@@ -59,70 +58,26 @@ def get_cases(cfg):
   libtelco5g.redis_set('cases', json.dumps(cases))
 
 def get_escalations(cfg):
-    '''Get cases that have been escalated from Smartsheet'''
-    cases = libtelco5g.redis_get('cases')
-    if cases is None or cfg['smartsheet_access_token'] is None or cfg['smartsheet_access_token'] == '':
-        libtelco5g.redis_set('escalations', json.dumps(None))
-        return
-
-    logging.warning("getting escalated cases from smartsheet")
-    smart = smartsheet.Smartsheet(cfg['smartsheet_access_token'])
-    sheet_dict = smart.Sheets.get_sheet(cfg['sheet_id']).to_dict()
-
-    # Get Column ID's
-    column_map = {}
-    for column in sheet_dict['columns']:
-        column_map[column['title']] = column['id']
-    no_tracking_col = column_map['No longer tracking']
-    no_escalation_col = column_map['No longer an escalation']
-    case_col = column_map['Case']
-
-    # Get Escalated Cases
-    escalations = []
-    for row in sheet_dict['rows']:
-        for cell in row['cells']:
-            if cell['columnId'] == no_tracking_col:
-                if 'value' in cell and cell['value'] == True:
-                    break
-            if cell['columnId'] == no_escalation_col:
-                if 'value' in cell:
-                    break
-            if cell['columnId'] == case_col and 'value' in cell and cell['value'][:8] not in cases.keys():
-                break
-            elif cell['columnId'] == case_col and 'value' in cell and cell['value'][:8] in cases.keys():
-                escalations.append(cell['value'][:8])
-
-    
-    more_escalations = get_escalations_from_jira(cfg)
-    logging.warning("new: {}".format(more_escalations))
-    logging.warning("old: {}".format(escalations))
-    all_escalations = escalations + more_escalations
-    
-    escalations = list(set(all_escalations))
-    libtelco5g.redis_set('escalations', json.dumps(escalations))
-
-def get_escalations_from_jira(cfg):
     '''Get cases that have been escalated by querying the escalations JIRA board'''
     cases = libtelco5g.redis_get('cases')
     if cases is None or cfg['jira_escalations_project'] is None or cfg['jira_escalations_label'] is None:
         libtelco5g.redis_set('escalations', json.dumps(None))
         return
     
+    logging.warning("getting escalated cases from JIRA")
     jira_conn = libtelco5g.jira_connection(cfg)
     max_cards = cfg['max_jira_results']
     project = libtelco5g.get_project_id(jira_conn, cfg['jira_escalations_project'])
     jira_query = 'project = {} AND labels = "{}" AND status != "Closed"'.format(project.id, cfg['jira_escalations_label'])
-    escalated_cards = jira_conn.search_issues(jira_query, 0, max_cards).iterable
     
+    escalated_cards = jira_conn.search_issues(jira_query, 0, max_cards).iterable
     escalations = []
     for card in escalated_cards:
         issue = jira_conn.issue(card)
         case = issue.fields.customfield_12313441
         if case is not None:
             escalations.append(case)
-    # TODO: uncomment when removing smartsheet call
-    #libtelco5g.redis_set('escalations', json.dumps(escalations))
-    return escalations
+    libtelco5g.redis_set('escalations', json.dumps(escalations))
     
 
 def get_cards(cfg, self=None, background=False):

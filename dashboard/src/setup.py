@@ -14,7 +14,6 @@ setup(
         'slack_sdk==3.19.4',
         'redis==4.3.4',
         'python_bugzilla==3.2.0',
-        'smartsheet-python-sdk==2.177.1',
         'celery==5.2.7',
         'flower==1.2.0',
         'python3-saml==1.15.0',
