@@ -111,6 +111,7 @@ def get_cards(cfg, self=None, background=False):
 
     jira_cards = {}
     for index, card in enumerate(card_list):
+        logging.warning("caching details for card {}".format(card))
         if background:
             # Update task information for progress bar
             self.update_state(state='PROGRESS',
@@ -130,11 +131,13 @@ def get_cards(cfg, self=None, background=False):
         if not case_number or case_number not in cases.keys():
             logging.warning("card isn't associated with a case. discarding ({})".format(card))
             continue
-        assignee = {
-            "displayName": issue.fields.assignee.displayName,
-            "key": issue.fields.assignee.key,
-            "name": issue.fields.assignee.name
-        }
+        assignee = {}
+        if issue.fields.assignee.displayName:
+            assignee = {
+                "displayName": issue.fields.assignee.displayName,
+                "key": issue.fields.assignee.key,
+                "name": issue.fields.assignee.name
+            }
 
         # Get contributors
 

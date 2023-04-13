@@ -52,7 +52,8 @@ status_map = {
     "QE Review": "Ready To Close",
     "Blocked": "Blocked",
     "Won't Fix / Obsolete": "Done",
-    "Done": "Done"
+    "Done": "Done",
+    "Closed": "Done"
 }
 
 def jira_connection(cfg):
