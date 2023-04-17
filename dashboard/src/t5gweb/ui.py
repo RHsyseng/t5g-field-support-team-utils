@@ -95,6 +95,8 @@ def login():
     error_reason = None
     not_auth_warn = False
     attributes = False
+    wrong_permissions=False
+    alert_email=None
 
     if 'sso' in request.args:
         return redirect(auth.login())
@@ -126,8 +128,20 @@ def login():
             error_reason = auth.get_last_error_reason()
     if 'samlUserdata' in session:
         if len(session['samlUserdata']) > 0:
+            cfg = set_cfg()
             attributes = session['samlUserdata']
-        
+            groups = ",".join(attributes['memberOf'])
+            #RBAC
+            if cfg['rbac'] not in groups:
+                    wrong_permissions = True
+                    return render_template(
+                        'ui/login.html',
+                        errors=errors,
+                        error_reason=error_reason,
+                        not_auth_warn=not_auth_warn,
+                        wrong_permissions=wrong_permissions,
+                        alert_email=cfg['alert_to']
+                    )
         #JIT Provisioning
         if attributes['rhatUUID'][0] not in users:
             new_user = {attributes['rhatUUID'][0]: {attribute_name:attribute_value for (attribute_name,attribute_value) in attributes.items()}}
@@ -149,6 +163,7 @@ def login():
         errors=errors,
         error_reason=error_reason,
         not_auth_warn=not_auth_warn,
+        wrong_permissions=wrong_permissions
     )
 
 ## deprecated endpoints to remove

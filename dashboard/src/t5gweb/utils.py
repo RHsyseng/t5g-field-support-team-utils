@@ -159,7 +159,8 @@ def set_cfg():
     cfg['jira_query'] = os.environ.get('jira_query')
     cfg['password'] = os.environ.get('jira_pass')
     cfg['labels'] = os.environ.get('jira_labels').split(',')
-    
+    #sso
+    cfg['rbac'] = os.environ.get('rbac')
     return cfg
 
 def set_defaults():
