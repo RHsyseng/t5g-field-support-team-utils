@@ -139,6 +139,7 @@ def portal_jira_sync():
         message_content, new_cards = libtelco5g.create_cards(cfg, new_cases, action='create')
         if message_content:
             logging.warning("notifying team about new JIRA cards")
+            cfg['subject'] += ': {}'.format(', '.join(new_cases))
             email_notify(cfg, message_content)
             if cfg['slack_token'] and cfg['slack_channel']:
                 slack_notify(cfg, message_content)
