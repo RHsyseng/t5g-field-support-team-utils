@@ -95,6 +95,8 @@ def login():
     error_reason = None
     not_auth_warn = False
     attributes = False
+    wrong_permissions=False
+    alert_email=None
 
     if 'sso' in request.args:
         return redirect(auth.login())
@@ -126,8 +128,20 @@ def login():
             error_reason = auth.get_last_error_reason()
     if 'samlUserdata' in session:
         if len(session['samlUserdata']) > 0:
+            cfg = set_cfg()
             attributes = session['samlUserdata']
-        
+            groups = ",".join(attributes['memberOf'])
+            #RBAC
+            if cfg['rbac'] not in groups:
+                    wrong_permissions = True
+                    return render_template(
+                        'ui/login.html',
+                        errors=errors,
+                        error_reason=error_reason,
+                        not_auth_warn=not_auth_warn,
+                        wrong_permissions=wrong_permissions,
+                        alert_email=cfg['alert_to']
+                    )
         #JIT Provisioning
         if attributes['rhatUUID'][0] not in users:
             new_user = {attributes['rhatUUID'][0]: {attribute_name:attribute_value for (attribute_name,attribute_value) in attributes.items()}}
@@ -149,6 +163,7 @@ def login():
         errors=errors,
         error_reason=error_reason,
         not_auth_warn=not_auth_warn,
+        wrong_permissions=wrong_permissions
     )
 
 ## deprecated endpoints to remove
@@ -164,14 +179,14 @@ def login():
 @BP.route('/stats/telco5g')
 ## end of deprecated routes
 @BP.route('/home')
-@login_required
+# @login_required
 def index():
     """list new cases"""
     load_data()
     return render_template('ui/index.html', new_cases=load_data.new_cases, values=load_data.y, now=load_data.now)
 
 @BP.route('/progress/status', methods=['POST'])
-@login_required
+# @login_required
 def progress_status():
     """On page load: if refresh is in progress, get task information for progress bar display"""
     refresh_id = redis_get('refresh_id')
@@ -181,7 +196,7 @@ def progress_status():
         return jsonify({})
 
 @BP.route('/status/<task_id>')
-@login_required
+# @login_required
 def refresh_status(task_id):
     """Provide updates for refresh_background task"""
     task = refresh_background.AsyncResult(task_id)
@@ -215,7 +230,7 @@ def refresh_status(task_id):
     return jsonify(response)
 
 @BP.route('/refresh', methods=['POST'])
-@login_required
+# @login_required
 def refresh():
     """Forces an update to the dashboard"""
     task = refresh_background.delay()
@@ -224,42 +239,42 @@ def refresh():
 
 
 @BP.route('/updates/')
-@login_required
+# @login_required
 def report_view():
     """Retrieves cards that have been updated within the last week and creates report"""
     load_data()
     return render_template('ui/updates.html', now=load_data.now, new_comments=load_data.accounts, jira_server=load_data.jira_server, page_title='recent updates')
 
 @BP.route('/updates/all')
-@login_required
+# @login_required
 def report_view_all():
     """Retrieves all cards and creates report"""
     load_data()
     return render_template('ui/updates.html', now=load_data.now, new_comments=load_data.accounts_all, jira_server=load_data.jira_server, page_title='all cards')
 
 @BP.route('/trends/')
-@login_required
+# @login_required
 def trends():
     """Retrieves cards that have been labeled with 'Trends' within the previous quarter and creates report"""
     load_data()
     return render_template('ui/updates.html', now=load_data.now, new_comments=load_data.trending_cards, jira_server=load_data.jira_server, page_title='trends')
 
 @BP.route('/table/')
-@login_required
+# @login_required
 def table_view():
     """Sorts new cards by severity and creates table"""
     load_data()
     return render_template('ui/table.html', now=load_data.now, new_comments=load_data.accounts, jira_server=load_data.jira_server, page_title='severity')
 
 @BP.route('/table/all')
-@login_required
+# @login_required
 def table_view_all():
     """Sorts all cards by severity and creates table"""
     load_data()
     return render_template('ui/table.html', now=load_data.now, new_comments=load_data.accounts_all, jira_server=load_data.jira_server, page_title='all-severity')
 
 @BP.route('/weekly/')
-@login_required
+# @login_required
 def weekly_updates():
     """Retrieves cards and displays them plainly for easy copy/pasting and distribution"""
     load_data()
@@ -275,7 +290,7 @@ def get_stats():
     return render_template('ui/stats.html', now=load_data.now, stats=stats, x_values=x_values, y_values=y_values, page_title='stats')
     
 @BP.route('/account/<string:account>')
-@login_required
+# @login_required
 def get_account(account):
     '''show bugs, cases and stats by for a given account'''
     load_data()

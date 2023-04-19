@@ -23,6 +23,10 @@
 {% if not_auth_warn %}
   <div class="alert alert-danger" role="alert">Not authenticated</div>
 {% endif %}
+
+{% if wrong_permissions %}
+  <div class="alert alert-danger" role="alert">You do not belong to the correct LDAP groups, please contact {{ alert_email }} for assistance.</div>
+{% endif %}
   <div class="col-xs-12" style="height:50px;"></div>
 </div>
   {% endblock %}
