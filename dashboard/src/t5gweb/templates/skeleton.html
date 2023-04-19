@@ -97,12 +97,20 @@
 
 <body>
   <div class="content">{% block content %}{% endblock %}</div>
-  <div class="footer">
+  <div class="footer d-flex flex-wrap justify-content-between align-items-center">
     {% block footer %}
     <div class=left>
       Maintained by the Telco5G Field Engineering Team
     </div>
-    <a href="https://github.com/RHsyseng/t5g-field-support-team-utils" target="_blank">t5g-field-support-team-utils</a>
+    <div class="d-flex justify-content-between">
+      <div class="muted"><a href="#" data-bs-html="true" data-bs-toggle="tooltip" data-bs-title="1. We update the card data from Jira once an hour
+        <br>2. We update the case data from the case portal once every 15 minutes
+        <br>3. We update the bug data from Bugzilla/Jira once every 12 hours
+        <br>4. We update the escalations data from Jira every 6 hours">How does this website retrieve data?</a> 
+      </div>
+      &nbsp; &nbsp; &nbsp; 
+      <a href="https://github.com/RHsyseng/t5g-field-support-team-utils" target="_blank">t5g-field-support-team-utils</a>
+    </div>
     {% endblock %}
   </div>
 
@@ -120,7 +128,10 @@
          console.log(e);
       });
   </script>
-
+  <script>
+    const tooltipTriggerList = document.querySelectorAll('[data-bs-toggle="tooltip"]')
+    const tooltipList = [...tooltipTriggerList].map(tooltipTriggerEl => new bootstrap.Tooltip(tooltipTriggerEl))
+  </script>
 <script type="text/javascript" charset="utf8" src="{{ url_for('static', filename='js/refresh.js') }}"></script>
 </body>
 
