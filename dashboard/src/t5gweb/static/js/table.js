@@ -86,7 +86,13 @@ $(document).ready(function () {
                             value: function (rowData, rowIdx) {
                                 return rowData[3].includes("Yes");
                             }
-                        }
+                        },
+                        {
+                          label: 'Potentially',
+                          value: function (rowData, rowIdx) {
+                              return rowData[3] === 'Potentially';
+                          }
+                      }
                     ]
                 },
                 targets: [3]
