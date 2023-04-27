@@ -297,7 +297,7 @@ def create_cards(cfg, new_cases, action='none'):
             logging.warning('creating card for case {}'.format(case))
             new_card = jira_conn.create_issue(fields=card_info)
             logging.warning('created {}'.format(new_card.key))
-            email_content.append( f"A JIRA issue ({cfg['server']}/browse/{new_card}) has been created for a new case:\nCase #: {case} (https://access.redhat.com/support/cases/{case})\nAccount: {cases[case]['account']}\nSummary: {cases[case]['problem']}\nSeverity: {cases[case]['severity']}\nDescription: {cases[case]['description']}\n\nIt is initially being tracked by {assignee['name']}.\n\n=============================================\n")
+            email_content.append( f"A JIRA issue ({cfg['server']}/browse/{new_card}) has been created for a new case:\nCase #: {case} (https://access.redhat.com/support/cases/{case})\nAccount: {cases[case]['account']}\nSummary: {cases[case]['problem']}\nSeverity: {cases[case]['severity']}\nDescription: {cases[case]['description']}\n\nIt is initially being tracked by {assignee['name']}.\n\n=============================================\n\n")
 
             # Add newly create card to the sprint
             if cfg['sprintname'] and cfg['sprintname'] != '':
