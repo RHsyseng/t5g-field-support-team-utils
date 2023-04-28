@@ -17,6 +17,7 @@ setup(
         'celery==5.2.7',
         'flower==1.2.0',
         'python3-saml==1.15.0',
-        'flask-login==0.6.2'
+        'flask-login==0.6.2',
+        'prometheus-flask-exporter==0.22.4'
     ],
 )
