@@ -249,24 +249,28 @@ def create_cards(cfg, new_cases, action='none'):
 
     for case in new_cases:
         assignee = None
-        for member in cfg['team']:
-            for account in member["accounts"]:
-                if account.lower() in cases[case]['account'].lower():
-                    assignee = member
-        if assignee == None:
-            last_choice = redis_get('last_choice')
-            assignee = get_random_member(cfg['team'], last_choice)
-            redis_set('last_choice', json.dumps(assignee))
-        assignee['displayName'] = assignee['name']
 
-        # Check if the user wants to be notified
-        notifieduser = assignee.get('notifieduser', "true")
-        # Add the user as a watcher only if they want to be notified
-        if notifieduser == "true" and case:
-            logging.warning(f"Adding watcher {assignee['jira_user']} to case {case}")
-            add_watcher_to_case(cfg, case, assignee['jira_user'], token)
-        else:
-            logging.warning(f"Not adding watcher {assignee['jira_user']} to case {case}")
+        if cfg['team']:
+            for member in cfg['team']:
+                for account in member["accounts"]:
+                    if account.lower() in cases[case]['account'].lower():
+                        assignee = member
+            if assignee == None:
+                last_choice = redis_get('last_choice')
+                assignee = get_random_member(cfg['team'], last_choice)
+                redis_set('last_choice', json.dumps(assignee))
+            assignee['displayName'] = assignee['name']
+
+            # Check if the user wants to be notified
+            notifieduser = assignee.get('notifieduser', "true")
+            # Add the user as a watcher only if they want to be notified
+            if notifieduser == "true" and case:
+                logging.warning(f"Adding watcher {assignee['jira_user']} to case {case}")
+                add_watcher_to_case(cfg, case, assignee['jira_user'], token)
+            else:
+                logging.warning(f"Not adding watcher {assignee['jira_user']} to case {case}")
+        
+        
 
         priority = portal2jira_sevs[cases[case]['severity']]
         full_description = 'This card was automatically created from the Case Dashboard Sync Job.\r\n\r\n' + \
@@ -285,10 +289,12 @@ def create_cards(cfg, new_cases, action='none'):
             'components': [{'name': cfg['component']}],
             'priority': {'name': priority},
             'labels': cfg['labels'],
-            'assignee': {'name': assignee['jira_user']},
             'summary': case + ': ' + cases[case]['problem'],
             'description': full_description[:253] + '..' if len(full_description) > 253 else full_description
             }
+        
+        if assignee:
+            card_info['assignee']: {'name': assignee['jira_user']}
 
         logging.warning('A card needs created for case {}'.format(case))
         logging.warning(card_info)
@@ -297,7 +303,11 @@ def create_cards(cfg, new_cases, action='none'):
             logging.warning('creating card for case {}'.format(case))
             new_card = jira_conn.create_issue(fields=card_info)
             logging.warning('created {}'.format(new_card.key))
-            email_content.append( f"A JIRA issue ({cfg['server']}/browse/{new_card}) has been created for a new case:\nCase #: {case} (https://access.redhat.com/support/cases/{case})\nAccount: {cases[case]['account']}\nSummary: {cases[case]['problem']}\nSeverity: {cases[case]['severity']}\nDescription: {cases[case]['description']}\n\nIt is initially being tracked by {assignee['name']}.\n\n=============================================\n\n")
+
+            email_content.append( f"A JIRA issue ({cfg['server']}/browse/{new_card}) has been created for a new case:\nCase #: {case} (https://access.redhat.com/support/cases/{case})\nAccount: {cases[case]['account']}\nSummary: {cases[case]['problem']}\nSeverity: {cases[case]['severity']}\nDescription: {cases[case]['description']}\n")
+            if assignee:
+                email_content.append( f"It is initially being tracked by {assignee['name']}.\n")
+            email_content.append( f"\n===========================================\n\n")
 
             # Add newly create card to the sprint
             if cfg['sprintname'] and cfg['sprintname'] != '':

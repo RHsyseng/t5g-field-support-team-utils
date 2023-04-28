@@ -128,7 +128,7 @@ def set_cfg():
         cfg[key] = value
 
     ## env overrides
-    cfg['team'] = json.loads(os.environ.get('team'))
+    cfg['team'] = json.loads(os.environ.get('team')) if os.environ.get('team') else None
     #defaults['max_jira_results'] = 1000
     #defaults['max_portal_results'] = 5000
     # sources
