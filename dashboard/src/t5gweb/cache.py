@@ -111,7 +111,6 @@ def get_cards(cfg, self=None, background=False):
 
     jira_cards = {}
     for index, card in enumerate(card_list):
-        logging.warning("caching details for card {}".format(card))
         if background:
             # Update task information for progress bar
             self.update_state(state='PROGRESS',
