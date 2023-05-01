@@ -130,8 +130,12 @@ def get_cards(cfg, self=None, background=False):
         if not case_number or case_number not in cases.keys():
             logging.warning("card isn't associated with a case. discarding ({})".format(card))
             continue
-        assignee = {}
-        if issue.fields.assignee.displayName:
+        assignee = {
+                "displayName": None,
+                "key": None,
+                "name": None
+            }
+        if issue.fields.assignee:
             assignee = {
                 "displayName": issue.fields.assignee.displayName,
                 "key": issue.fields.assignee.key,

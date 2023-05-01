@@ -294,7 +294,7 @@ def create_cards(cfg, new_cases, action='none'):
             }
         
         if assignee:
-            card_info['assignee']: {'name': assignee['jira_user']}
+            card_info['assignee'] = {'name': assignee['jira_user']}
 
         logging.warning('A card needs created for case {}'.format(case))
         logging.warning(card_info)
