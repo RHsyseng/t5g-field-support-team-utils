@@ -86,9 +86,9 @@ def setup_scheduled_tasks(sender, **kwargs):
         )
 
     # update escalations cache
-    if cfg['smartsheet_access_token'] or (cfg['jira_escalations_project'] and cfg['jira_escalations_label']):
+    if cfg['jira_escalations_project'] and cfg['jira_escalations_label']:
         sender.add_periodic_task(
-            crontab(hour='*/6', minute='37'), # 4x a day
+            crontab(hour='*/2', minute='37'), # 12x a day
             cache_data.s('escalations'),
             name='escalations_sync',
         )
@@ -139,6 +139,7 @@ def portal_jira_sync():
         message_content, new_cards = libtelco5g.create_cards(cfg, new_cases, action='create')
         if message_content:
             logging.warning("notifying team about new JIRA cards")
+            cfg['subject'] += ': {}'.format(', '.join(new_cases))
             email_notify(cfg, message_content)
             if cfg['slack_token'] and cfg['slack_channel']:
                 slack_notify(cfg, message_content)

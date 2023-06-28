@@ -128,7 +128,7 @@ def set_cfg():
         cfg[key] = value
 
     ## env overrides
-    cfg['team'] = json.loads(os.environ.get('team'))
+    cfg['team'] = json.loads(os.environ.get('team')) if os.environ.get('team') else None
     #defaults['max_jira_results'] = 1000
     #defaults['max_portal_results'] = 5000
     # sources
@@ -136,7 +136,6 @@ def set_cfg():
     cfg['redhat_api'] = os.environ.get('redhat_api') # redhat api url
     cfg['query'] = os.environ.get('case_query')
     cfg['bz_key'] = os.environ.get('bz_key')
-    cfg['smartsheet_access_token'] = os.environ.get('smartsheet_access_token')
     cfg['sheet_id'] = os.environ.get('sheet_id')
     cfg['watchlist_url'] = os.environ.get('watchlist_url')
     cfg['jira_escalations_project'] = os.environ.get('jira_escalations_project')
@@ -159,7 +158,8 @@ def set_cfg():
     cfg['jira_query'] = os.environ.get('jira_query')
     cfg['password'] = os.environ.get('jira_pass')
     cfg['labels'] = os.environ.get('jira_labels').split(',')
-    
+    #sso
+    cfg['rbac'] = os.environ.get('rbac')
     return cfg
 
 def set_defaults():
