@@ -1,6 +1,7 @@
 #! /usr/bin/python -W ignore
 """
-This script hits the API to check for cases that are closed but the associated card is still open
+This script hits the API to check for cases that are closed but the associated card is
+still open
 """
 import os
 import sys
