@@ -17,7 +17,8 @@ from t5gweb.libtelco5g import(
     redis_get,
     redis_set,
     generate_stats,
-    plot_stats
+    plot_stats,
+    generate_histogram_stats
 )
 from t5gweb.utils import (
     set_cfg
@@ -287,7 +288,8 @@ def get_stats():
     load_data()
     stats = generate_stats()
     x_values, y_values = plot_stats()
-    return render_template('ui/stats.html', now=load_data.now, stats=stats, x_values=x_values, y_values=y_values, page_title='stats')
+    histogram_stats = generate_histogram_stats()
+    return render_template('ui/stats.html', now=load_data.now, stats=stats, x_values=x_values, y_values=y_values, histogram_stats=histogram_stats,page_title='stats')
     
 @BP.route('/account/<string:account>')
 # @login_required
@@ -307,5 +309,7 @@ def get_account(account):
             list(stats["by_status"].values()),
         ),
     }
-    return render_template('ui/account.html', page_title=account, account=account, now=load_data.now, stats=stats, new_comments=comments, jira_server=load_data.jira_server, pie_stats=pie_stats)
+
+    histogram_stats = generate_histogram_stats(account)
+    return render_template('ui/account.html', page_title=account, account=account, now=load_data.now, stats=stats, new_comments=comments, jira_server=load_data.jira_server, pie_stats=pie_stats, histogram_stats=histogram_stats)
 
