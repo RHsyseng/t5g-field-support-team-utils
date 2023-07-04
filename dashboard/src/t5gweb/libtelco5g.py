@@ -529,6 +529,66 @@ def plot_stats():
     
     return x_values, y_values
 
+def generate_histogram_stats(account=None):
+    """
+    Calculates histogram statistics for resolved and relief times of cards.
+
+    Args:
+        account (str, optional): Filter cards by account. Defaults to None.
+
+    Returns:
+        dict: A dictionary containing histogram statistics for resolved / relief times.
+              The structure of the dictionary is as follows:
+              {
+                  "Resolved": {
+                      "<severity1>": [<time1>, <time2>, ...],
+                      "<severity2>": [<time1>, <time2>, ...],
+                      ...
+                  },
+                  "Relief": {
+                      "<severity1>": [<time1>, <time2>, ...],
+                      "<severity2>": [<time1>, <time2>, ...],
+                      ...
+                  }
+              }
+              The times are represented as the number of days until resolution / relief.
+    """
+    seconds_per_day = 60 * 60 * 24
+    cards = redis_get("cards")
+    if account is not None:
+        logging.warning(f"filtering cards for {account}")
+        cards = {c:d for (c,d) in cards.items() if d['account'] == account}
+
+    histogram_data = {
+        "Resolved": {"Urgent": [], "High": [], "Normal": [], "Low": []},
+        "Relief": {"Urgent": [], "High": [], "Normal": [], "Low": []},
+    }
+
+    # Iterate over each entry in the input dictionary
+    for card, details in cards.items():
+        severity = details.get("severity")
+        resolved_at = details.get("resolved_at")
+        relief_at = details.get("relief_at")
+        case_created = details.get("case_created")
+
+        # Add time to resolution to the "Resolved" dictionary, indexed by severity
+        if resolved_at is not None:
+            days_until_resolved = (
+                datetime.datetime.strptime(resolved_at, "%Y-%m-%dT%H:%M:%SZ")
+                - datetime.datetime.strptime(case_created, "%Y-%m-%dT%H:%M:%SZ")
+            ).total_seconds() / seconds_per_day
+            histogram_data["Resolved"][severity].append(days_until_resolved)
+
+        # Add time to relief to the "Relief" dictionary, indexed by severity
+        if relief_at is not None:
+            days_until_relief = (
+                datetime.datetime.strptime(relief_at, "%Y-%m-%dT%H:%M:%SZ")
+                - datetime.datetime.strptime(case_created, "%Y-%m-%dT%H:%M:%SZ")
+            ).total_seconds() / seconds_per_day
+            histogram_data["Relief"][severity].append(days_until_relief)
+
+    return histogram_data
+
 def sync_priority(cfg):
     cards = redis_get("cards")
     sev_map = {re.search(r'[a-zA-Z]+', k).group(): v for k, v in portal2jira_sevs.items()}

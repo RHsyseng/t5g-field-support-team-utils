@@ -191,9 +191,16 @@ def get_cards(cfg, self=None, background=False):
         if case_number in details.keys():
             crit_sit = details[case_number]['crit_sit']
             group_name = details[case_number]['group_name']
+            notified_users = details[case_number]['notified_users']
+            relief_at = details[case_number]['relief_at']
+            resolved_at = details[case_number]['resolved_at']
+
         else:
             crit_sit = False
             group_name = None
+            notified_users = []
+            relief_at = None
+            resolved_at = None
 
         jira_cards[card.key] = {
             "card_status": libtelco5g.status_map[issue.fields.status.name],
@@ -220,7 +227,11 @@ def get_cards(cfg, self=None, background=False):
             "crit_sit": crit_sit,
             "group_name": group_name,
             "case_updated_date": datetime.datetime.strftime(datetime.datetime.strptime(cases[case_number]['last_update'], '%Y-%m-%dT%H:%M:%SZ'), '%Y-%m-%d %H:%M'),
-            "case_days_open": (time_now.replace(tzinfo=None) - datetime.datetime.strptime(cases[case_number]['createdate'], '%Y-%m-%dT%H:%M:%SZ')).days
+            "case_days_open": (time_now.replace(tzinfo=None) - datetime.datetime.strptime(cases[case_number]['createdate'], '%Y-%m-%dT%H:%M:%SZ')).days,
+            "case_created": cases[case_number]['createdate'],
+            "notified_users": notified_users,
+            "relief_at": relief_at,
+            "resolved_at": resolved_at
         }
 
     end = time.time()
@@ -278,11 +289,15 @@ def get_case_details(cfg):
             crit_sit = r_case.json().get('critSit', False)
             group_name = r_case.json().get('groupName', None)
             notified_users = r_case.json().get('notifiedUsers', [])
+            relief_at = r_case.json().get('reliefAt', None)
+            resolved_at = r_case.json().get('resolvedAt', None)
 
             case_details[case] = {
                 "crit_sit": crit_sit,
                 "group_name": group_name,
-                "notified_users": notified_users
+                "notified_users": notified_users,
+                "relief_at": relief_at,
+                "resolved_at": resolved_at
             }
             if "bug" in cases[case]:
                 bz_dict[case] = r_case.json()['bugzillas']
