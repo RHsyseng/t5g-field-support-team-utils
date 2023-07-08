@@ -8,9 +8,9 @@ metadata:
     app: t5gweb-tasks
 spec:
   ports:
-  - port: 80
-    name: t5gweb-tasks-http
-    protocol: TCP
-    targetPort: 8080
+    - port: 80
+      name: t5gweb-tasks-http
+      protocol: TCP
+      targetPort: 8080
   selector:
     app: t5gweb-tasks
