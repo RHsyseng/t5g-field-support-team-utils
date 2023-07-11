@@ -38,7 +38,7 @@ r = requests.get(attachment_url, headers=headers)
 
 for file in r.json():
     print("{}: {}".format(file["fileName"], file["link"]))
-    data = requests.get(file["link"], headers=headers)
+    link = requests.get(file["link"], headers=headers)
     with open(file["fileName"], "wb") as handle:
-        handle.write(data.content)
+        handle.write(link.content)
         handle.close()
