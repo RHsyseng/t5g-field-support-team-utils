@@ -42,17 +42,17 @@ permissions and then passed via stdin to the script.
 #### Source Email
 
 The ***email*** key in the configuration file or the ***t5g_email*** environment
-variable can be unset, set to a local file, or set to a url.
+variable can be unset, set to a local file, or set to a URL.
 
 It is best to leave this unset or set to an empty string.
 Doing so, will cause the script to to query the mail list archive for todays
 email and parse it.
 
 If it is set to a local disk file, the file will have its newlines stripped from
-it. This file should contain the html table that is the open case report.The
+it. This file should contain the HTML table that is the open case report. The
 file should not be in quoted-text format.
 
-If it points to a url, the url will be parsed without change.
+If it points to a URL, the URL will be parsed without change.
 
 #### Creating Cards
 
