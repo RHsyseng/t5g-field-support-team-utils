@@ -13,7 +13,10 @@ import requests
 
 
 def main():
-    sso_url = "https://sso.redhat.com/auth/realms/redhat-external/protocol/openid-connect/token"
+    sso_url = (
+        "https://sso.redhat.com/"
+        "auth/realms/redhat-external/protocol/openid-connect/token"
+    )
     offline_token = os.environ.get("PORTAL_TOKEN")
     endpoint_url = os.environ.get("ATTACH_URL")
 
