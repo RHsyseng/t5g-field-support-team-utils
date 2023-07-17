@@ -15,13 +15,13 @@ spec:
         app: redis
     spec:
       containers:
-      - name: redis
-        image: registry.redhat.io/rhel8/redis-6
-        imagePullPolicy: IfNotPresent
-        volumeMounts:
-        - mountPath: /var/lib/redis/data
-          name: redis-vol
+        - name: redis
+          image: registry.redhat.io/rhel8/redis-6
+          imagePullPolicy: IfNotPresent
+          volumeMounts:
+            - mountPath: /var/lib/redis/data
+              name: redis-vol
       volumes:
-      - name: redis-vol
-        persistentVolumeClaim:
-          claimName: redis-vol-pvc
+        - name: redis-vol
+          persistentVolumeClaim:
+            claimName: redis-vol-pvc

@@ -6,7 +6,7 @@ metadata:
 spec:
   storageClassName: ocs-external-storagecluster-ceph-rbd
   accessModes:
-  - ReadWriteOnce
+    - ReadWriteOnce
   resources:
     requests:
       storage: 2Gi

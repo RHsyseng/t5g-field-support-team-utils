@@ -3,8 +3,8 @@ body {
   font-size: 100%;
   background-color: white;
   color: #111;
-  padding: 0em;
-  margin: 1% 1%;
+  padding: 0;
+  margin: 1%;
   display: block;
 }
 
@@ -13,8 +13,8 @@ div.header {
   padding: 1em;
   margin: 0%;
   border: thin solid gray;
-  border-width: 1px 1px 1px 1px;
-  border-radius: 5px 5px 0px 0px;
+  border-width: 1px;
+  border-radius: 5px 5px 0 0;
   display: block;
 }
 
@@ -23,8 +23,8 @@ div.footer {
   padding: 1em;
   margin: 0%;
   border: thin solid gray;
-  border-width: 1px 1px 1px 1px;
-  border-radius: 0px 0px 5px 5px;
+  border-width: 1px;
+  border-radius: 0 0 5px 5px;
   display: block;
 }
 
@@ -32,8 +32,8 @@ div.content {
   padding: 1em;
   margin: 0%;
   border: thin solid gray;
-  border-width: 0px 1px 0px 1px;
-  border-radius: 0px;
+  border-width: 0 1px;
+  border-radius: 0;
   display: block;
 }
 
@@ -59,26 +59,32 @@ a {
 }
 
 hr.divide {
-  border: 1px dashed rgb(136, 128, 128);
+  border: 1px dashed rgb(136 128 128);
 }
 
 .header {
   padding-top: 10px;
 }
 
-ul li { 
-  padding: 5px 0px; 
+ul li {
+  padding: 5px 0;
 }
 
 ul.highlight:hover {
   background-color: #eee;
   border-radius: 5px;
-  box-shadow: 0 0 0 1px rgba(0, 0, 0, 0.2);
-  transition: all 200ms ease-out;  
+  box-shadow: 0 0 0 1px rgba(0 0 0 20%);
+  transition: all 200ms ease-out;
 }
 
-.right         { text-align: right; }
-.left         { text-align: left; float: left; }
+.right {
+  text-align: right;
+}
+
+.left {
+  text-align: left;
+  float: left;
+}
 
 .severity.low {
   background-color: var(--bs-cyan);
@@ -87,7 +93,7 @@ ul.highlight:hover {
 
 .severity.normal {
   background-color: var(--bs-yellow);
-  border-radius: 5px;  
+  border-radius: 5px;
 }
 
 .severity.high {
@@ -130,8 +136,8 @@ ul.highlight:hover {
   border-radius: 5px;
 }
 
+/* Sidebar */
 
-/* Sidebar*/
 /* Derived from https://getbootstrap.com/docs/5.1/examples/#snippets */
 
 .btn-toggle {
@@ -139,12 +145,13 @@ ul.highlight:hover {
   align-items: center;
   padding: .25rem .5rem;
   font-weight: 600;
-  color: rgba(0, 0, 0, .85);
+  color: rgba(0 0 0 85%);
   border: 0;
 }
+
 .btn-toggle:hover,
 .btn-toggle:focus {
-  color: rgba(0, 0, 0, .85);
+  color: rgba(0 0 0 85%);
   background-color: #eee;
 }
 
@@ -157,8 +164,9 @@ ul.highlight:hover {
 }
 
 .btn-toggle[aria-expanded="true"] {
-  color: rgba(0, 0, 0, 0.85);
+  color: rgba(0 0 0 85%);
 }
+
 .btn-toggle[aria-expanded="true"]::before {
   transform: rotate(90deg);
 }
@@ -170,6 +178,7 @@ ul.highlight:hover {
   margin-left: 1.25rem;
   text-decoration: none;
 }
+
 .btn-toggle-nav a:hover,
 .btn-toggle-nav a:focus {
   background-color: #eee;
@@ -180,7 +189,7 @@ ul.highlight:hover {
 }
 
 /* Moves Sidebar under Navbar */
-.sb  {
+.sb {
   top: 75px;
   overflow: auto;
   height: calc(100vh - 7rem);

@@ -1,7 +1,8 @@
+---
 variables:
   NAMESPACE: "t5g-web"
   IMAGE: "t5gweb"
-  TAG: "latest" #$CI_PIPELINE_IID
+  TAG: "latest"  # $CI_PIPELINE_IID
 
 stages:
   - sync
@@ -11,54 +12,54 @@ stages:
 github_sync:
   stage: sync
   script:
-  - git config --global user.email "${GL_USER_EMAIL}"
-  - git config --global user.name "${GL_USER}"
-  - git clone git@$CI_SERVER_HOST:$CI_PROJECT_PATH.git
-  - cd t5g-field-support-team-utils
-  - git remote add upstream https://$GH_USER:$GH_PASS@github.com/RHsyseng/t5g-field-support-team-utils.git 
-  - git fetch upstream
-  - git checkout master
-  - git merge upstream/main --allow-unrelated-histories
-  - git push origin master
-  - echo "Sync has completed"
+    - git config --global user.email "${GL_USER_EMAIL}"
+    - git config --global user.name "${GL_USER}"
+    - git clone git@$CI_SERVER_HOST:$CI_PROJECT_PATH.git
+    - cd t5g-field-support-team-utils
+    - git remote add upstream https://$GH_USER:$GH_PASS@github.com/RHsyseng/t5g-field-support-team-utils.git
+    - git fetch upstream
+    - git checkout master
+    - git merge upstream/main --allow-unrelated-histories
+    - git push origin master
+    - echo "Sync has completed"
   rules:
-  - if: '$CI_PIPELINE_SOURCE == "schedule"'
+    - if: '$CI_PIPELINE_SOURCE == "schedule"'
 
 build_push_dashboard_container:
   stage: build
   before_script:
-  - echo "Please make sure that Podman and Kubectl are installed" 
+    - echo "Please make sure that Podman and Kubectl are installed"
   script:
-  - oc login -u $OCP_USER -p $OCP_PASS --server=$SERVER --insecure-skip-tls-verify 
-  - cd dashboard/build
-  - ./t5gweb.sh latest true
+    - oc login -u $OCP_USER -p $OCP_PASS --server=$SERVER --insecure-skip-tls-verify
+    - cd dashboard/build
+    - ./t5gweb.sh latest true
   rules:
-  - if: '$CI_COMMIT_BRANCH == "master"'
+    - if: '$CI_COMMIT_BRANCH == "master"'
 
 k8s_deploy:
   stage: deploy
   before_script:
-  #Dashboard
-  - sed -i 's/OFFLINE_TOKEN/'"$Offline_token"'/g' dashboard/yaml/*.yml
-  - sed -i 's/JIRA_PASS/'"$Jira_Pass"'/g' dashboard/yaml/*.yml
-  - sed -i 's/BZ_KEY/'"$BZ_key"'/g' dashboard/yaml/*.yml
-  - sed -i 's/TELCO_TEAM/'"$Telco_team"'/g' dashboard/yaml/*.yml
-  - sed -i 's/TELCO_EMAIL/'"$Telco_email"'/g' dashboard/yaml/*.yml
-  - sed -i 's/CNV_TEAM/'"$CNV_team"'/g' dashboard/yaml/*.yml
-  - sed -i 's/CNV_EMAIL/'"$CNV_email"'/g' dashboard/yaml/*.yml
-  - sed -i 's/ALERT_EMAIL/'"$Alert_email"'/g' dashboard/yaml/*.yml
-  - sed -i 's/SLACK_TOKEN/'"$Slack_token"'/g' dashboard/yaml/*.yml
-  - sed -i 's/SLACK_CHANNEL/'"$Slack_channel"'/g' dashboard/yaml/*.yml
-  - sed -i 's/APP_URL/'"$URL"'/g' dashboard/yaml/*.yml
-  - sed -i 's/TASKS_URL/'"$URL"'/g' dashboard/yaml/*.yml
-  - sed -i 's/SMARTSHEET_ACCESS_TOKEN/'"$Smartsheet_access_token"'/g' dashboard/yaml/*.yml
-  - sed -i 's/SHEET_ID/'"$Sheet_id"'/g' dashboard/yaml/*.yml
+    # Dashboard
+    - sed -i 's/OFFLINE_TOKEN/'"$Offline_token"'/g' dashboard/yaml/*.yml
+    - sed -i 's/JIRA_PASS/'"$Jira_Pass"'/g' dashboard/yaml/*.yml
+    - sed -i 's/BZ_KEY/'"$BZ_key"'/g' dashboard/yaml/*.yml
+    - sed -i 's/TELCO_TEAM/'"$Telco_team"'/g' dashboard/yaml/*.yml
+    - sed -i 's/TELCO_EMAIL/'"$Telco_email"'/g' dashboard/yaml/*.yml
+    - sed -i 's/CNV_TEAM/'"$CNV_team"'/g' dashboard/yaml/*.yml
+    - sed -i 's/CNV_EMAIL/'"$CNV_email"'/g' dashboard/yaml/*.yml
+    - sed -i 's/ALERT_EMAIL/'"$Alert_email"'/g' dashboard/yaml/*.yml
+    - sed -i 's/SLACK_TOKEN/'"$Slack_token"'/g' dashboard/yaml/*.yml
+    - sed -i 's/SLACK_CHANNEL/'"$Slack_channel"'/g' dashboard/yaml/*.yml
+    - sed -i 's/APP_URL/'"$URL"'/g' dashboard/yaml/*.yml
+    - sed -i 's/TASKS_URL/'"$URL"'/g' dashboard/yaml/*.yml
+    - sed -i 's/SMARTSHEET_ACCESS_TOKEN/'"$Smartsheet_access_token"'/g' dashboard/yaml/*.yml
+    - sed -i 's/SHEET_ID/'"$Sheet_id"'/g' dashboard/yaml/*.yml
 
   script:
-  - oc apply -f dashboard/yaml/03_t5gweb-app-deployment.yml
-  - oc apply -f dashboard/yaml/06_t5gweb-tasks-deployment.yml
-  - oc apply -f dashboard/yaml/06_t5gweb-route.yml
-  - oc apply -f dashboard/yaml/08_t5gweb-tasks-route.yml
+    - oc apply -f dashboard/yaml/03_t5gweb-app-deployment.yml
+    - oc apply -f dashboard/yaml/06_t5gweb-tasks-deployment.yml
+    - oc apply -f dashboard/yaml/06_t5gweb-route.yml
+    - oc apply -f dashboard/yaml/08_t5gweb-tasks-route.yml
   rules:
-  - if: '$CI_COMMIT_BRANCH == "master"'
-  - if: '$CI_PIPELINE_SOURCE == "schedule"'
+    - if: '$CI_COMMIT_BRANCH == "master"'
+    - if: '$CI_PIPELINE_SOURCE == "schedule"'
