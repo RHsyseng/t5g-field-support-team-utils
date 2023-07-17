@@ -132,8 +132,9 @@ def login():
             cfg = set_cfg()
             attributes = session['samlUserdata']
             groups = ",".join(attributes['memberOf'])
-            #RBAC
-            if cfg['rbac'] not in groups:
+
+            # RBAC - Check if the user is a member of the allowed groups
+            if not any(string in group for group in groups for string in cfg["rbac"]):
                     wrong_permissions = True
                     return render_template(
                         'ui/login.html',
