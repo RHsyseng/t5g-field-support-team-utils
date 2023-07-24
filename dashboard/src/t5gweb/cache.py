@@ -8,9 +8,8 @@ import xmlrpc
 
 import bugzilla
 import requests
-from jira.exceptions import JIRAError
-
 import t5gweb.libtelco5g as libtelco5g
+from jira.exceptions import JIRAError
 
 
 def get_cases(cfg):

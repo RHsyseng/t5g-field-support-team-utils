@@ -3,7 +3,6 @@ import json
 
 from flask import Blueprint, request
 from flask_login import login_required
-
 from t5gweb.cache import (
     get_bz_details,
     get_cards,
