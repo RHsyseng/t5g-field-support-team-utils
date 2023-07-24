@@ -4,9 +4,15 @@ import json
 from flask import Blueprint, request
 from flask_login import login_required
 
-from t5gweb.cache import (get_bz_details, get_cards, get_case_details,
-                          get_cases, get_escalations, get_issue_details,
-                          get_watchlist)
+from t5gweb.cache import (
+    get_bz_details,
+    get_cards,
+    get_case_details,
+    get_cases,
+    get_escalations,
+    get_issue_details,
+    get_watchlist,
+)
 from t5gweb.libtelco5g import generate_stats, redis_get
 from t5gweb.utils import set_cfg
 
