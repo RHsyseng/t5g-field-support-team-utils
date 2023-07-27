@@ -15,14 +15,13 @@ import pprint
 # import t5gweb.utils
 import sys
 
-sys.path.append("../dashboard/src/")
-from t5gweb.libtelco5g import (
+from dashboard.src.t5gweb.libtelco5g import (
     get_board_id,
     get_latest_sprint,
     get_sprint_summary,
     jira_connection,
 )
-from t5gweb.utils import read_config, read_env_config, set_defaults
+from dashboard.src.t5gweb.utils import read_config, read_env_config, set_defaults
 
 
 def main():
@@ -46,9 +45,7 @@ def main():
     trcfg = read_env_config(cfg.keys())
     for key in trcfg:
         cfg[key] = trcfg[key]
-    import logging
 
-    logging.warning(cfg)
     # Fix some of the settings so they are easier to use
     cfg["labels"] = cfg["labels"].split(",")
 
