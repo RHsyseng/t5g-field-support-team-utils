@@ -71,6 +71,7 @@ def get_project_id(conn, name):
     project = conn.project(name)
     return project
 
+
 def get_board_id(conn, name):
     """Take a board name as input and return its id
     conn    - Jira connection object
