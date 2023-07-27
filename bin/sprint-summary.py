@@ -7,8 +7,6 @@ to use its default settings and any environmental settings.
 
 Setting set in the environment override the ones in the configuration file.
 """
-
-
 import getpass
 import json
 import os
@@ -17,16 +15,15 @@ import pprint
 # import t5gweb.utils
 import sys
 
-sys.path.append('../dashboard/src/')
 from t5gweb.libtelco5g import (
     get_board_id,
-    get_component_id,
     get_latest_sprint,
-    get_project_id,
     get_sprint_summary,
     jira_connection,
 )
 from t5gweb.utils import read_config, read_env_config, set_defaults
+
+sys.path.append("../dashboard/src/")
 
 
 def main():
@@ -51,6 +48,7 @@ def main():
     for key in trcfg:
         cfg[key] = trcfg[key]
     import logging
+
     logging.warning(cfg)
     # Fix some of the settings so they are easier to use
     cfg["labels"] = cfg["labels"].split(",")
@@ -76,22 +74,6 @@ def main():
     if cfg["debug"]:
         print("\nDEBUG: Connection")
         dpp.pprint(vars(conn))
-
-    print("\nFetching ID for project:", cfg["project"])
-    project = get_project_id(conn, cfg["project"])
-    print("    Id:", project.id)
-
-    if cfg["debug"]:
-        print("\nDEBUG: Project")
-        dpp.pprint(vars(project))
-
-    print("\nFetching ID for component:", cfg["component"])
-    component = get_component_id(conn, project.id, cfg["component"])
-    print("    Id:", component.id)
-
-    if cfg["debug"]:
-        print("\nDEBUG: Component")
-        dpp.pprint(vars(component))
 
     print("\nFetching ID for board:", cfg["board"])
     board = get_board_id(conn, cfg["board"])

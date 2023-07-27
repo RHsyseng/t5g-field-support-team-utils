@@ -1,19 +1,15 @@
 """core CRUD functions for t5gweb"""
 import logging
-import os
-import jira
+import re
+from copy import deepcopy
+from datetime import date, datetime, timezone
+
 import click
 from flask.cli import with_appcontext
-from datetime import datetime, timezone, date
-import pkg_resources
-import re
-from werkzeug.exceptions import abort
-from . import libtelco5g
-from . import cache
-import json
-import sys
-from copy import deepcopy
 from t5gweb.utils import set_cfg
+
+from . import cache, libtelco5g
+
 
 def get_new_cases():
     """get new cases created since X days ago"""
@@ -23,39 +19,55 @@ def get_new_cases():
 
     interval = 7
     today = date.today()
-    new_cases = {c: d for (c, d) in sorted(cases.items(), key = lambda i: i[1]['severity']) if (today - datetime.strptime(d['createdate'], '%Y-%m-%dT%H:%M:%SZ').date()).days <= interval}
+    new_cases = {
+        c: d
+        for (c, d) in sorted(cases.items(), key=lambda i: i[1]["severity"])
+        if (
+            today - datetime.strptime(d["createdate"], "%Y-%m-%dT%H:%M:%SZ").date()
+        ).days
+        <= interval
+    }
     for case in new_cases:
-        new_cases[case]['severity'] = re.sub('\(|\)| |[0-9]', '', new_cases[case]['severity'])
+        new_cases[case]["severity"] = re.sub(
+            r"\(|\)| |[0-9]", "", new_cases[case]["severity"]
+        )
     return new_cases
 
-def get_new_comments(new_comments_only=True, account=None):
 
+def get_new_comments(new_comments_only=True, account=None):
     # fetch cards from redis cache
-    cards = libtelco5g.redis_get('cards')
+    cards = libtelco5g.redis_get("cards")
     if account is not None:
-        cards = {c:d for (c,d) in cards.items() if d['account'] == account}
+        cards = {c: d for (c, d) in cards.items() if d["account"] == account}
     logging.warning("found %d JIRA cards" % (len(cards)))
     time_now = datetime.now(timezone.utc)
 
     # filter cards for comments created in the last week
-    detailed_cards= {}
+    detailed_cards = {}
     account_list = []
 
     for card in cards:
         comments = []
         if new_comments_only:
-            if cards[card]['comments'] is not None:
-                comments = [comment for comment in cards[card]['comments'] if (time_now - datetime.strptime(comment[1], '%Y-%m-%dT%H:%M:%S.%f%z')).days < 7]
+            if cards[card]["comments"] is not None:
+                comments = [
+                    comment
+                    for comment in cards[card]["comments"]
+                    if (
+                        time_now
+                        - datetime.strptime(comment[1], "%Y-%m-%dT%H:%M:%S.%f%z")
+                    ).days
+                    < 7
+                ]
         else:
-            if cards[card]['comments'] is not None:
-                comments = [comment for comment in cards[card]['comments']]
+            if cards[card]["comments"] is not None:
+                comments = [comment for comment in cards[card]["comments"]]
         if len(comments) == 0:
-            #logging.warning("no recent updates for {}".format(card))
-            continue # no updates
+            continue  # no updates
         else:
             detailed_cards[card] = cards[card]
-            detailed_cards[card]['comments'] = comments
-        account_list.append(cards[card]['account'])
+            detailed_cards[card]["comments"] = comments
+        account_list.append(cards[card]["account"])
     account_list.sort()
     logging.warning("found %d detailed cards" % (len(detailed_cards)))
 
@@ -63,65 +75,63 @@ def get_new_comments(new_comments_only=True, account=None):
     accounts = organize_cards(detailed_cards, account_list)
     return accounts
 
-def get_trending_cards():
 
+def get_trending_cards():
     # fetch cards from redis cache
-    cards = libtelco5g.redis_get('cards')
-    time_now = datetime.now(timezone.utc)
+    cards = libtelco5g.redis_get("cards")
 
     # get a list of trending cards
-    trending_cards = [card for card in cards if 'Trends' in cards[card]['labels']]
+    trending_cards = [card for card in cards if "Trends" in cards[card]["labels"]]
 
-    #TODO: timeframe?
+    # TODO: timeframe?
     detailed_cards = {}
     account_list = []
     for card in trending_cards:
         detailed_cards[card] = cards[card]
-        account = cards[card]['account']
+        account = cards[card]["account"]
         if account not in account_list:
-            account_list.append(cards[card]['account'])
+            account_list.append(cards[card]["account"])
 
     accounts = organize_cards(detailed_cards, account_list)
     return accounts
-    
+
 
 def plots():
-
     summary = libtelco5g.get_card_summary()
     return summary
 
+
 def organize_cards(detailed_cards, account_list):
     """Group cards by account"""
-    
+
     accounts = {}
-    
-    states = {"Waiting on Red Hat":{}, "Waiting on Customer": {}, "Closed": {}}
-    
+
+    states = {"Waiting on Red Hat": {}, "Waiting on Customer": {}, "Closed": {}}
+
     for account in account_list:
         accounts[account] = deepcopy(states)
-    
+
     for i in detailed_cards.keys():
-        status = detailed_cards[i]['case_status']
-        tags =  detailed_cards[i]['tags']
-        account = detailed_cards[i]['account']
-        #logging.warning("card: %s\tstatus: %s\ttags: %s\taccount: %s" % (i, status, tags, account))
+        status = detailed_cards[i]["case_status"]
+        account = detailed_cards[i]["account"]
         accounts[account][status][i] = detailed_cards[i]
-        
+
     return accounts
 
-@click.command('init-cache')
+
+@click.command("init-cache")
 @with_appcontext
 def init_cache():
     cfg = set_cfg()
     logging.warning("checking caches")
-    cases = libtelco5g.redis_get('cases')
-    cards = libtelco5g.redis_get('cards')
-    bugs = libtelco5g.redis_get('bugs')
-    issues = libtelco5g.redis_get('issues')
-    details = libtelco5g.redis_get('details')
-    escalations = libtelco5g.redis_get('escalations')
-    watchlist = libtelco5g.redis_get('watchlist')
-    stats = libtelco5g.redis_get('stats')
+    cases = libtelco5g.redis_get("cases")
+    cards = libtelco5g.redis_get("cards")
+    bugs = libtelco5g.redis_get("bugs")
+    issues = libtelco5g.redis_get("issues")
+    details = libtelco5g.redis_get("details")
+    escalations = libtelco5g.redis_get("escalations")
+    watchlist = libtelco5g.redis_get("watchlist")
+    stats = libtelco5g.redis_get("stats")
     if cases == {}:
         logging.warning("no cases found in cache. refreshing...")
         cache.get_cases(cfg)

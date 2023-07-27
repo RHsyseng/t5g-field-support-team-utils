@@ -104,8 +104,6 @@ def get_cards(cfg, self=None, background=False):
     start = time.time()
     project = libtelco5g.get_project_id(jira_conn, cfg["project"])
     logging.warning("project: {}".format(project))
-    component = libtelco5g.get_component_id(jira_conn, project.id, cfg["component"])
-    logging.warning("component: {}".format(component))
     board = libtelco5g.get_board_id(jira_conn, cfg["board"])
     logging.warning("board: {}".format(board))
     if cfg["sprintname"] and cfg["sprintname"] != "":
