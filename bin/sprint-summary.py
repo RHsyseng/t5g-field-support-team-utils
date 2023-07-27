@@ -11,17 +11,17 @@ import getpass
 import json
 import os
 import pprint
-
-# import t5gweb.utils
 import sys
 
-from dashboard.src.t5gweb.libtelco5g import (
+sys.path.append("../dashboard/src/")
+
+from t5gweb.libtelco5g import (  # noqa: E402
     get_board_id,
     get_latest_sprint,
     get_sprint_summary,
     jira_connection,
 )
-from dashboard.src.t5gweb.utils import read_config, read_env_config, set_defaults
+from t5gweb.utils import read_config, read_env_config, set_defaults  # noqa: E402
 
 
 def main():
