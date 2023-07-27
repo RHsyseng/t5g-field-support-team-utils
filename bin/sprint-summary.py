@@ -15,6 +15,7 @@ import pprint
 # import t5gweb.utils
 import sys
 
+sys.path.append("../dashboard/src/")
 from t5gweb.libtelco5g import (
     get_board_id,
     get_latest_sprint,
@@ -22,8 +23,6 @@ from t5gweb.libtelco5g import (
     jira_connection,
 )
 from t5gweb.utils import read_config, read_env_config, set_defaults
-
-sys.path.append("../dashboard/src/")
 
 
 def main():
