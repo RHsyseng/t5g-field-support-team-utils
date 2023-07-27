@@ -20,7 +20,6 @@ import sys
 sys.path.append('../dashboard/src/')
 from t5gweb.libtelco5g import (
     get_board_id,
-    get_component_id,
     get_latest_sprint,
     get_project_id,
     get_sprint_summary,
@@ -84,14 +83,6 @@ def main():
     if cfg["debug"]:
         print("\nDEBUG: Project")
         dpp.pprint(vars(project))
-
-    print("\nFetching ID for component:", cfg["component"])
-    component = get_component_id(conn, project.id, cfg["component"])
-    print("    Id:", component.id)
-
-    if cfg["debug"]:
-        print("\nDEBUG: Component")
-        dpp.pprint(vars(component))
 
     print("\nFetching ID for board:", cfg["board"])
     board = get_board_id(conn, cfg["board"])
