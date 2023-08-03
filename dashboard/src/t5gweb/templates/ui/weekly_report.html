@@ -21,9 +21,9 @@
                               <li>{{ status }}</li>
                            {% endif %}
                               {% for details in new_comments[account][status] %}
-                                 <span id={{ new_comments[account][status][details]['case_number'] }}></span>
+                                 <span id="{{ new_comments[account][status][details]['case_number'] }}"></span>
                                  <ul>
-                                    <li id = {{ new_comments[account][status][details]['case_number'] }}><a href=https://access.redhat.com/support/cases/#/case/{{ new_comments[account][status][details]['case_number'] }} target="_blank">{{ new_comments[account][status][details]['case_number'] }}</a> | Severity: {{ new_comments[account][status][details]['severity'] }} {% if new_comments[account][status][details]['escalated'] %} | Escalated{% endif %} {% if new_comments[account][status][details]['watched'] %} |  WatchList{% endif %} | {{ new_comments[account][status][details]['summary'] }} | Jira: <a href={{ jira_server }}/browse/{{ details }} target="_blank">{{ details }}</a> | Product: {{ new_comments[account][status][details]['product'] }}</li>
+                                    <li id="{{ new_comments[account][status][details]['case_number'] }}"><a href="https://access.redhat.com/support/cases/#/case/{{ new_comments[account][status][details]['case_number'] }}" target="_blank">{{ new_comments[account][status][details]['case_number'] }}</a> | Severity: {{ new_comments[account][status][details]['severity'] }} {% if new_comments[account][status][details]['escalated'] %} | Escalated{% endif %} {% if new_comments[account][status][details]['watched'] %} |  WatchList{% endif %} | {{ new_comments[account][status][details]['summary'] }} | Jira: <a href="{{ jira_server }}/browse/{{ details }}" target="_blank">{{ details }}</a> | Product: {{ new_comments[account][status][details]['product'] }}</li>
                                     <ul>
                                        <li>Most Recent Comment: </li>
                                        <ul>
@@ -36,9 +36,9 @@
                         {% endif %}
                      {% endfor %}
                   {% else %}
-                  <span class="anchor" id={{ account | replace(" ", "-") }}-no-update></span>
+                  <span class="anchor" id="{{ account | replace(' ', '-') }}-no-update"></span>
                      <ul class="highlight">
-                        <li id={{ account | replace(" ", "-") }}-no-update>{{ new_comments[account] }}</li>
+                        <li id="{{ account | replace(' ', '-') }}-no-update">{{ new_comments[account] }}</li>
                      </ul>
                   {% endif %}
                   </ul>

@@ -248,7 +248,7 @@
 </div>
 <br>
 <div class="bug-table">
-    <h2>Bugs & JIRA Issues:</h2>
+    <h2>Bugs and JIRA Issues:</h2>
     <table class="table table-bordered table-hover table-responsive mt-5 w-100" id="bugs">
         <thead>
             <tr>
@@ -377,7 +377,7 @@
                             {% elif new_comments[account][status][card]['severity'] == 'Urgent' %}
                                 {% set severity_order = 4 %}
                             {% endif %}
-                            <tr data-child-data='{{ new_comments[account][status][card] | tojson }}'>
+                            <tr data-child-data="{{ new_comments[account][status][card] | tojson }}">
                                 <td class="align-middle dt-control"></td>
                                 <td class="align-middle text-center"><a href=https://access.redhat.com/support/cases/#/case/{{new_comments[account][status][card]['case_number'] }} target="_blank">{{ new_comments[account][status][card]['case_number'] }}</a></td>
                                 <td data-order="{{ severity_order }}" class="align-middle text-center"><span class="badge severity {{ new_comments[account][status][card]['severity'] | lower() }}">{{ new_comments[account][status][card]['severity'] }}</span></td>
@@ -415,7 +415,6 @@
             </tbody>
         </table>
     </div>
-</div>
 <script>
     // Create the histograms
     var reliefUrgent = {

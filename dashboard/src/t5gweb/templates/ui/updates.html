@@ -11,10 +11,10 @@
                <ul class="list-unstyled ps-0">           
                   {% for account in new_comments %}
                   <li class="mb-1">    
-                     <button class="btn btn-toggle align-items-center text-start rounded collapsed" data-bs-toggle="collapse" data-bs-target='#{{ account | replace(" ", "-") | replace(",", "-") | replace(".", "-") | replace("(", "-") | replace(")", "-") | replace("&", "-") }}-collapse' aria-expanded="false">
+                     <button class="btn btn-toggle align-items-center text-start rounded collapsed" data-bs-toggle="collapse" data-bs-target="#{{ account | replace(' ', '-') | replace(',', '-') | replace('.', '-') | replace('(', '-') | replace(')', '-') | replace('&', '-') }}-collapse" aria-expanded="false">
                         {{ account }}
                      </button>
-                     <div class="collapse" id='{{ account | replace(" ", "-") | replace(",", "-") | replace(".", "-") | replace("(", "-") | replace(")", "-") | replace("&", "-") }}-collapse'>
+                     <div class="collapse" id="{{ account | replace(' ', '-') | replace(',', '-') | replace('.', '-') | replace('(', '-') | replace(')', '-') | replace('&', '-') }}-collapse">
                         <ul class="btn-toggle-nav list-unstyled fw-normal pb-1 small">
                            {% if new_comments[account] != "No Updates" %}
                               {% for status in new_comments[account] %}
@@ -53,7 +53,7 @@
                                              <div class="table-responsive">
                                                 <table class="table table-hover w-100">
                                                    <thead>
-                                                      <tr><th>#</th><th>Summary</th><th>Target Release</th><th>Assignee</th><th>QA Contact</th></th><th>Last Updated</th><th>Status</th></tr></thead>
+                                                      <tr><th>#</th><th>Summary</th><th>Target Release</th><th>Assignee</th><th>QA Contact</th><th>Last Updated</th><th>Status</th></tr></thead>
                                                       <tbody>
                                                          {% for bug in new_comments[account][status][details]['bugzilla'] %}
                                                          <tr><td><a href="{{ bug['bugzillaLink'] }}" target="_blank">{{ bug['bugzillaNumber'] }}</a></td>

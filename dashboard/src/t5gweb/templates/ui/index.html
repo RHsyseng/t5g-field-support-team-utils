@@ -12,7 +12,7 @@
         <th>case#</th><th>account</th><th>severity</th><th>summary</th>
         {% for case in new_cases %}
         <tr>
-            <td><a href=https://access.redhat.com/support/cases/#/case/{{ case }} target="_blank">{{ case }}</a></td>
+            <td><a href="https://access.redhat.com/support/cases/#/case/{{ case }}" target="_blank">{{ case }}</a></td>
             <td><a href="{{ url_for('ui.get_account', account=new_cases[case]['account']) }}">{{ new_cases[case]['account'] }}</a></td>
             <td>{{ new_cases[case]['severity'] }}</td>
             <td>{{ new_cases[case]['problem'] }}</td>
@@ -89,6 +89,5 @@
         </script>
 
     </div>
-    </a>
 </div>
   {% endblock %}
