@@ -66,6 +66,7 @@ def main():
     if len(sys.argv) == 2:
         case_tag = sys.argv[1]
     else:
+        case_tag = None
         sys.exit("no case tag specified")
     print(
         "searching {} for newly opened and closed cases ({})".format(api_url, case_tag)

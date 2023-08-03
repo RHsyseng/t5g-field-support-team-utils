@@ -36,6 +36,6 @@ if [[ $PUSH == "true" ]]; then
   buildah tag "$IMAGE":"$TAG" "$REGISTRY"/"$NS"/"$IMAGE":"$TAG"
   buildah login -u "$(oc whoami)" -p "$(oc whoami -t)" --tls-verify=false "$REGISTRY"
   buildah push --tls-verify=false "$REGISTRY"/"$NS"/"$IMAGE":"$TAG"
-  for pod in $(oc get pods -l app=ui --no-headers | awk '{print $1}'); do oc delete pod/$pod; sleep 15; done # rolling update
+  for pod in $(oc get pods -l app=ui --no-headers | awk '{print $1}'); do oc delete pod/"$pod"; sleep 15; done # rolling update
   oc scale deployment/taskmgr --replicas=0; oc scale deployment/taskmgr --replicas=1
 fi

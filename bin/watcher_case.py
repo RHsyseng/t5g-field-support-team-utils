@@ -1,12 +1,14 @@
 #! /usr/bin/python -W ignore
 """
-This script allows you to check whether certain users and support cases are watchers on the Red Hat Customer Portal.
+This script allows you to check whether certain users and support cases are watchers
+on the Red Hat Customer Portal.
 Also allows you to add or delete users as watchers to the specified support cases
 
 Requirements and Examples:
 
 $ pip install -r requirements.txt
-$ export REDHAT_API_TOKEN=<your_token> # Get your token https://access.redhat.com/management/api
+$ export REDHAT_API_TOKEN=<your_token> # Get your token:
+https://access.redhat.com/management/api
 $ watcher_case.py list --users rhn-support-jclaretm --case 03112577
 $ watcher_case.py list -f file.json
 $ watcher_case.py add --users rhn-support-jclaretm --case 03112577
@@ -37,7 +39,8 @@ class WatcherCase:
         if self.API_TOKEN is None:
             print(
                 Fore.RED
-                + f"[ERROR] - API token not found. Please set the REDHAT_API_TOKEN environment variable."
+                + "[ERROR] - API token not found. "
+                + "Please set the REDHAT_API_TOKEN environment variable."
             )
             sys.exit(1)
 
@@ -54,7 +57,10 @@ class WatcherCase:
     def init_parser(self):
         # Define subcommands and arguments using argparse
         self.parser = argparse.ArgumentParser(
-            description="Script to check if given users and support cases are watchers on the Red Hat Customer Portal."
+            description=(
+                "Script to check if given users and support cases are "
+                "watchers on the Red Hat Customer Portal."
+            )
         )
         subparsers = self.parser.add_subparsers(dest="subcommand", required=True)
 
@@ -114,15 +120,19 @@ class WatcherCase:
 
     def refresh_access_token(self):
         # Check if the access token is still valid
-        if hasattr(self, "expires_at") and datetime.now() < self.expires_at:
-            return
+        if hasattr(self, "expires_at"):
+            if datetime.now() < getattr(self, "expires_at"):
+                return
 
         # Define the application credentials
         CLIENT_ID = "rhsm-api"
         REFRESH_TOKEN = os.environ.get("REDHAT_API_TOKEN")
 
         # Define the authorization URL
-        AUTH_URL = "https://sso.redhat.com/auth/realms/redhat-external/protocol/openid-connect/token"
+        AUTH_URL = (
+            "https://sso.redhat.com"
+            "/auth/realms/redhat-external/protocol/openid-connect/token"
+        )
 
         headers = {"Content-Type": "application/x-www-form-urlencoded"}
         data = {
@@ -173,7 +183,6 @@ class WatcherCase:
         return True
 
     def handle_watchers(self, args, action):
-
         # Check if the user has provided a filename or a list of user and case IDs
         if args.filename:
             # Read the input file with user and case IDs
@@ -192,7 +201,7 @@ class WatcherCase:
         if not users or not cases:
             print(
                 Fore.RED
-                + f"[ERROR] - Please provide a list of users and cases or a filename."
+                + "[ERROR] - Please provide a list of users and cases or a filename."
             )
             sys.exit(1)
 
@@ -224,12 +233,14 @@ class WatcherCase:
                     if result:
                         print(
                             Fore.GREEN
-                            + f'Users {", ".join(to_add)} added as watchers to case {case_id}'
+                            + f'Users {", ".join(to_add)} added as watchers '
+                            + f"to case {case_id}"
                         )
                 else:
                     print(
                         Fore.GREEN
-                        + f'Users {", ".join(user_ids)} already watchers on case {case_id}'
+                        + f'Users {", ".join(user_ids)} already watchers '
+                        + f"on case {case_id}"
                     )
             elif action == "del":
                 # Remove the users as watchers from the case
@@ -239,7 +250,8 @@ class WatcherCase:
                     if result:
                         print(
                             Fore.GREEN
-                            + f'Users {", ".join(to_remove)} deleted as watchers from case {case_id}'
+                            + f'Users {", ".join(to_remove)} deleted as watchers '
+                            + f"from case {case_id}"
                         )
                 else:
                     print(
