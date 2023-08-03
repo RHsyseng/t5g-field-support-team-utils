@@ -71,14 +71,6 @@ def main():
         print("\nDEBUG: Connection")
         dpp.pprint(vars(conn))
 
-    print("\nFetching ID for project:", cfg["project"])
-    project = get_project_id(conn, cfg["project"])
-    print("    Id:", project.id)
-
-    if cfg["debug"]:
-        print("\nDEBUG: Project")
-        dpp.pprint(vars(project))
-
     print("\nFetching ID for board:", cfg["board"])
     board = get_board_id(conn, cfg["board"])
     print("    Id:", board.id)
