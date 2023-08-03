@@ -72,28 +72,6 @@ def get_project_id(conn, name):
     return project
 
 
-def get_component_id(conn, projid, name):
-    """Take a component name and return its id
-    conn    - Jira connection object
-    projid  - component id
-    name    - component name
-
-    Returns Jira object.
-    Notable fields:
-        .description - string
-        .id          - numerical string
-        .name        - string
-            KNI Labs & Field
-        .project     - string
-            KNIECO
-        .projectId   - numerical string
-    """
-
-    components = conn.project_components(projid)
-    component = next(item for item in components if item.name == name)
-    return component
-
-
 def get_board_id(conn, name):
     """Take a board name as input and return its id
     conn    - Jira connection object
@@ -241,8 +219,6 @@ def create_cards(cfg, new_cases, action="none"):
 
     logging.warning("attempting to connect to jira...")
     jira_conn = jira_connection(cfg)
-    project = get_project_id(jira_conn, cfg["project"])
-    component = get_component_id(jira_conn, project.id, cfg["component"])
     board = get_board_id(jira_conn, cfg["board"])
 
     # Obtain the authentication token for RedHat Api

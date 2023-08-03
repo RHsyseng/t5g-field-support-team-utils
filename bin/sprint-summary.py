@@ -7,25 +7,21 @@ to use its default settings and any environmental settings.
 
 Setting set in the environment override the ones in the configuration file.
 """
-
-
 import getpass
 import json
 import os
 import pprint
-
-# import t5gweb.utils
 import sys
 
-sys.path.append('../dashboard/src/')
-from t5gweb.libtelco5g import (
+sys.path.append("../dashboard/src/")
+
+from t5gweb.libtelco5g import (  # noqa: E402
     get_board_id,
     get_latest_sprint,
-    get_project_id,
     get_sprint_summary,
     jira_connection,
 )
-from t5gweb.utils import read_config, read_env_config, set_defaults
+from t5gweb.utils import read_config, read_env_config, set_defaults  # noqa: E402
 
 
 def main():
@@ -49,8 +45,7 @@ def main():
     trcfg = read_env_config(cfg.keys())
     for key in trcfg:
         cfg[key] = trcfg[key]
-    import logging
-    logging.warning(cfg)
+
     # Fix some of the settings so they are easier to use
     cfg["labels"] = cfg["labels"].split(",")
 
