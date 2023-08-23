@@ -39,19 +39,19 @@
                  </svg></a>
              </li>
              <li class="nav-item dropdown">
-               <a class="nav-link dropdown-toggle active" href="#" id="navbarDropdown" role="button" data-bs-toggle="dropdown" aria-expanded="false">
+               <a class="nav-link dropdown-toggle active" href="#" id="navbarDropdownTables" role="button" data-bs-toggle="dropdown" aria-expanded="false">
                  Tables
                </a>
-               <ul class="dropdown-menu dropdown-menu-dark" aria-labelledby="navbarDropdown">
+               <ul class="dropdown-menu dropdown-menu-dark" aria-labelledby="navbarDropdownTables">
                  <li><a class="dropdown-item" href="{{ url_for('ui.table_view') }}">Recent Updates</a></li>
                  <li><a class="dropdown-item" href="{{ url_for('ui.table_view_all') }}">All Cards</a></li>
                </ul>
              </li>
              <li class="nav-item dropdown">
-               <a class="nav-link dropdown-toggle active" href="#" id="navbarDropdown" role="button" data-bs-toggle="dropdown" aria-expanded="false">
+               <a class="nav-link dropdown-toggle active" href="#" id="navbarDropdownReports" role="button" data-bs-toggle="dropdown" aria-expanded="false">
                  Reports
                </a>
-               <ul class="dropdown-menu dropdown-menu-dark" aria-labelledby="navbarDropdown">
+               <ul class="dropdown-menu dropdown-menu-dark" aria-labelledby="navbarDropdownReports">
                  <li><a class="dropdown-item" href="{{ url_for('ui.report_view') }}">Recent Updates</a></li>
                  <li><a class="dropdown-item" href="{{ url_for('ui.report_view_all') }}">All Cards</a></li>
                  <li><a class="dropdown-item" href="{{ url_for('ui.weekly_updates') }}">Weekly Report</a></li>
