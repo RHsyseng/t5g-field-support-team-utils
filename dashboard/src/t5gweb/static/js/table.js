@@ -40,8 +40,8 @@ $(document).ready(function () {
         "dom": "<'row'<'col-sm-12 col-md-6'l><'col-sm-12 col-md-6'f>><'row'<'col-sm-12 col-md-5'i><'col-sm-12 col-md-7'p>><'row'<'col-sm-12'tr>><'row'<'col-sm-12 col-md-5'i><'col-sm-12 col-md-7'p>>",
         "lengthMenu": [[10, 25, 50, -1], [10, 25, 50, "All"]],
         "searchPanes": {
-            order: ['Severity', 'On Prio-list?', 'Escalated?', 'Account', 'Internal Status'],
-            columns: [2, 3, 8, 10],
+            order: ['Severity', 'On Prio-list?', 'Product', 'Escalated?', 'Account', 'Internal Status'],
+            columns: [2, 3, 7, 8, 10],
             initCollapsed: true,
             panes: [{
                 name: 'Escalated?',
