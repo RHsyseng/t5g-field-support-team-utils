@@ -467,7 +467,7 @@ def get_issue_details(cfg):
                             "assignee": assignee,
                             "fix_versions": fix_versions,
                             "priority": priority,
-                            "jira_severity": jira_severity
+                            "jira_severity": jira_severity,
                         }
                     )
             if len(case_issues) > 0:
