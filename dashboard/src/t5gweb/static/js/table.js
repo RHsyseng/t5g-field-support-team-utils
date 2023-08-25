@@ -109,11 +109,12 @@ $(document).ready(function () {
       order: [
         "Severity",
         "On Prio-list?",
+        "Product",
         "Escalated?",
         "Account",
         "Internal Status",
       ],
-      columns: [2, 3, 8, 10],
+      columns: [2, 3, 7, 8, 10],
       initCollapsed: true,
       panes: [
         {
