@@ -26,7 +26,7 @@ def email_notify(ini, blist, recipient=None, subject=None):
 
     msg["Subject"] = ini[subject] if subject else ini["subject"]
     msg["From"] = ini["from"]
-    msg["to"] = ini[recipient] if recipient else ini["to"]
+    msg["To"] = ini[recipient] if recipient else ini["to"]
     sendmail = smtplib.SMTP(ini["smtp"])
     sendmail.send_message(msg)
     sendmail.quit()
