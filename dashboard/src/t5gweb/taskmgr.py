@@ -253,6 +253,7 @@ def tag_bz():
     for case in issues:
         if case in cases:
             for issue in issues[case]:
+                attribute_error = False
                 tagged = False
                 card = jira_conn.issue(issue["id"])
                 try:
