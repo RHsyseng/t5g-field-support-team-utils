@@ -279,6 +279,7 @@ def tag_bz():
                         }
                         logging.warning("tagging Jira Bug:" + str(card))
                         card.update(private_keywords_dict)
+                        email_body["Script Tagged Private Keywords"].append(str(card))
                     elif "Telco:Case" not in new_keywords:
                         new_keywords.append("Telco:Case")
                         private_keywords_dict = {
@@ -288,7 +289,7 @@ def tag_bz():
                         }
                         logging.warning("tagging Jira Bug:" + str(card))
                         card.update(private_keywords_dict)
-                    email_body["Script Tagged Private Keywords"].append(str(card))
+                        email_body["Script Tagged Private Keywords"].append(str(card))
                     tagged = True
 
                 if tagged is False:
@@ -310,11 +311,12 @@ def tag_bz():
                         logging.warning("tagging Jira Bug:" + str(card))
                         internal_whiteboard = "Telco Telco:Case " + internal_whiteboard
                         update = card.update(customfield_12322040=internal_whiteboard)
+                        email_body["Script Tagged Internal Whiteboard"].append(str(card))
                     elif "telco:case" not in internal_whiteboard.lower():
                         logging.warning("tagging Jira Bug:" + str(card))
                         internal_whiteboard = internal_whiteboard + " Telco:Case"
                         update = card.update(customfield_12322040=internal_whiteboard)
-                    email_body["Script Tagged Internal Whiteboard"].append(str(card))
+                        email_body["Script Tagged Internal Whiteboard"].append(str(card))
 
     message_content = []
     for category, cards in email_body.items():
