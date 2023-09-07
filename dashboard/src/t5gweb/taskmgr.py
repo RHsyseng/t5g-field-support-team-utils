@@ -311,12 +311,16 @@ def tag_bz():
                         logging.warning("tagging Jira Bug:" + str(card))
                         internal_whiteboard = "Telco Telco:Case " + internal_whiteboard
                         update = card.update(customfield_12322040=internal_whiteboard)
-                        email_body["Script Tagged Internal Whiteboard"].append(str(card))
+                        email_body["Script Tagged Internal Whiteboard"].append(
+                            str(card)
+                        )
                     elif "telco:case" not in internal_whiteboard.lower():
                         logging.warning("tagging Jira Bug:" + str(card))
                         internal_whiteboard = internal_whiteboard + " Telco:Case"
                         update = card.update(customfield_12322040=internal_whiteboard)
-                        email_body["Script Tagged Internal Whiteboard"].append(str(card))
+                        email_body["Script Tagged Internal Whiteboard"].append(
+                            str(card)
+                        )
 
     message_content = []
     for category, cards in email_body.items():
