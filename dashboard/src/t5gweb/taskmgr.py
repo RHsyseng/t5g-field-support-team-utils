@@ -274,7 +274,7 @@ def tag_bz():
                         new_keywords.extend(["Telco", "Telco:Case"])
                         private_keywords_dict = {
                             "customfield_12323649": [
-                                [{"value": keyword} for keyword in new_keywords]
+                                {"value": keyword} for keyword in new_keywords
                             ]
                         }
                         logging.warning("tagging Jira Bug:" + str(card))
@@ -284,7 +284,7 @@ def tag_bz():
                         new_keywords.append("Telco:Case")
                         private_keywords_dict = {
                             "customfield_12323649": [
-                                [{"value": keyword} for keyword in new_keywords]
+                                {"value": keyword} for keyword in new_keywords
                             ]
                         }
                         logging.warning("tagging Jira Bug:" + str(card))
