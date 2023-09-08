@@ -1,174 +1,194 @@
 {% extends "skeleton.html" %}
 {% block title %}{{ page_title }}{% endblock %}
 {% block content %}
-   <!-- Include jQuery + DataTables -->
-   <script type="text/javascript" charset="utf8" src="{{ url_for('static', filename='node_modules/jquery/dist/jquery.min.js') }}"></script>
-   <script type="text/javascript" charset="utf8" src="{{ url_for('static', filename='node_modules/datatables.net/js/jquery.dataTables.js') }}"></script>
-   <script type="text/javascript" charset="utf8" src="{{ url_for('static', filename='node_modules/datatables.net-bs5/js/dataTables.bootstrap5.min.js') }}"></script>
-   <script type="text/javascript" charset="utf8" src="{{ url_for('static', filename='js/plugins.js') }}"></script>
-   <script type="text/javascript" charset="utf8" src="{{ url_for('static', filename='node_modules/datatables.net-searchpanes/js/dataTables.searchPanes.min.js') }}"></script>
-   <script type="text/javascript" charset="utf8" src="{{ url_for('static', filename='node_modules/datatables.net-searchpanes-bs5/js/searchPanes.bootstrap5.min.js') }}"></script>
-   <script type="text/javascript" charset="utf8" src="{{ url_for('static', filename='node_modules/datatables.net-select/js/dataTables.select.min.js') }}"></script>
-   <script type="text/javascript" charset="utf8" src="{{ url_for('static', filename='js/table.js') }}"></script>
-   <script type="text/javascript" charset="utf8" src="{{ url_for('static', filename='node_modules/plotly.js-cartesian-dist-min/plotly-cartesian.min.js') }}"></script>
-
-<div class="container-fluid copy mt-5">
-    <h2>Account Stats: {{account}} </h2>
-    <div class="row">
-        <div class="col-sm-6">
-        <table class="table table-bordered table-hover table-responsive w-100" id="overall">
-        <thead>
-            <tr><th class="text-center">Metric</th><th class="text-center">Count</th></tr>
-        </thead>
-        <tbody class="list">
-                <tr>
-                    <td class="align-middle">Open Cases</td>
-                    <td class="align-middle text-center">{{ stats['open_cases'] }}</td>
-                </tr>
-                <tr>
-                    <td class="align-middle">Cases On Prio-list</td>
-                    <td class="align-middle text-center">{{ stats['escalated'] }}</td>
-                </tr>
-                <tr>
-                    <td class="align-middle">Cases On WatchList</td>
-                    <td class="align-middle text-center">{{ stats['watched'] }}</td>
-                </tr>
-                <tr>
-                    <td class="align-middle">Crit Sit Cases</td>
-                    <td class="align-middle text-center">{{ stats['crit_sit'] }}</td>
-                </tr>
-                <tr>
-                    <td class="align-middle">Total Escalations</td>
-                    <td class="align-middle text-center">{{ stats['total_escalations'] }}</td>
-                </tr>
-                <tr>
-                    <td class="align-middle">High Priority Cases</td>
-                    <td class="align-middle text-center">{{ stats['high_prio'] }}</td>
-                </tr>
-                <tr>
-                    <td class="align-middle">Cases Opened in the Last Day / Week</td>
-                    <td class="align-middle text-center">{{ stats['daily_opened_cases'] }} / {{ stats['weekly_opened_cases'] }}</td>
-                </tr>
-                <tr>
-                    <td class="align-middle">Cases Closed in the Last Day / Week</td>
-                    <td class="align-middle text-center">{{ stats['daily_closed_cases'] }} / {{ stats['weekly_closed_cases'] }}</td>
-                </tr>
-                <tr>
-                    <td class="align-middle">Cases With No Updates In The Last Week</td>
-                    <td class="align-middle text-center">{{ stats['no_updates'] }}</td>
-                </tr>
-                <tr>
-                    <td class="align-middle">Cases With No BZs Associated</td>
-                    <td class="align-middle text-center">{{ stats['no_bzs'] }}</td>
-                </tr>
-                <tr>
-                    <td class="align-middle">Unique Bugs</td>
-                    <td class="align-middle text-center">{{ stats['bugs']['unique'] }}</td>
-                </tr>
-                <tr>
-                    <td class="align-middle">Bugs With No Target</td>
-                    <td class="align-middle text-center">{{ stats['bugs']['no_target'] }}</td>
-                </tr>
-        </tbody>
-        </table>
+    <!-- Include jQuery + DataTables -->
+    <script type="text/javascript"
+            charset="utf8"
+            src="{{ url_for('static', filename='node_modules/jquery/dist/jquery.min.js') }}"></script>
+    <script type="text/javascript"
+            charset="utf8"
+            src="{{ url_for('static', filename='node_modules/datatables.net/js/jquery.dataTables.js') }}"></script>
+    <script type="text/javascript"
+            charset="utf8"
+            src="{{ url_for('static', filename='node_modules/datatables.net-bs5/js/dataTables.bootstrap5.min.js') }}"></script>
+    <script type="text/javascript"
+            charset="utf8"
+            src="{{ url_for('static', filename='js/plugins.js') }}"></script>
+    <script type="text/javascript"
+            charset="utf8"
+            src="{{ url_for('static', filename='node_modules/datatables.net-searchpanes/js/dataTables.searchPanes.min.js') }}"></script>
+    <script type="text/javascript"
+            charset="utf8"
+            src="{{ url_for('static', filename='node_modules/datatables.net-searchpanes-bs5/js/searchPanes.bootstrap5.min.js') }}"></script>
+    <script type="text/javascript"
+            charset="utf8"
+            src="{{ url_for('static', filename='node_modules/datatables.net-select/js/dataTables.select.min.js') }}"></script>
+    <script type="text/javascript"
+            charset="utf8"
+            src="{{ url_for('static', filename='js/table.js') }}"></script>
+    <script type="text/javascript"
+            charset="utf8"
+            src="{{ url_for('static', filename='node_modules/plotly.js-cartesian-dist-min/plotly-cartesian.min.js') }}"></script>
+    <div class="container-fluid copy mt-5">
+        <h2>Account Stats: {{ account }}</h2>
         <div class="row">
-            <div class="col">
-                <div class="card mx-auto">
-                    <div class="card-body">
-                        <div id="reliefHistogram"></div>
-                        <div class="container pt-3 pb-5">
-                            <h2>Statistics</h2>
-                            <table class="table">
-                                <thead>
-                                    <tr>
-                                        <th></th>
-                                        <th>Urgent</th>
-                                        <th>High</th>
-                                        <th>Normal</th>
-                                        <th>Low</th>
-                                    </tr>
-                                </thead>
-                                <tbody>
-                                    <tr>
-                                        <td>Average Time Until Relief (Days)</td>
-                                        <td id="avg1"></td>
-                                        <td id="avg2"></td>
-                                        <td id="avg3"></td>
-                                        <td id="avg4"></td>
-                                    </tr>
-                                    <tr>
-                                        <td>Median Time Until Relief (Days)</td>
-                                        <td id="median1"></td>
-                                        <td id="median2"></td>
-                                        <td id="median3"></td>
-                                        <td id="median4"></td>
-                                    </tr>
-                                    <tr>
-                                        <td># of Cases</td>
-                                        <td id="cases1"></td>
-                                        <td id="cases2"></td>
-                                        <td id="cases3"></td>
-                                        <td id="cases4"></td>
-                                    </tr>
-                                </tbody>
-                            </table>
+            <div class="col-sm-6">
+                <table class="table table-bordered table-hover table-responsive w-100"
+                       id="overall">
+                    <thead>
+                        <tr>
+                            <th class="text-center">Metric</th>
+                            <th class="text-center">Count</th>
+                        </tr>
+                    </thead>
+                    <tbody class="list">
+                        <tr>
+                            <td class="align-middle">Open Cases</td>
+                            <td class="align-middle text-center">{{ stats['open_cases'] }}</td>
+                        </tr>
+                        <tr>
+                            <td class="align-middle">Cases On Prio-list</td>
+                            <td class="align-middle text-center">{{ stats['escalated'] }}</td>
+                        </tr>
+                        <tr>
+                            <td class="align-middle">Cases On WatchList</td>
+                            <td class="align-middle text-center">{{ stats['watched'] }}</td>
+                        </tr>
+                        <tr>
+                            <td class="align-middle">Crit Sit Cases</td>
+                            <td class="align-middle text-center">{{ stats['crit_sit'] }}</td>
+                        </tr>
+                        <tr>
+                            <td class="align-middle">Total Escalations</td>
+                            <td class="align-middle text-center">{{ stats['total_escalations'] }}</td>
+                        </tr>
+                        <tr>
+                            <td class="align-middle">High Priority Cases</td>
+                            <td class="align-middle text-center">{{ stats['high_prio'] }}</td>
+                        </tr>
+                        <tr>
+                            <td class="align-middle">Cases Opened in the Last Day / Week</td>
+                            <td class="align-middle text-center">{{ stats['daily_opened_cases'] }} / {{ stats['weekly_opened_cases'] }}</td>
+                        </tr>
+                        <tr>
+                            <td class="align-middle">Cases Closed in the Last Day / Week</td>
+                            <td class="align-middle text-center">{{ stats['daily_closed_cases'] }} / {{ stats['weekly_closed_cases'] }}</td>
+                        </tr>
+                        <tr>
+                            <td class="align-middle">Cases With No Updates In The Last Week</td>
+                            <td class="align-middle text-center">{{ stats['no_updates'] }}</td>
+                        </tr>
+                        <tr>
+                            <td class="align-middle">Cases With No BZs Associated</td>
+                            <td class="align-middle text-center">{{ stats['no_bzs'] }}</td>
+                        </tr>
+                        <tr>
+                            <td class="align-middle">Unique Bugs</td>
+                            <td class="align-middle text-center">{{ stats['bugs']['unique'] }}</td>
+                        </tr>
+                        <tr>
+                            <td class="align-middle">Bugs With No Target</td>
+                            <td class="align-middle text-center">{{ stats['bugs']['no_target'] }}</td>
+                        </tr>
+                    </tbody>
+                </table>
+                <div class="row">
+                    <div class="col">
+                        <div class="card mx-auto">
+                            <div class="card-body">
+                                <div id="reliefHistogram"></div>
+                                <div class="container pt-3 pb-5">
+                                    <h2>Statistics</h2>
+                                    <table class="table">
+                                        <thead>
+                                            <tr>
+                                                <th></th>
+                                                <th>Urgent</th>
+                                                <th>High</th>
+                                                <th>Normal</th>
+                                                <th>Low</th>
+                                            </tr>
+                                        </thead>
+                                        <tbody>
+                                            <tr>
+                                                <td>Average Time Until Relief (Days)</td>
+                                                <td id="avg1"></td>
+                                                <td id="avg2"></td>
+                                                <td id="avg3"></td>
+                                                <td id="avg4"></td>
+                                            </tr>
+                                            <tr>
+                                                <td>Median Time Until Relief (Days)</td>
+                                                <td id="median1"></td>
+                                                <td id="median2"></td>
+                                                <td id="median3"></td>
+                                                <td id="median4"></td>
+                                            </tr>
+                                            <tr>
+                                                <td># of Cases</td>
+                                                <td id="cases1"></td>
+                                                <td id="cases2"></td>
+                                                <td id="cases3"></td>
+                                                <td id="cases4"></td>
+                                            </tr>
+                                        </tbody>
+                                    </table>
+                                </div>
+                            </div>
                         </div>
-        
+                    </div>
+                    <div class="col">
+                        <div class="card mx-auto">
+                            <div class="card-body">
+                                <div id="resolutionHistogram"></div>
+                                <div class="container pt-3 pb-5">
+                                    <h2>Statistics</h2>
+                                    <table class="table">
+                                        <thead>
+                                            <tr>
+                                                <th></th>
+                                                <th>Urgent</th>
+                                                <th>High</th>
+                                                <th>Normal</th>
+                                                <th>Low</th>
+                                            </tr>
+                                        </thead>
+                                        <tbody>
+                                            <tr>
+                                                <td>Average Time Until Resolution (Days)</td>
+                                                <td id="avg5"></td>
+                                                <td id="avg6"></td>
+                                                <td id="avg7"></td>
+                                                <td id="avg8"></td>
+                                            </tr>
+                                            <tr>
+                                                <td>Median Time Until Resolution (Days)</td>
+                                                <td id="median5"></td>
+                                                <td id="median6"></td>
+                                                <td id="median7"></td>
+                                                <td id="median8"></td>
+                                            </tr>
+                                            <tr>
+                                                <td># of Cases</td>
+                                                <td id="cases5"></td>
+                                                <td id="cases6"></td>
+                                                <td id="cases7"></td>
+                                                <td id="cases8"></td>
+                                            </tr>
+                                        </tbody>
+                                    </table>
+                                </div>
+                            </div>
+                        </div>
                     </div>
                 </div>
             </div>
-            <div class="col">
-                <div class="card mx-auto">
+            <div class="col-12 col-sm-6">
+                <div class="card mb-2">
                     <div class="card-body">
-                        <div id="resolutionHistogram"></div>
-                        <div class="container pt-3 pb-5">
-                            <h2>Statistics</h2>
-                            <table class="table">
-                                <thead>
-                                    <tr>
-                                        <th></th>
-                                        <th>Urgent</th>
-                                        <th>High</th>
-                                        <th>Normal</th>
-                                        <th>Low</th>
-                                    </tr>
-                                </thead>
-                                <tbody>
-                                    <tr>
-                                        <td>Average Time Until Resolution (Days)</td>
-                                        <td id="avg5"></td>
-                                        <td id="avg6"></td>
-                                        <td id="avg7"></td>
-                                        <td id="avg8"></td>
-                                    </tr>
-                                    <tr>
-                                        <td>Median Time Until Resolution (Days)</td>
-                                        <td id="median5"></td>
-                                        <td id="median6"></td>
-                                        <td id="median7"></td>
-                                        <td id="median8"></td>
-                                    </tr>
-                                    <tr>
-                                        <td># of Cases</td>
-                                        <td id="cases5"></td>
-                                        <td id="cases6"></td>
-                                        <td id="cases7"></td>
-                                        <td id="cases8"></td>
-                                    </tr>
-                                </tbody>
-                            </table>
-                        </div>
-                    </div>
-                </div>
-            </div>
-        </div>
-        </div>
-        <div class="col-12 col-sm-6">
-            <div class="card mb-2">
-                <div class="card-body">
-                    <div class="chart-container">
-                        <canvas id="severityChart"></canvas>
-                        <script>
+                        <div class="chart-container">
+                            <canvas id="severityChart"></canvas>
+                            <script>
                             var ctx = document.getElementById('severityChart').getContext('2d');
                             var myChart = new Chart(ctx, {
                                 type: 'pie',
@@ -200,16 +220,15 @@
                                 }
                             }
                             });
-                        </script>
+                            </script>
+                        </div>
                     </div>
                 </div>
-            </div>
-
-            <div class="card">
-                <div class="card-body">
-                    <div class="chart-container">
-                        <canvas id="statusChart"></canvas>
-                        <script>
+                <div class="card">
+                    <div class="card-body">
+                        <div class="chart-container">
+                            <canvas id="statusChart"></canvas>
+                            <script>
                             var ctx = document.getElementById('statusChart').getContext('2d');
                             var myChart = new Chart(ctx, {
                                 type: 'pie',
@@ -240,107 +259,82 @@
                                 }
                             }
                             });
-                        </script>
+                            </script>
+                        </div>
                     </div>
                 </div>
             </div>
-        </div>  
+        </div>
     </div>
-</div>
-<br>
-<div class="bug-table">
-    <h2>Bugs and JIRA Issues:</h2>
-    <table class="table table-bordered table-hover table-responsive mt-5 w-100" id="bugs">
-        <thead>
-            <tr>
-                <th class="text-center">BZ/JIRA#</th>
-                <th class="text-center">Summary</th>
-                <th class="text-center">Priority/Severity</th>
-                <th class="text-center">Target Release</th>
-                <th class="text-center">Assignee</th>
-                <th class="text-center">QA Contact</th>
-                <th class="text-center">Last Updated</th>
-                <th class="text-center">Status</th>
-            </tr>
-        </thead>
-        <tbody class="list">
-            {% for account in new_comments %}
-                {% for status in new_comments[account] %}
-                    {% for card in new_comments[account][status] %}
-                        {% if new_comments[account][status][card]['bugzilla'] != None %}
-                            {% for bug in new_comments[account][status][card]['bugzilla'] %}
-                                <tr>
-                                    <td class="align-middle text-center">
-                                        <a href="{{ bug['bugzillaLink'] }}" target="_blank">{{ bug['bugzillaNumber'] }}</a>
-                                    </td>
-                                    <td class="align-middle text-center">
-                                        {{ bug['summary'] }}
-                                    </td>
-                                    <td class="align-middle text-center">
-                                        {{ bug['severity'] }}
-                                    </td>
-                                    <td class="align-middle text-center">
-                                        {{ bug['target_release'][0] }}
-                                    </td>
-                                    <td class="align-middle text-center">
-                                        {{ bug['assignee'] }}
-                                    </td>
-                                    <td class="align-middle text-center">
-                                        {{ bug['qa_contact'] }}
-                                    </td>
-                                    <td class="align-middle text-center">
-                                        {{ bug['last_change_time'] }}
-                                    </td>
-                                    <td class="align-middle text-center">
-                                        {{ bug['status'] }}
-                                    </td>
-                                </tr>
-                            {% endfor %}
-                        {% endif %}
-                        {% if new_comments[account][status][card]['issues'] != None %}
-                            {% for issue in new_comments[account][status][card]['issues'] %}
-                                <tr>
-                                    <td class="align-middle text-center">
-                                        <a href="{{ issue['url'] }}" target="_blank">{{ issue['id'] }}</a>
-                                    </td>
-                                    <td class="align-middle text-center">
-                                        {{ issue['title'] }}
-                                    </td>
-                                    <td class="align-middle text-center">
-                                        {{ issue['priority'] }}
-                                    </td>
-                                    <td class="align-middle text-center">
-                                        {{ issue['fix_versions'] }}
-                                    </td>
-                                    <td class="align-middle text-center">
-                                        {{ issue['assignee'] }}
-                                    </td>
-                                    <td class="align-middle text-center">
-                                        {{ issue['qa_contact'] }}
-                                    </td>
-                                    <td class="align-middle text-center">
-                                        {{ issue['updated'] }}
-                                    </td>
-                                    <td class="issue-middle text-center">
-                                        {{ issue['status'] }}
-                                    </td>
-                                </tr>
-                            {% endfor %}
-                        {% endif %}
+    <br>
+    <div class="bug-table">
+        <h2>Bugs and JIRA Issues:</h2>
+        <table class="table table-bordered table-hover table-responsive mt-5 w-100"
+               id="bugs">
+            <thead>
+                <tr>
+                    <th class="text-center">BZ/JIRA#</th>
+                    <th class="text-center">Summary</th>
+                    <th class="text-center">Priority/Severity</th>
+                    <th class="text-center">Target Release</th>
+                    <th class="text-center">Assignee</th>
+                    <th class="text-center">QA Contact</th>
+                    <th class="text-center">Last Updated</th>
+                    <th class="text-center">Status</th>
+                </tr>
+            </thead>
+            <tbody class="list">
+                {% for account in new_comments %}
+                    {% for status in new_comments[account] %}
+                        {% for card in new_comments[account][status] %}
+                            {% if new_comments[account][status][card]['bugzilla'] != None %}
+                                {% for bug in new_comments[account][status][card]['bugzilla'] %}
+                                    <tr>
+                                        <td class="align-middle text-center">
+                                            <a href="{{ bug['bugzillaLink'] }}" target="_blank">{{ bug['bugzillaNumber'] }}</a>
+                                        </td>
+                                        <td class="align-middle text-center">{{ bug['summary'] }}</td>
+                                        <td class="align-middle text-center">{{ bug['severity'] }}</td>
+                                        <td class="align-middle text-center">{{ bug['target_release'][0] }}</td>
+                                        <td class="align-middle text-center">{{ bug['assignee'] }}</td>
+                                        <td class="align-middle text-center">{{ bug['qa_contact'] }}</td>
+                                        <td class="align-middle text-center">{{ bug['last_change_time'] }}</td>
+                                        <td class="align-middle text-center">{{ bug['status'] }}</td>
+                                    </tr>
+                                {% endfor %}
+                            {% endif %}
+                            {% if new_comments[account][status][card]['issues'] != None %}
+                                {% for issue in new_comments[account][status][card]['issues'] %}
+                                    <tr>
+                                        <td class="align-middle text-center">
+                                            <a href="{{ issue['url'] }}" target="_blank">{{ issue['id'] }}</a>
+                                        </td>
+                                        <td class="align-middle text-center">{{ issue['title'] }}</td>
+                                        <td class="align-middle text-center">{{ issue['priority'] }}</td>
+                                        <td class="align-middle text-center">{{ issue['fix_versions'] }}</td>
+                                        <td class="align-middle text-center">{{ issue['assignee'] }}</td>
+                                        <td class="align-middle text-center">{{ issue['qa_contact'] }}</td>
+                                        <td class="align-middle text-center">{{ issue['updated'] }}</td>
+                                        <td class="issue-middle text-center">{{ issue['status'] }}</td>
+                                    </tr>
+                                {% endfor %}
+                            {% endif %}
+                        {% endfor %}
                     {% endfor %}
                 {% endfor %}
-            {% endfor %}
-        </tbody>
-    </table>
-</div>
-<br>
+            </tbody>
+        </table>
+    </div>
+    <br>
     <h2>Cases:</h2>
     <div class="container-fluid pt-2" id="expand-buttons">
-        <button type="button" class="btn btn-outline-dark" id="expand-button">Expand All Rows</button> <button type="button" class="btn btn-outline-dark" id="collapse-button">Collapse All Rows</button>
+        <button type="button" class="btn btn-outline-dark" id="expand-button">Expand All Rows</button>
+        <button type="button" class="btn btn-outline-dark" id="collapse-button">Collapse All Rows</button>
     </div>
     <div class="loading text-center fs-3">Loading Table...</div>
     <div class="case-table" style="display: none;">
-        <table class="table table-bordered table-hover table-responsive mt-5 w-100" id="data">
+        <table class="table table-bordered table-hover table-responsive mt-5 w-100"
+               id="data">
             <caption style="caption-side: top; text-align: center;">Note: Use shift+click to sort by multiple columns</caption>
             <thead>
                 <tr>
@@ -368,7 +362,7 @@
             <tbody class="list">
                 {% for account in new_comments %}
                     {% for status in new_comments[account] %}
-                        {% for card in new_comments[account][status]%}
+                        {% for card in new_comments[account][status] %}
                             {% if new_comments[account][status][card]['severity'] == 'Low' %}
                                 {% set severity_order = 1 %}
                             {% elif  new_comments[account][status][card]['severity'] == 'Normal' %}
@@ -380,8 +374,13 @@
                             {% endif %}
                             <tr data-child-data="{{ new_comments[account][status][card] | tojson }}">
                                 <td class="align-middle dt-control"></td>
-                                <td class="align-middle text-center"><a href="https://access.redhat.com/support/cases/#/case/{{new_comments[account][status][card]['case_number'] }}" target="_blank">{{ new_comments[account][status][card]['case_number'] }}</a></td>
-                                <td data-order="{{ severity_order }}" class="align-middle text-center"><span class="badge severity {{ new_comments[account][status][card]['severity'] | lower() }}">{{ new_comments[account][status][card]['severity'] }}</span></td>
+                                <td class="align-middle text-center">
+                                    <a href="https://access.redhat.com/support/cases/#/case/{{ new_comments[account][status][card]['case_number'] }}"
+                                       target="_blank">{{ new_comments[account][status][card]['case_number'] }}</a>
+                                </td>
+                                <td data-order="{{ severity_order }}" class="align-middle text-center">
+                                    <span class="badge severity {{ new_comments[account][status][card]['severity'] | lower() }}">{{ new_comments[account][status][card]['severity'] }}</span>
+                                </td>
                                 {% if new_comments[account][status][card]['escalated'] %}
                                     <td class="align-middle text-center">Yes</td>
                                 {% elif new_comments[account][status][card]['potential_escalation'] %}
@@ -404,19 +403,33 @@
                                 <td class="align-middle text-center">{{ new_comments[account][status][card]['account'] }}</td>
                                 <td class="align-middle text-center">{{ new_comments[account][status][card]['case_status'] }}</td>
                                 <td class="align-middle text-center">{{ new_comments[account][status][card]['card_status'] }}</td>
-                                <td class="align-middle text-center">{{ new_comments[account][status][card]['assignee']['displayName'] }} {% if new_comments[account][status][card]['contributor'] | length %} <br><br> <span class="fw-bold">Contributor(s):</span> {% endif %} {% for contributor in new_comments[account][status][card]['contributor'] %} {{ contributor['displayName'] }}{{ ", " if not loop.last else "" }} {% endfor %}</td>
-                                <td class="align-middle text-center"><a href="{{ jira_server }}/browse/{{ card }}" target="_blank">{{ card }}</a></td>
-                                <td class="align-middle"><span class="fw-bold fst-italic">{{ new_comments[account][status][card]['comments'][-1][1][:10] }}</span> - {{ new_comments[account][status][card]['comments'][-1][0] | safe }}</td>
+                                <td class="align-middle text-center">
+                                    {{ new_comments[account][status][card]['assignee']['displayName'] }}
+                                    {% if new_comments[account][status][card]['contributor'] | length %}
+                                        <br>
+                                        <br>
+                                        <span class="fw-bold">Contributor(s):</span>
+                                    {% endif %}
+                                    {% for contributor in new_comments[account][status][card]['contributor'] %}
+                                        {{ contributor['displayName'] }}{{ ", " if not loop.last else "" }}
+                                    {% endfor %}
+                                </td>
+                                <td class="align-middle text-center">
+                                    <a href="{{ jira_server }}/browse/{{ card }}" target="_blank">{{ card }}</a>
+                                </td>
+                                <td class="align-middle">
+                                    <span class="fw-bold fst-italic">{{ new_comments[account][status][card]['comments'][-1][1][:10] }}</span> - {{ new_comments[account][status][card]['comments'][-1][0] | safe }}
+                                </td>
                                 <td class="align-middle text-center">{{ new_comments[account][status][card]['case_days_open'] }}</td>
                                 <td class="align-middle text-center">{{ new_comments[account][status][card]['case_updated_date'] }}</td>
                             </tr>
-                        {% endfor %}        
+                        {% endfor %}
                     {% endfor %}
                 {% endfor %}
             </tbody>
         </table>
     </div>
-<script>
+    <script>
     // Create the histograms
     var reliefUrgent = {
         x: {{ histogram_stats["Relief"]["Urgent"] | safe }},
@@ -560,5 +573,5 @@
 
     // Initial table update
     updateTable();
-</script>
+    </script>
 {% endblock %}
