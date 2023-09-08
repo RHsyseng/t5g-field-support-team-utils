@@ -14,7 +14,7 @@ from slack_sdk import WebClient
 from slack_sdk.errors import SlackApiError
 
 
-def email_notify(ini, blist):
+def email_notify(ini, blist, recipient=None, subject=None):
     """send an email to notify the team of a new case"""
 
     body = ""
@@ -24,10 +24,9 @@ def email_notify(ini, blist):
     msg = EmailMessage()
     msg.set_content(body)
 
-    msg["Subject"] = ini["subject"]
+    msg["Subject"] = ini[subject] if subject else ini["subject"]
     msg["From"] = ini["from"]
-    msg["to"] = ini["to"]
-
+    msg["To"] = ini[recipient] if recipient else ini["to"]
     sendmail = smtplib.SMTP(ini["smtp"])
     sendmail.send_message(msg)
     sendmail.quit()

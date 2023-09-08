@@ -423,19 +423,23 @@ def get_issue_details(cfg):
                         logging.warning("Can't access {}".format(issue["resourceKey"]))
                         continue
 
-                    # Retrieve QA contact from Jira card
+                    # Retrieve QA contact from Jira bug
                     try:
                         qa_contact = bug.fields.customfield_12315948.emailAddress
                     except AttributeError:
                         qa_contact = None
-
-                    # Retrieve assignee from Jira card
+                    # Retrieve Severity from Jira bug
+                    try:
+                        jira_severity = bug.fields.customfield_12316142.value
+                    except AttributeError:
+                        jira_severity = None
+                    # Retrieve assignee from Jira bug
                     if bug.fields.assignee is not None:
                         assignee = bug.fields.assignee.emailAddress
                     else:
                         assignee = None
 
-                    # Retrieve target release from Jira card
+                    # Retrieve target release from Jira bug
                     if len(bug.fields.fixVersions) > 0:
                         fix_versions = []
                         for version in bug.fields.fixVersions:
@@ -463,6 +467,7 @@ def get_issue_details(cfg):
                             "assignee": assignee,
                             "fix_versions": fix_versions,
                             "priority": priority,
+                            "jira_severity": jira_severity,
                         }
                     )
             if len(case_issues) > 0:
