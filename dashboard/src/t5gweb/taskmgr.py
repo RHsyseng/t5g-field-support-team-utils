@@ -327,7 +327,6 @@ def tag_bz():
         message_content.append(f"{category}:")
         for card in cards:
             message_content.append(f"- {card}")
-    message_content = "\n".join(message_content)
     cfg["to"] = os.environ.get("bug_email")
     cfg["subject"] = "Summary: Jira Bug Tagging"
     email_notify(cfg, message_content)
