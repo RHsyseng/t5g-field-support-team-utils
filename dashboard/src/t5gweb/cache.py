@@ -472,7 +472,7 @@ def get_issue_details(cfg):
                             "fix_versions": fix_versions,
                             "priority": priority,
                             "jira_severity": jira_severity,
-                            "jira_type": jira_type
+                            "jira_type": jira_type,
                         }
                     )
             if len(case_issues) > 0:
