@@ -433,6 +433,10 @@ def get_issue_details(cfg):
                         jira_severity = bug.fields.customfield_12316142.value
                     except AttributeError:
                         jira_severity = None
+                    try:
+                        jira_type = bug.fields.issuetype.name
+                    except AttributeError:
+                        jira_type = None
                     # Retrieve assignee from Jira bug
                     if bug.fields.assignee is not None:
                         assignee = bug.fields.assignee.emailAddress
@@ -468,6 +472,7 @@ def get_issue_details(cfg):
                             "fix_versions": fix_versions,
                             "priority": priority,
                             "jira_severity": jira_severity,
+                            "jira_type": jira_type,
                         }
                     )
             if len(case_issues) > 0:
