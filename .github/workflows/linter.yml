@@ -51,3 +51,4 @@ jobs:
           JAVASCRIPT_DEFAULT_STYLE: prettier
           DEFAULT_BRANCH: main
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          KUBERNETES_KUBECONFORM_OPTIONS: -ignore-missing-schemas
