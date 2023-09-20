@@ -1,125 +1,205 @@
-<!doctype html>
+<!DOCTYPE html>
 <html>
-
-<head>
-  {% block head %}
-  <!-- Include Bootstrap -->
-  <link href="{{ url_for('static', filename='node_modules/bootstrap/dist/css/bootstrap.min.css') }}" rel="stylesheet">
-
-  <!-- Include CSS -->
-  <link rel=stylesheet type=text/css href="{{ url_for('static', filename='style.css') }}">
-
-  <!-- Include ClipboardJS-->
-  <script src="{{ url_for('static', filename='node_modules/clipboard/dist/clipboard.min.js') }}"></script>
-
-  <!-- Include ChartJS -->
-  <script src="{{ url_for('static', filename='node_modules/chart.js/dist/chart.js') }}"></script>
-  
-  <!-- Include JQuery -->
-  <script type="text/javascript" charset="utf8" src="{{ url_for('static', filename='node_modules/jquery/dist/jquery.min.js') }}"></script>
-
-  <!-- Include Datatables CSS -->
-  <link rel="stylesheet" href="{{ url_for('static', filename='node_modules/datatables.net-bs5/css/dataTables.bootstrap5.min.css') }}"/>
-  <link rel="stylesheet" href="{{ url_for('static', filename='node_modules/datatables.net-searchpanes-bs5/css/searchPanes.bootstrap5.min.css') }}"/>
-  <link rel="stylesheet" href="{{ url_for('static', filename='node_modules/datatables.net-select-bs5/css/select.bootstrap5.min.css') }}"/>
-  <title>dashboard://{% block title %}{% endblock %}</title>
-  <nav class="navbar navbar-expand-md navbar-dark fixed-top bg-dark">
-    <div class="container-fluid">
-       <a class="navbar-brand" href="#top">New Card Updates</a>
-       <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbarCollapse"
-          aria-controls="navbarCollapse" aria-expanded="false" aria-label="Toggle navigation">
-          <span class="navbar-toggler-icon"></span>
-       </button>
-       <div class="collapse navbar-collapse" id="navbarCollapse">
-          <ul class="navbar-nav  mb-2 mb-md-0">
-             <li class="nav-item ms-2">
-               <a role="button" class="btn btn-dark" href="{{ url_for('ui.index') }}"><svg alt="Home" xmlns="http://www.w3.org/2000/svg" width="28" height="28" fill="currentColor" role="img" aria-label="Home" class="bi bi-house" viewBox="0 0 16 16">
-               <path fill-rule="evenodd" d="M2 13.5V7h1v6.5a.5.5 0 0 0 .5.5h9a.5.5 0 0 0 .5-.5V7h1v6.5a1.5 1.5 0 0 1-1.5 1.5h-9A1.5 1.5 0 0 1 2 13.5zm11-11V6l-2-2V2.5a.5.5 0 0 1 .5-.5h1a.5.5 0 0 1 .5.5z"/>
-                   <path fill-rule="evenodd" d="M7.293 1.5a1 1 0 0 1 1.414 0l6.647 6.646a.5.5 0 0 1-.708.708L8 2.207 1.354 8.854a.5.5 0 1 1-.708-.708L7.293 1.5z"/>
-                 </svg></a>
-             </li>
-             <li class="nav-item dropdown">
-               <a class="nav-link dropdown-toggle active" href="#" id="navbarDropdown" role="button" data-bs-toggle="dropdown" aria-expanded="false">
-                 Tables
-               </a>
-               <ul class="dropdown-menu dropdown-menu-dark" aria-labelledby="navbarDropdown">
-                 <li><a class="dropdown-item" href="{{ url_for('ui.table_view') }}">Recent Updates</a></li>
-                 <li><a class="dropdown-item" href="{{ url_for('ui.table_view_all') }}">All Cards</a></li>
-               </ul>
-             </li>
-             <li class="nav-item dropdown">
-               <a class="nav-link dropdown-toggle active" href="#" id="navbarDropdown" role="button" data-bs-toggle="dropdown" aria-expanded="false">
-                 Reports
-               </a>
-               <ul class="dropdown-menu dropdown-menu-dark" aria-labelledby="navbarDropdown">
-                 <li><a class="dropdown-item" href="{{ url_for('ui.report_view') }}">Recent Updates</a></li>
-                 <li><a class="dropdown-item" href="{{ url_for('ui.report_view_all') }}">All Cards</a></li>
-                 <li><a class="dropdown-item" href="{{ url_for('ui.weekly_updates') }}">Weekly Report</a></li>
-               </ul>
-             </li>
-             <li class="nav-item ms-2">
-              <a class="nav-link active" href="{{ url_for('ui.get_stats') }}">Stats</a>
-             </li>
-             <li class="nav-item ms-2">
-               <a role="button" class="btn btn-dark" href="{{ url_for('ui.trends') }}"><svg xmlns="http://www.w3.org/2000/svg" width="25" height="25" fill="currentColor" role="img" aria-label="Trends" class="bi bi-graph-up-arrow" viewBox="0 0 16 16">
-                  <path fill-rule="evenodd" clip-rule="evenodd" d="M0 0h1v15h15v1H0V0Zm10 3.5a.5.5 0 0 1 .5-.5h4a.5.5 0 0 1 .5.5v4a.5.5 0 0 1-1 0V4.9l-3.613 4.417a.5.5 0 0 1-.74.037L7.06 6.767l-3.656 5.027a.5.5 0 0 1-.808-.588l4-5.5a.5.5 0 0 1 .758-.06l2.609 2.61L13.445 4H10.5a.5.5 0 0 1-.5-.5Z"/>
-                </svg></a>
-            </li>
-             <li class="nav-item ms-2">
-                <button type="button" class="btn btn-dark" id="copy" data-clipboard-target=".copy"><svg alt="Copy" xmlns="http://www.w3.org/2000/svg" width="25" height="25" fill="currentColor" role="img" aria-label="Copy to Clipboard" class="bi bi-clipboard" viewBox="0 0 16 16">
-                   <path d="M4 1.5H3a2 2 0 0 0-2 2V14a2 2 0 0 0 2 2h10a2 2 0 0 0 2-2V3.5a2 2 0 0 0-2-2h-1v1h1a1 1 0 0 1 1 1V14a1 1 0 0 1-1 1H3a1 1 0 0 1-1-1V3.5a1 1 0 0 1 1-1h1v-1z"/>
-                   <path d="M9.5 1a.5.5 0 0 1 .5.5v1a.5.5 0 0 1-.5.5h-3a.5.5 0 0 1-.5-.5v-1a.5.5 0 0 1 .5-.5h3zm-3-1A1.5 1.5 0 0 0 5 1.5v1A1.5 1.5 0 0 0 6.5 4h3A1.5 1.5 0 0 0 11 2.5v-1A1.5 1.5 0 0 0 9.5 0h-3z"/>
-                 </svg></button>
-             </li>
-             <li class="nav-item ms-2 me-2">
-              <a role="button" class="btn btn-dark" id="refresh"><svg alt="Refresh" xmlns="http://www.w3.org/2000/svg" width="28" height="28" fill="currentColor" role="img" aria-label="Refresh" class="bi bi-arrow-clockwise" viewBox="0 0 16 16">
-                   <path fill-rule="evenodd" d="M8 3a5 5 0 1 0 4.546 2.914.5.5 0 0 1 .908-.417A6 6 0 1 1 8 2v1z"/>
-                   <path d="M8 4.466V.534a.25.25 0 0 1 .41-.192l2.36 1.966c.12.1.12.284 0 .384L8.41 4.658A.25.25 0 0 1 8 4.466z"/>
-                 </svg></a>
-             </li>
-          </ul>
-          <span class="navbar-text">
-             Last generated on {{ now }} UTC
-          </span>
-          <div id="progressbar" class="w-25 ps-3 pe-3"></div>
-          <ul class="navbar-nav ms-auto">
-             <li class="nav-item">
-                <a role = "button" class="btn btn-dark btn-lg" href="https://github.com/RHsyseng/t5g-field-support-team-utils"><svg alt="github" xmlns="http://www.w3.org/2000/svg" width="28" height="28" fill="currentColor" class="bi bi-github" viewBox="0 0 16 16">
-                   <path d="M8 0C3.58 0 0 3.58 0 8c0 3.54 2.29 6.53 5.47 7.59.4.07.55-.17.55-.38 0-.19-.01-.82-.01-1.49-2.01.37-2.53-.49-2.69-.94-.09-.23-.48-.94-.82-1.13-.28-.15-.68-.52-.01-.53.63-.01 1.08.58 1.23.82.72 1.21 1.87.87 2.33.66.07-.52.28-.87.51-1.07-1.78-.2-3.64-.89-3.64-3.95 0-.87.31-1.59.82-2.15-.08-.2-.36-1.02.08-2.12 0 0 .67-.21 2.2.82.64-.18 1.32-.27 2-.27.68 0 1.36.09 2 .27 1.53-1.04 2.2-.82 2.2-.82.44 1.1.16 1.92.08 2.12.51.56.82 1.27.82 2.15 0 3.07-1.87 3.75-3.65 3.95.29.25.54.73.54 1.48 0 1.07-.01 1.93-.01 2.2 0 .21.15.46.55.38A8.012 8.012 0 0 0 16 8c0-4.42-3.58-8-8-8z"/>
-                 </svg></a>
-             </li>
-          </ul>
-       </div>
-    </div>
- </nav>
-  {% endblock %}
-</head>
-
-<body>
-  <div class="content">{% block content %}{% endblock %}</div>
-  <div class="footer d-flex flex-wrap justify-content-between align-items-center">
-    {% block footer %}
-    <div class=left>
-      Maintained by the Telco5G Field Engineering Team
-    </div>
-    <div class="d-flex justify-content-between">
-      <div class="muted"><a href="#" data-bs-html="true" data-bs-toggle="tooltip" data-bs-title="This is not a live view of systems, but rather a snapshot of the data:
-        <br>1. We update the card data from JIRA once an hour
-        <br>2. We update the case data from the case portal once every 15 minutes
-        <br>3. We update the bug data from Bugzilla/JIRA once every 12 hours
-        <br>4. We update the escalations data from JIRA every 6 hours">How does this website retrieve data?</a> 
-      </div>
-      &nbsp; &nbsp; &nbsp; 
-      <a href="https://github.com/RHsyseng/t5g-field-support-team-utils" target="_blank">t5g-field-support-team-utils</a>
-    </div>
-    {% endblock %}
-  </div>
-
-  <!-- Include Bootstrap JS Bundle -->
-  <script src="{{ url_for('static', filename='node_modules/bootstrap/dist/js/bootstrap.bundle.min.js') }}"></script>
-  
-  <!-- Copy Button JS-->
-  <script>
+    <head>
+        {% block head %}
+            <!-- Include Bootstrap -->
+            <link href="{{ url_for('static', filename='node_modules/bootstrap/dist/css/bootstrap.min.css') }}"
+                  rel="stylesheet">
+            <!-- Include CSS -->
+            <link rel="stylesheet"
+                  type="text/css"
+                  href="{{ url_for('static', filename='style.css') }}">
+            <!-- Include ClipboardJS-->
+            <script src="{{ url_for('static', filename='node_modules/clipboard/dist/clipboard.min.js') }}"></script>
+            <!-- Include ChartJS -->
+            <script src="{{ url_for('static', filename='node_modules/chart.js/dist/chart.js') }}"></script>
+            <!-- Include JQuery -->
+            <script type="text/javascript"
+                    charset="utf8"
+                    src="{{ url_for('static', filename='node_modules/jquery/dist/jquery.min.js') }}"></script>
+            <!-- Include Datatables CSS -->
+            <link rel="stylesheet"
+                  href="{{ url_for('static', filename='node_modules/datatables.net-bs5/css/dataTables.bootstrap5.min.css') }}" />
+            <link rel="stylesheet"
+                  href="{{ url_for('static', filename='node_modules/datatables.net-searchpanes-bs5/css/searchPanes.bootstrap5.min.css') }}" />
+            <link rel="stylesheet"
+                  href="{{ url_for('static', filename='node_modules/datatables.net-select-bs5/css/select.bootstrap5.min.css') }}" />
+            <title>dashboard://
+                {% block title %}{% endblock %}
+            </title>
+            <nav class="navbar navbar-expand-md navbar-dark fixed-top bg-dark">
+                <div class="container-fluid">
+                    <a class="navbar-brand" href="#top">New Card Updates</a>
+                    <button class="navbar-toggler"
+                            type="button"
+                            data-bs-toggle="collapse"
+                            data-bs-target="#navbarCollapse"
+                            aria-controls="navbarCollapse"
+                            aria-expanded="false"
+                            aria-label="Toggle navigation">
+                        <span class="navbar-toggler-icon"></span>
+                    </button>
+                    <div class="collapse navbar-collapse" id="navbarCollapse">
+                        <ul class="navbar-nav  mb-2 mb-md-0">
+                            <li class="nav-item ms-2">
+                                <a role="button" class="btn btn-dark" href="{{ url_for("ui.index") }}">
+                                    <svg alt="Home"
+                                         xmlns="http://www.w3.org/2000/svg"
+                                         width="28"
+                                         height="28"
+                                         fill="currentColor"
+                                         role="img"
+                                         aria-label="Home"
+                                         class="bi bi-house"
+                                         viewBox="0 0 16 16">
+                                        <path fill-rule="evenodd" d="M2 13.5V7h1v6.5a.5.5 0 0 0 .5.5h9a.5.5 0 0 0 .5-.5V7h1v6.5a1.5 1.5 0 0 1-1.5 1.5h-9A1.5 1.5 0 0 1 2 13.5zm11-11V6l-2-2V2.5a.5.5 0 0 1 .5-.5h1a.5.5 0 0 1 .5.5z" />
+                                        <path fill-rule="evenodd" d="M7.293 1.5a1 1 0 0 1 1.414 0l6.647 6.646a.5.5 0 0 1-.708.708L8 2.207 1.354 8.854a.5.5 0 1 1-.708-.708L7.293 1.5z" />
+                                    </svg>
+                                </a>
+                            </li>
+                            <li class="nav-item dropdown">
+                                <a class="nav-link dropdown-toggle active"
+                                   href="#"
+                                   id="navbarDropdownTables"
+                                   role="button"
+                                   data-bs-toggle="dropdown"
+                                   aria-expanded="false">Tables</a>
+                                <ul class="dropdown-menu dropdown-menu-dark"
+                                    aria-labelledby="navbarDropdownTables">
+                                    <li>
+                                        <a class="dropdown-item" href="{{ url_for("ui.table_view") }}">Recent Updates</a>
+                                    </li>
+                                    <li>
+                                        <a class="dropdown-item" href="{{ url_for("ui.table_view_all") }}">All Cards</a>
+                                    </li>
+                                </ul>
+                            </li>
+                            <li class="nav-item dropdown">
+                                <a class="nav-link dropdown-toggle active"
+                                   href="#"
+                                   id="navbarDropdownReports"
+                                   role="button"
+                                   data-bs-toggle="dropdown"
+                                   aria-expanded="false">Reports</a>
+                                <ul class="dropdown-menu dropdown-menu-dark"
+                                    aria-labelledby="navbarDropdownReports">
+                                    <li>
+                                        <a class="dropdown-item" href="{{ url_for("ui.report_view") }}">Recent Updates</a>
+                                    </li>
+                                    <li>
+                                        <a class="dropdown-item" href="{{ url_for("ui.report_view_all") }}">All Cards</a>
+                                    </li>
+                                    <li>
+                                        <a class="dropdown-item" href="{{ url_for("ui.weekly_updates") }}">Weekly Report</a>
+                                    </li>
+                                </ul>
+                            </li>
+                            <li class="nav-item ms-2">
+                                <a class="nav-link active" href="{{ url_for("ui.get_stats") }}">Stats</a>
+                            </li>
+                            <li class="nav-item ms-2">
+                                <a role="button" class="btn btn-dark" href="{{ url_for("ui.trends") }}">
+                                    <svg xmlns="http://www.w3.org/2000/svg"
+                                         width="25"
+                                         height="25"
+                                         fill="currentColor"
+                                         role="img"
+                                         aria-label="Trends"
+                                         class="bi bi-graph-up-arrow"
+                                         viewBox="0 0 16 16">
+                                        <path fill-rule="evenodd" clip-rule="evenodd" d="M0 0h1v15h15v1H0V0Zm10 3.5a.5.5 0 0 1 .5-.5h4a.5.5 0 0 1 .5.5v4a.5.5 0 0 1-1 0V4.9l-3.613 4.417a.5.5 0 0 1-.74.037L7.06 6.767l-3.656 5.027a.5.5 0 0 1-.808-.588l4-5.5a.5.5 0 0 1 .758-.06l2.609 2.61L13.445 4H10.5a.5.5 0 0 1-.5-.5Z" />
+                                    </svg>
+                                </a>
+                            </li>
+                            <li class="nav-item ms-2">
+                                <button type="button"
+                                        class="btn btn-dark"
+                                        id="copy"
+                                        data-clipboard-target=".copy">
+                                    <svg alt="Copy"
+                                         xmlns="http://www.w3.org/2000/svg"
+                                         width="25"
+                                         height="25"
+                                         fill="currentColor"
+                                         role="img"
+                                         aria-label="Copy to Clipboard"
+                                         class="bi bi-clipboard"
+                                         viewBox="0 0 16 16">
+                                        <path d="M4 1.5H3a2 2 0 0 0-2 2V14a2 2 0 0 0 2 2h10a2 2 0 0 0 2-2V3.5a2 2 0 0 0-2-2h-1v1h1a1 1 0 0 1 1 1V14a1 1 0 0 1-1 1H3a1 1 0 0 1-1-1V3.5a1 1 0 0 1 1-1h1v-1z" />
+                                        <path d="M9.5 1a.5.5 0 0 1 .5.5v1a.5.5 0 0 1-.5.5h-3a.5.5 0 0 1-.5-.5v-1a.5.5 0 0 1 .5-.5h3zm-3-1A1.5 1.5 0 0 0 5 1.5v1A1.5 1.5 0 0 0 6.5 4h3A1.5 1.5 0 0 0 11 2.5v-1A1.5 1.5 0 0 0 9.5 0h-3z" />
+                                    </svg>
+                                </button>
+                            </li>
+                            <li class="nav-item ms-2 me-2">
+                                <a role="button" class="btn btn-dark" id="refresh">
+                                    <svg alt="Refresh"
+                                         xmlns="http://www.w3.org/2000/svg"
+                                         width="28"
+                                         height="28"
+                                         fill="currentColor"
+                                         role="img"
+                                         aria-label="Refresh"
+                                         class="bi bi-arrow-clockwise"
+                                         viewBox="0 0 16 16">
+                                        <path fill-rule="evenodd" d="M8 3a5 5 0 1 0 4.546 2.914.5.5 0 0 1 .908-.417A6 6 0 1 1 8 2v1z" />
+                                        <path d="M8 4.466V.534a.25.25 0 0 1 .41-.192l2.36 1.966c.12.1.12.284 0 .384L8.41 4.658A.25.25 0 0 1 8 4.466z" />
+                                    </svg>
+                                </a>
+                            </li>
+                        </ul>
+                        <span class="navbar-text">Last generated on {{ now }} UTC</span>
+                        <div id="progressbar" class="w-25 ps-3 pe-3"></div>
+                        <ul class="navbar-nav ms-auto">
+                            <li class="nav-item">
+                                <a role="button"
+                                   class="btn btn-dark btn-lg"
+                                   href="https://github.com/RHsyseng/t5g-field-support-team-utils">
+                                    <svg alt="github"
+                                         xmlns="http://www.w3.org/2000/svg"
+                                         width="28"
+                                         height="28"
+                                         fill="currentColor"
+                                         class="bi bi-github"
+                                         viewBox="0 0 16 16">
+                                        <path d="M8 0C3.58 0 0 3.58 0 8c0 3.54 2.29 6.53 5.47 7.59.4.07.55-.17.55-.38 0-.19-.01-.82-.01-1.49-2.01.37-2.53-.49-2.69-.94-.09-.23-.48-.94-.82-1.13-.28-.15-.68-.52-.01-.53.63-.01 1.08.58 1.23.82.72 1.21 1.87.87 2.33.66.07-.52.28-.87.51-1.07-1.78-.2-3.64-.89-3.64-3.95 0-.87.31-1.59.82-2.15-.08-.2-.36-1.02.08-2.12 0 0 .67-.21 2.2.82.64-.18 1.32-.27 2-.27.68 0 1.36.09 2 .27 1.53-1.04 2.2-.82 2.2-.82.44 1.1.16 1.92.08 2.12.51.56.82 1.27.82 2.15 0 3.07-1.87 3.75-3.65 3.95.29.25.54.73.54 1.48 0 1.07-.01 1.93-.01 2.2 0 .21.15.46.55.38A8.012 8.012 0 0 0 16 8c0-4.42-3.58-8-8-8z" />
+                                    </svg>
+                                </a>
+                            </li>
+                        </ul>
+                    </div>
+                </div>
+            </nav>
+        {% endblock %}
+    </head>
+    <body>
+        <div class="content">
+            {% block content %}{% endblock %}
+        </div>
+        <div class="footer d-flex flex-wrap justify-content-between align-items-center">
+            {% block footer %}
+                <div class="left">Maintained by the Telco5G Field Engineering Team</div>
+                <div class="d-flex justify-content-between">
+                    <div class="muted">
+                        <a href="#" data-bs-html="true" data-bs-toggle="tooltip" data-bs-title="This is not a live view of systems, but rather a snapshot of the data:
+                            <br>
+                            1. We update the card data from JIRA once an hour
+                            <br>
+                            2. We update the case data from the case portal once every 15 minutes
+                            <br>
+                            3. We update the bug data from Bugzilla/JIRA once every 12 hours
+                            <br>
+                        4. We update the escalations data from JIRA every 6 hours">How does this website retrieve data?</a>
+                    </div>
+                    &nbsp; &nbsp; &nbsp;
+                    <a href="https://github.com/RHsyseng/t5g-field-support-team-utils"
+                       target="_blank">t5g-field-support-team-utils</a>
+                </div>
+            {% endblock %}
+        </div>
+        <!-- Include Bootstrap JS Bundle -->
+        <script src="{{ url_for('static', filename='node_modules/bootstrap/dist/js/bootstrap.bundle.min.js') }}"></script>
+        <!-- Copy Button JS-->
+        <script>
       var clipboard = new ClipboardJS('#copy');
       clipboard.on('success', function (e) {
          console.log(e);
@@ -128,12 +208,13 @@
       clipboard.on('error', function (e) {
          console.log(e);
       });
-  </script>
-  <script>
+        </script>
+        <script>
     const tooltipTriggerList = document.querySelectorAll('[data-bs-toggle="tooltip"]')
     const tooltipList = [...tooltipTriggerList].map(tooltipTriggerEl => new bootstrap.Tooltip(tooltipTriggerEl))
-  </script>
-<script type="text/javascript" charset="utf8" src="{{ url_for('static', filename='js/refresh.js') }}"></script>
-</body>
-
+        </script>
+        <script type="text/javascript"
+                charset="utf8"
+                src="{{ url_for('static', filename='js/refresh.js') }}"></script>
+    </body>
 </html>

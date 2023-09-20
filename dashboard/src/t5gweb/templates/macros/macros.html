@@ -1,0 +1,50 @@
+{% macro outcomes_table(histogram_stats) -%}
+    {% for outcome in histogram_stats %}
+        <div class="col">
+            <div class="card mx-auto">
+                <div class="card-body">
+                    <div id="{{ outcome | lower }}Histogram"></div>
+                    <div class="container pt-3 pb-5">
+                        <h2>Statistics</h2>
+                        <table class="table">
+                            <thead>
+                                <tr>
+                                    <th></th>
+                                    {% for severity in histogram_stats[outcome] %}<th>{{ severity }}</th>{% endfor %}
+                                </tr>
+                            </thead>
+                            <tbody>
+                                <tr>
+                                    <td>Average Time Until {{ outcome }} (Days)</td>
+                                    {% for severity in histogram_stats[outcome] %}
+                                        {% if histogram_stats[outcome][severity]["mean"] != None %}
+                                            <td>{{ histogram_stats[outcome][severity]["mean"] | round(1, 'common') }}</td>
+                                        {% else %}
+                                            <td>0</td>
+                                        {% endif %}
+                                    {% endfor %}
+                                </tr>
+                                <tr>
+                                    <td>Median Time Until {{ outcome }} (Days)</td>
+                                    {% for severity in histogram_stats[outcome] %}
+                                        {% if histogram_stats[outcome][severity]["median"] != None %}
+                                            <td>{{ histogram_stats[outcome][severity]["median"] | round(1, 'common') }}</td>
+                                        {% else %}
+                                            <td>0</td>
+                                        {% endif %}
+                                    {% endfor %}
+                                </tr>
+                                <tr>
+                                    <td># of Cases</td>
+                                    {% for severity in histogram_stats[outcome] %}
+                                        <td>{{ histogram_stats[outcome][severity]["data"] | length }}</td>
+                                    {% endfor %}
+                                </tr>
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            </div>
+        </div>
+    {% endfor %}
+{%- endmacro %}

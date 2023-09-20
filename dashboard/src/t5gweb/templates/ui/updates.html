@@ -1,99 +1,162 @@
 {% extends "skeleton.html" %}
 {% block title %}{{ page_title }}{% endblock %}
 {% block content %}
-   <a id="top"></a>
-   <div class="container-fluid pt-2 ms-0">
-      <div class="row">
-         <div class="col-2">
-                     <!-- Sidebar Derived from https://getbootstrap.com/docs/5.1/examples/#snippets -->
-            <div class="flex-shrink-0 p-3 bg-white sticky-top sb">
-               <a role="button" class="btn btn-outline-dark btn-lg mb-2" href="{{ request.url | replace('updates', 'table') }}">Table View</a>
-               <ul class="list-unstyled ps-0">           
-                  {% for account in new_comments %}
-                  <li class="mb-1">    
-                     <button class="btn btn-toggle align-items-center text-start rounded collapsed" data-bs-toggle="collapse" data-bs-target='#{{ account | replace(" ", "-") | replace(",", "-") | replace(".", "-") | replace("(", "-") | replace(")", "-") | replace("&", "-") }}-collapse' aria-expanded="false">
-                        {{ account }}
-                     </button>
-                     <div class="collapse" id='{{ account | replace(" ", "-") | replace(",", "-") | replace(".", "-") | replace("(", "-") | replace(")", "-") | replace("&", "-") }}-collapse'>
-                        <ul class="btn-toggle-nav list-unstyled fw-normal pb-1 small">
-                           {% if new_comments[account] != "No Updates" %}
-                              {% for status in new_comments[account] %}
-                                 {% for details in new_comments[account][status] %}
-                                    <li><a href=#{{ new_comments[account][status][details]['case_number'] }} class="link-dark rounded">{{ new_comments[account][status][details]['case_number'] }}: {{ new_comments[account][status][details]['summary'] }}</a></li>
-                                 {% endfor %}
-                              {% endfor %}
-                           {% else %}
-                           <li><a href=#{{ account | replace(" ", "-") }}-no-update class="link-dark rounded">No Updates</a></li>
-                           {% endif %}
-                        </ul>
-                     </div>
-                  </li> 
-                  {% endfor %}   
-               </ul>
+    <a id="top"></a>
+    <div class="container-fluid pt-2 ms-0">
+        <div class="row">
+            <div class="col-2">
+                <!-- Sidebar Derived from https://getbootstrap.com/docs/5.1/examples/#snippets -->
+                <div class="flex-shrink-0 p-3 bg-white sticky-top sb">
+                    <a role="button"
+                       class="btn btn-outline-dark btn-lg mb-2"
+                       href="{{ request.url | replace('updates', 'table') }}">Table View</a>
+                    <ul class="list-unstyled ps-0">
+                        {% for account in new_comments %}
+                            <li class="mb-1">
+                                <button class="btn btn-toggle align-items-center text-start rounded collapsed"
+                                        data-bs-toggle="collapse"
+                                        data-bs-target="#{{ account | replace(' ', '-') | replace(',', '-') | replace('.', '-') | replace('(', '-') | replace(')', '-') | replace('&', '-') }}-collapse"
+                                        aria-expanded="false">{{ account }}</button>
+                                <div class="collapse"
+                                     id="{{ account | replace(' ', '-') | replace(',', '-') | replace('.', '-') | replace('(', '-') | replace(')', '-') | replace('&', '-') }}-collapse">
+                                    <ul class="btn-toggle-nav list-unstyled fw-normal pb-1 small">
+                                        {% if new_comments[account] != "No Updates" %}
+                                            {% for status in new_comments[account] %}
+                                                {% for details in new_comments[account][status] %}
+                                                    <li>
+                                                        <a href="#{{ new_comments[account][status][details]['case_number'] }}"
+                                                           class="link-dark rounded">{{ new_comments[account][status][details]['case_number'] }}: {{ new_comments[account][status][details]['summary'] }}</a>
+                                                    </li>
+                                                {% endfor %}
+                                            {% endfor %}
+                                        {% else %}
+                                            <li>
+                                                <a href="#{{ account | replace(' ', '-') }}-no-update"
+                                                   class="link-dark rounded">No Updates</a>
+                                            </li>
+                                        {% endif %}
+                                    </ul>
+                                </div>
+                            </li>
+                        {% endfor %}
+                    </ul>
+                </div>
             </div>
-         </div>
-         <div class="col">      
-            <div class="copy pt-5">
-              {% for account in new_comments %}
-                  <ul>
-                  <li><span class = "account"><a href="{{ url_for('ui.get_account', account=account) }}">{{ account }}</a></span></li>
-                  {% if new_comments[account] != "No Updates" %}
-                     {% for status in new_comments[account] %}
-                     
-                        {% if new_comments[account][status] | length > 0 %}
+            <div class="col">
+                <div class="copy pt-5">
+                    {% for account in new_comments %}
                         <ul>
-                           <li><span class = "status">{{ status }}</span></li>
-                              {% for details in new_comments[account][status] %}
-                                 <span class="anchor" id={{ new_comments[account][status][details]['case_number'] }}></span>
-                                 <ul class="highlight pe-3 pb-3">
-                                    <li class="header" id = {{ new_comments[account][status][details]['case_number'] }}><a href=https://access.redhat.com/support/cases/#/case/{{ new_comments[account][status][details]['case_number'] }} target="_blank">{{ new_comments[account][status][details]['case_number'] }}</a> <span class="badge internalstatus {{ new_comments[account][status][details]['card_status'] | lower() | replace(' ', '-') | replace('\'', '') }}">{{ new_comments[account][status][details]['card_status'] }}</span> | <span class="badge severity {{ new_comments[account][status][details]['severity'] | lower() }}">Severity: {{ new_comments[account][status][details]['severity'] }}</span>{% if new_comments[account][status][details]['escalated'] %} |  <span style="background-color: #FFFF00" class="p-1"><svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" fill="red" class="bi bi-exclamation-octagon-fill" viewBox="0 0 16 16"><path d="M11.46.146A.5.5 0 0 0 11.107 0H4.893a.5.5 0 0 0-.353.146L.146 4.54A.5.5 0 0 0 0 4.893v6.214a.5.5 0 0 0 .146.353l4.394 4.394a.5.5 0 0 0 .353.146h6.214a.5.5 0 0 0 .353-.146l4.394-4.394a.5.5 0 0 0 .146-.353V4.893a.5.5 0 0 0-.146-.353L11.46.146zM8 4c.535 0 .954.462.9.995l-.35 3.507a.552.552 0 0 1-1.1 0L7.1 4.995A.905.905 0 0 1 8 4zm.002 6a1 1 0 1 1 0 2 1 1 0 0 1 0-2z"/></svg> On Prio-list</span>{% endif %} {% if new_comments[account][status][details]['watched'] %} |  <span style="background-color: #FFFF00" class="p-1"><svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" fill="red" class="bi bi-exclamation-octagon-fill" viewBox="0 0 16 16"><path d="M11.46.146A.5.5 0 0 0 11.107 0H4.893a.5.5 0 0 0-.353.146L.146 4.54A.5.5 0 0 0 0 4.893v6.214a.5.5 0 0 0 .146.353l4.394 4.394a.5.5 0 0 0 .353.146h6.214a.5.5 0 0 0 .353-.146l4.394-4.394a.5.5 0 0 0 .146-.353V4.893a.5.5 0 0 0-.146-.353L11.46.146zM8 4c.535 0 .954.462.9.995l-.35 3.507a.552.552 0 0 1-1.1 0L7.1 4.995A.905.905 0 0 1 8 4zm.002 6a1 1 0 1 1 0 2 1 1 0 0 1 0-2z"/></svg> WatchList</span>{% endif %} | <span class="case">{{ new_comments[account][status][details]['summary'] }}</span> (Jira: <a href={{ jira_server }}/browse/{{ details }} target="_blank">{{ details }}</a> / Assignee: {{ new_comments[account][status][details]['assignee']['displayName'] }}{% if new_comments[account][status][details]['contributor'] | length %} / Contributor: {% endif %}{% for contributor in new_comments[account][status][details]['contributor'] %}{{ contributor['displayName'] }}{{ ", " if not loop.last else "" }}{% endfor %}) | <span class="fw-bold">Product:</span> {{ new_comments[account][status][details]['product'] }}</li>
-                                    {% if new_comments[account][status][details]['bugzilla'] %}
-                                       <ul>
-                                          <li> Bugzillas:
-                                             <div class="table-responsive">
-                                                <table class="table table-hover w-100">
-                                                   <thead>
-                                                      <tr><th>#</th><th>Summary</th><th>Target Release</th><th>Assignee</th><th>QA Contact</th></th><th>Last Updated</th><th>Status</th></tr></thead>
-                                                      <tbody>
-                                                         {% for bug in new_comments[account][status][details]['bugzilla'] %}
-                                                         <tr><td><a href="{{ bug['bugzillaLink'] }}" target="_blank">{{ bug['bugzillaNumber'] }}</a></td>
-                                                            <td>{{ bug['summary'] }}</td>
-                                                            <td>{{ bug['target_release'][0] }}</td>
-                                                            <td>{{ bug['assignee'] }}</td>
-                                                            <td>{{ bug['qa_contact'] }}</td>
-                                                            <td>{{ bug['last_change_time'] }}</td>
-                                                            <td>{{ bug['status'] }}</td>
-                                                         </tr>
-                                                         {% endfor %}
-                                                      </tbody>
-                                                </table>
-                                             </div>
-                                          </li>
-                                       </ul>
-                                    {% endif %}
-                                    <ul>
-                                       <li>Comments: </li>
-                                    {% for comment in new_comments[account][status][details]['comments'] | reverse %}
-                                       <ul>
-                                          <li class="text-break"> <span class="fw-bold fst-italic">{{ comment[1][:10] }}</span> - {{ comment[0] | safe }}</li>
-                                       </ul>
+                            <li>
+                                <span class = "account"><a href="{{ url_for('ui.get_account', account=account) }}">{{ account }}</a></span>
+                            </li>
+                            {% if new_comments[account] != "No Updates" %}
+                                {% for status in new_comments[account] %}
+                                    {% if new_comments[account][status] | length > 0 %}
+                                        <ul>
+                                            <li>
+                                                <span class = "status">{{ status }}</span>
+                                            </li>
+                                            {% for details in new_comments[account][status] %}
+                                                <span class="anchor"
+                                                      id="{{ new_comments[account][status][details]['case_number'] }}"></span>
+                                                <ul class="highlight pe-3 pb-3">
+                                                    <li class="header"
+                                                        id="{{ new_comments[account][status][details]['case_number'] }}">
+                                                        <a href="https://access.redhat.com/support/cases/#/case/{{ new_comments[account][status][details]['case_number'] }}"
+                                                           target="_blank">{{ new_comments[account][status][details]['case_number'] }}</a> <span class="badge internalstatus {{ new_comments[account][status][details]['card_status'] | lower() | replace(' ', '-') | replace('\'', '') }}">{{ new_comments[account][status][details]['card_status'] }}</span> | <span class="badge severity {{ new_comments[account][status][details]['severity'] | lower() }}">Severity: {{ new_comments[account][status][details]['severity'] }}</span>
+                                                        {% if new_comments[account][status][details]['escalated'] %}
+                                                            |  <span style="background-color: #FFFF00" class="p-1">
+                                                            <svg xmlns="http://www.w3.org/2000/svg"
+                                                                 width="16"
+                                                                 height="16"
+                                                                 fill="red"
+                                                                 class="bi bi-exclamation-octagon-fill"
+                                                                 viewBox="0 0 16 16">
+                                                                <path d="M11.46.146A.5.5 0 0 0 11.107 0H4.893a.5.5 0 0 0-.353.146L.146 4.54A.5.5 0 0 0 0 4.893v6.214a.5.5 0 0 0 .146.353l4.394 4.394a.5.5 0 0 0 .353.146h6.214a.5.5 0 0 0 .353-.146l4.394-4.394a.5.5 0 0 0 .146-.353V4.893a.5.5 0 0 0-.146-.353L11.46.146zM8 4c.535 0 .954.462.9.995l-.35 3.507a.552.552 0 0 1-1.1 0L7.1 4.995A.905.905 0 0 1 8 4zm.002 6a1 1 0 1 1 0 2 1 1 0 0 1 0-2z" />
+                                                            </svg>
+                                                        On Prio-list</span>
+                                                    {% endif %}
+                                                    {% if new_comments[account][status][details]['watched'] %}
+                                                        |  <span style="background-color: #FFFF00" class="p-1">
+                                                        <svg xmlns="http://www.w3.org/2000/svg"
+                                                             width="16"
+                                                             height="16"
+                                                             fill="red"
+                                                             class="bi bi-exclamation-octagon-fill"
+                                                             viewBox="0 0 16 16">
+                                                            <path d="M11.46.146A.5.5 0 0 0 11.107 0H4.893a.5.5 0 0 0-.353.146L.146 4.54A.5.5 0 0 0 0 4.893v6.214a.5.5 0 0 0 .146.353l4.394 4.394a.5.5 0 0 0 .353.146h6.214a.5.5 0 0 0 .353-.146l4.394-4.394a.5.5 0 0 0 .146-.353V4.893a.5.5 0 0 0-.146-.353L11.46.146zM8 4c.535 0 .954.462.9.995l-.35 3.507a.552.552 0 0 1-1.1 0L7.1 4.995A.905.905 0 0 1 8 4zm.002 6a1 1 0 1 1 0 2 1 1 0 0 1 0-2z" />
+                                                        </svg>
+                                                    WatchList</span>
+                                                {% endif %}
+                                                | <span class="case">{{ new_comments[account][status][details]['summary'] }}</span> (Jira: <a href="{{ jira_server }}/browse/{{ details }}" target="_blank">{{ details }}</a> / Assignee: {{ new_comments[account][status][details]['assignee']['displayName'] }}
+                                                {% if new_comments[account][status][details]['contributor'] | length %}/ Contributor:{% endif %}
+                                                {% for contributor in new_comments[account][status][details]['contributor'] %}
+                                                    {{ contributor['displayName'] }}{{ ", " if not loop.last else "" }}
+                                                {% endfor %}
+                                                ) | <span class="fw-bold">Product:</span> {{ new_comments[account][status][details]['product'] }}
+                                            </li>
+                                            {% if new_comments[account][status][details]['bugzilla'] %}
+                                                <ul>
+                                                    <li>
+                                                        Bugzillas:
+                                                        <div class="table-responsive">
+                                                            <table class="table table-hover w-100">
+                                                                <thead>
+                                                                    <tr>
+                                                                        <th>#</th>
+                                                                        <th>Summary</th>
+                                                                        <th>Target Release</th>
+                                                                        <th>Assignee</th>
+                                                                        <th>QA Contact</th>
+                                                                        <th>Last Updated</th>
+                                                                        <th>Status</th>
+                                                                    </tr>
+                                                                </thead>
+                                                                <tbody>
+                                                                    {% for bug in new_comments[account][status][details]['bugzilla'] %}
+                                                                        <tr>
+                                                                            <td>
+                                                                                <a href="{{ bug['bugzillaLink'] }}" target="_blank">{{ bug['bugzillaNumber'] }}</a>
+                                                                            </td>
+                                                                            <td>{{ bug['summary'] }}</td>
+                                                                            <td>{{ bug['target_release'][0] }}</td>
+                                                                            <td>{{ bug['assignee'] }}</td>
+                                                                            <td>{{ bug['qa_contact'] }}</td>
+                                                                            <td>{{ bug['last_change_time'] }}</td>
+                                                                            <td>{{ bug['status'] }}</td>
+                                                                        </tr>
+                                                                    {% endfor %}
+                                                                </tbody>
+                                                            </table>
+                                                        </div>
+                                                    </li>
+                                                </ul>
+                                            {% endif %}
+                                            <ul>
+                                                <li>Comments:</li>
+                                                {% for comment in new_comments[account][status][details]['comments'] | reverse %}
+                                                    <ul>
+                                                        <li class="text-break">
+                                                            <span class="fw-bold fst-italic">{{ comment[1][:10] }}</span> - {{ comment[0] | safe }}
+                                                        </li>
+                                                    </ul>
+                                                {% endfor %}
+                                            </ul>
+                                        </ul>
                                     {% endfor %}
-                                 </ul>
-                                 </ul>
-                              {% endfor %}
+                                </ul>
+                            {% endif %}
+                        {% endfor %}
+                    {% else %}
+                        <span class="anchor" id="{{ account | replace(' ', '-') }}-no-update"></span>
+                        <ul class="highlight">
+                            <li id="{{ account | replace(' ', '-') }}-no-update">{{ new_comments[account] }}</li>
                         </ul>
-                        {% endif %}
-                     {% endfor %}
-                  {% else %}
-                  <span class="anchor" id={{ account | replace(" ", "-") }}-no-update></span>
-                     <ul class="highlight">
-                        <li id={{ account | replace(" ", "-") }}-no-update>{{ new_comments[account] }}</li>
-                     </ul>
-                  {% endif %}
-                  </ul>
-               {% endfor %}
-            </div>
-         </div>
-      </div>
-   </div>
+                    {% endif %}
+                </ul>
+            {% endfor %}
+        </div>
+    </div>
+</div>
+</div>
 {% endblock %}

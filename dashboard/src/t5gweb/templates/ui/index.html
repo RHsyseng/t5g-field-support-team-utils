@@ -1,32 +1,42 @@
 {% extends "skeleton.html" %}
 {% block title %}{% endblock %}
 {% block content %}
-
-
-<a id="top"></a>
-
-<div class="new-cases">
-    <h2>{{ new_cases | length }} <a href="{{ url_for('ui.report_view') }}">Cases</a> Opened in the Last 7 Days:</h2>
-    <div class="copy">
-        <table class="table table-borderless table-hover">
-        <th>case#</th><th>account</th><th>severity</th><th>summary</th>
-        {% for case in new_cases %}
-        <tr>
-            <td><a href=https://access.redhat.com/support/cases/#/case/{{ case }} target="_blank">{{ case }}</a></td>
-            <td><a href="{{ url_for('ui.get_account', account=new_cases[case]['account']) }}">{{ new_cases[case]['account'] }}</a></td>
-            <td>{{ new_cases[case]['severity'] }}</td>
-            <td>{{ new_cases[case]['problem'] }}</td>
-        </tr>
-        {% endfor %}
-        </table>
-    </div>
-    <hr class="divide">
-    <a role="button" class="btn btn-outline-dark btn-lg" href="{{ url_for('ui.report_view') }}">Recent Updates</a>
-    <a role="button" class="btn btn-outline-dark btn-lg" href="{{ url_for('ui.report_view_all') }}">All Cards</a>
-
-    <div class="chart-container">
-        <canvas id="myChart" width="1475px" height="800px"></canvas>
-        <script>
+    <a id="top"></a>
+    <div class="new-cases">
+        <h2>
+            {{ new_cases | length }} <a href="{{ url_for("ui.report_view") }}">Cases</a> Opened in the Last 7 Days:
+        </h2>
+        <div class="copy">
+            <table class="table table-borderless table-hover">
+                <th>case#</th>
+                <th>account</th>
+                <th>severity</th>
+                <th>summary</th>
+                {% for case in new_cases %}
+                    <tr>
+                        <td>
+                            <a href="https://access.redhat.com/support/cases/#/case/{{ case }}"
+                               target="_blank">{{ case }}</a>
+                        </td>
+                        <td>
+                            <a href="{{ url_for('ui.get_account', account=new_cases[case]['account']) }}">{{ new_cases[case]['account'] }}</a>
+                        </td>
+                        <td>{{ new_cases[case]['severity'] }}</td>
+                        <td>{{ new_cases[case]['problem'] }}</td>
+                    </tr>
+                {% endfor %}
+            </table>
+        </div>
+        <hr class="divide">
+        <a role="button"
+           class="btn btn-outline-dark btn-lg"
+           href="{{ url_for("ui.report_view") }}">Recent Updates</a>
+        <a role="button"
+           class="btn btn-outline-dark btn-lg"
+           href="{{ url_for("ui.report_view_all") }}">All Cards</a>
+        <div class="chart-container">
+            <canvas id="myChart" width="1475px" height="800px"></canvas>
+            <script>
             var ctx = document.getElementById('myChart').getContext('2d');
             var myChart = new Chart(ctx, {
                 type: 'bar',
@@ -86,9 +96,7 @@
                 }
             }
             });
-        </script>
-
+            </script>
+        </div>
     </div>
-    </a>
-</div>
-  {% endblock %}
+{% endblock %}
