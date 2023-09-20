@@ -1,20 +1,34 @@
 {% extends "skeleton.html" %}
+{% import 'macros/macros.html' as macros %}
 {% block title %}{{ page_title }}{% endblock %}
 {% block content %}
-   <!-- Include jQuery + DataTables -->
-   <script type="text/javascript" charset="utf8" src="{{ url_for('static', filename='node_modules/jquery/dist/jquery.min.js') }}"></script>
-   <script type="text/javascript" charset="utf8" src="{{ url_for('static', filename='node_modules/datatables.net/js/jquery.dataTables.js') }}"></script>
-   <script type="text/javascript" charset="utf8" src="{{ url_for('static', filename='node_modules/datatables.net-bs5/js/dataTables.bootstrap5.min.js') }}"></script>
-   <script type="text/javascript" charset="utf8" src="{{ url_for('static', filename='js/plugins.js') }}"></script>
-   <script type="text/javascript" charset="utf8" src="{{ url_for('static', filename='node_modules/plotly.js-cartesian-dist-min/plotly-cartesian.min.js') }}"></script>
-
-<div class="container-fluid copy mt-5">
-    <h2>Overall Stats:</h2>
-    <table class="table table-bordered table-hover table-responsive mt-5 w-100" id="overall">
-        <thead>
-            <tr><th class="text-center">Metric</th><th class="text-center">Count</th></tr>
-        </thead>
-        <tbody class="list">
+    <!-- Include jQuery + DataTables -->
+    <script type="text/javascript"
+            charset="utf8"
+            src="{{ url_for('static', filename='node_modules/jquery/dist/jquery.min.js') }}"></script>
+    <script type="text/javascript"
+            charset="utf8"
+            src="{{ url_for('static', filename='node_modules/datatables.net/js/jquery.dataTables.js') }}"></script>
+    <script type="text/javascript"
+            charset="utf8"
+            src="{{ url_for('static', filename='node_modules/datatables.net-bs5/js/dataTables.bootstrap5.min.js') }}"></script>
+    <script type="text/javascript"
+            charset="utf8"
+            src="{{ url_for('static', filename='js/plugins.js') }}"></script>
+    <script type="text/javascript"
+            charset="utf8"
+            src="{{ url_for('static', filename='node_modules/plotly.js-cartesian-dist-min/plotly-cartesian.min.js') }}"></script>
+    <div class="container-fluid copy mt-5">
+        <h2>Overall Stats:</h2>
+        <table class="table table-bordered table-hover table-responsive mt-5 w-100"
+               id="overall">
+            <thead>
+                <tr>
+                    <th class="text-center">Metric</th>
+                    <th class="text-center">Count</th>
+                </tr>
+            </thead>
+            <tbody class="list">
                 <tr>
                     <td class="align-middle">Open Cases</td>
                     <td class="align-middle text-center">{{ stats['open_cases'] }}</td>
@@ -62,13 +76,14 @@
                 <tr>
                     <td class="align-middle">Bugs With No Target</td>
                     <td class="align-middle text-center">{{ stats['bugs']['no_target'] }}</td>
-        </tbody>
-    </table>
-    <div class="chart-container pt-3">
-        <button class="btn btn-outline-dark" id="hide-stats">Hide All</button>
-        <button class="btn btn-outline-dark" id="show-stats">Show All</button>
-        <canvas id="statsChart"></canvas>
-        <script>
+                </tr>
+            </tbody>
+        </table>
+        <div class="chart-container pt-3">
+            <button class="btn btn-outline-dark" id="hide-stats">Hide All</button>
+            <button class="btn btn-outline-dark" id="show-stats">Show All</button>
+            <canvas id="statsChart"></canvas>
+            <script>
             Chart.defaults.scales.linear.min = 0;
             var ctx = document.getElementById('statsChart').getContext('2d');
             var statsChart = new Chart(ctx, {
@@ -156,186 +171,113 @@
                 ]
                 }
             });
-        </script>
-    </div>
-    <br>
-    <h2>Breakdowns:</h2>
-    <div class="row">
-        <div class="col-12 col-xl-6">
-            <table class="table table-bordered table-hover table-responsive mt-5 w-100 display" id="customers">
-                <thead>
-                    <tr><th class="text-center">Customer</th><th class="text-center">Number of Open Cases</th></tr>
-                </thead>
-                <tbody class="list">
-                        {% for customer in stats['by_customer'] %}
-                        <tr>
-                            <td class="align-middle"><a href="{{ url_for('ui.get_account', account=customer) }}">{{ customer }}</a></td>
-                            <td class="align-middle text-center">{{ stats['by_customer'][customer] }}</td>
-                        </tr>
-                        {% endfor %}
-                </tbody>
-            </table>
+            </script>
         </div>
-        <div class="col-12 col-xl-6">
-            <table class="table table-bordered table-hover table-responsive mt-5 w-100" id="severity">
-                <thead>
-                    <tr><th class="text-center">Severity</th><th class="text-center">Number of Open Cases</th></tr>
-                </thead>
-                <tbody class="list">
+        <br>
+        <h2>Breakdowns:</h2>
+        <div class="row">
+            <div class="col-12 col-xl-6">
+                <table class="table table-bordered table-hover table-responsive mt-5 w-100 display"
+                       id="customers">
+                    <thead>
+                        <tr>
+                            <th class="text-center">Customer</th>
+                            <th class="text-center">Number of Open Cases</th>
+                        </tr>
+                    </thead>
+                    <tbody class="list">
+                        {% for customer in stats['by_customer'] %}
+                            <tr>
+                                <td class="align-middle">
+                                    <a href="{{ url_for('ui.get_account', account=customer) }}">{{ customer }}</a>
+                                </td>
+                                <td class="align-middle text-center">{{ stats['by_customer'][customer] }}</td>
+                            </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+            <div class="col-12 col-xl-6">
+                <table class="table table-bordered table-hover table-responsive mt-5 w-100"
+                       id="severity">
+                    <thead>
+                        <tr>
+                            <th class="text-center">Severity</th>
+                            <th class="text-center">Number of Open Cases</th>
+                        </tr>
+                    </thead>
+                    <tbody class="list">
                         {% for severity in stats['by_severity'] %}
-                        <tr>
-                            <td class="align-middle">{{ severity }}</td>
-                            <td class="align-middle text-center">{{ stats['by_severity'][severity] }}</td>
-                        </tr>
+                            <tr>
+                                <td class="align-middle">{{ severity }}</td>
+                                <td class="align-middle text-center">{{ stats['by_severity'][severity] }}</td>
+                            </tr>
                         {% endfor %}
-                </tbody>
-            </table>
-            <table class="table table-bordered table-hover table-responsive mt-5 w-100 display" id="status">
-                <thead>
-                    <tr><th class="text-center">Status</th><th class="text-center">Number of Cases</th></tr>
-                </thead>
-                <tbody class="list">
+                    </tbody>
+                </table>
+                <table class="table table-bordered table-hover table-responsive mt-5 w-100 display"
+                       id="status">
+                    <thead>
+                        <tr>
+                            <th class="text-center">Status</th>
+                            <th class="text-center">Number of Cases</th>
+                        </tr>
+                    </thead>
+                    <tbody class="list">
                         {% for status in stats['by_status'] %}
-                        <tr>
-                            <td class="align-middle">{{ status }}</td>
-                            <td class="align-middle text-center">{{ stats['by_status'][status] }}</td>
-                        </tr>
+                            <tr>
+                                <td class="align-middle">{{ status }}</td>
+                                <td class="align-middle text-center">{{ stats['by_status'][status] }}</td>
+                            </tr>
                         {% endfor %}
-                </tbody>
-            </table>
-
-            <table class="table table-bordered table-hover table-responsive mt-5 w-100 display" id="engineers">
-                <thead>
-                    <tr><th class="text-center">Field Engineer</th><th class="text-center">Number of Open Cases</th></tr>
-                </thead>
-                <tbody class="list">
+                    </tbody>
+                </table>
+                <table class="table table-bordered table-hover table-responsive mt-5 w-100 display"
+                       id="engineers">
+                    <thead>
+                        <tr>
+                            <th class="text-center">Field Engineer</th>
+                            <th class="text-center">Number of Open Cases</th>
+                        </tr>
+                    </thead>
+                    <tbody class="list">
                         {% for engineer in stats['by_engineer'] %}
-                        <tr>
-                            <td class="align-middle">{{ engineer }}</td>
-                            <td class="align-middle text-center">{{ stats['by_engineer'][engineer] }}</td>
-                        </tr>
+                            <tr>
+                                <td class="align-middle">{{ engineer }}</td>
+                                <td class="align-middle text-center">{{ stats['by_engineer'][engineer] }}</td>
+                            </tr>
                         {% endfor %}
-                </tbody>
-            </table>
-            <div class="row">
-                <div class="col">
-                    <div class="card mx-auto">
-                        <div class="card-body">
-                            <div id="reliefHistogram"></div>
-                            <div class="container pt-3 pb-5">
-                                <h2>Statistics</h2>
-                                <table class="table">
-                                    <thead>
-                                        <tr>
-                                            <th></th>
-                                            <th>Urgent</th>
-                                            <th>High</th>
-                                            <th>Normal</th>
-                                            <th>Low</th>
-                                        </tr>
-                                    </thead>
-                                    <tbody>
-                                        <tr>
-                                            <td>Average Time Until Relief (Days)</td>
-                                            <td id="avg1"></td>
-                                            <td id="avg2"></td>
-                                            <td id="avg3"></td>
-                                            <td id="avg4"></td>
-                                        </tr>
-                                        <tr>
-                                            <td>Median Time Until Relief (Days)</td>
-                                            <td id="median1"></td>
-                                            <td id="median2"></td>
-                                            <td id="median3"></td>
-                                            <td id="median4"></td>
-                                        </tr>
-                                        <tr>
-                                            <td># of Cases</td>
-                                            <td id="cases1"></td>
-                                            <td id="cases2"></td>
-                                            <td id="cases3"></td>
-                                            <td id="cases4"></td>
-                                        </tr>
-                                    </tbody>
-                                </table>
-                            </div>
-            
-                        </div>
-                    </div>
-                </div>
-                <div class="col">
-                    <div class="card mx-auto">
-                        <div class="card-body">
-                            <div id="resolutionHistogram"></div>
-                            <div class="container pt-3 pb-5">
-                                <h2>Statistics</h2>
-                                <table class="table">
-                                    <thead>
-                                        <tr>
-                                            <th></th>
-                                            <th>Urgent</th>
-                                            <th>High</th>
-                                            <th>Normal</th>
-                                            <th>Low</th>
-                                        </tr>
-                                    </thead>
-                                    <tbody>
-                                        <tr>
-                                            <td>Average Time Until Resolution (Days)</td>
-                                            <td id="avg5"></td>
-                                            <td id="avg6"></td>
-                                            <td id="avg7"></td>
-                                            <td id="avg8"></td>
-                                        </tr>
-                                        <tr>
-                                            <td>Median Time Until Resolution (Days)</td>
-                                            <td id="median5"></td>
-                                            <td id="median6"></td>
-                                            <td id="median7"></td>
-                                            <td id="median8"></td>
-                                        </tr>
-                                        <tr>
-                                            <td># of Cases</td>
-                                            <td id="cases5"></td>
-                                            <td id="cases6"></td>
-                                            <td id="cases7"></td>
-                                            <td id="cases8"></td>
-                                        </tr>
-                                    </tbody>
-                                </table>
-                            </div>
-                        </div>
-                    </div>
-                </div>
+                    </tbody>
+                </table>
+                <div class="row">{{ macros.outcomes_table(histogram_stats) }}</div>
             </div>
         </div>
     </div>
-</div>
-<script>
+    <script>
         // Create the histograms
         var reliefUrgent = {
-            x: {{ histogram_stats["Relief"]["Urgent"] | safe }},
+            x: {{ histogram_stats["Relief"]["Urgent"]["data"] | safe }},
             type: 'histogram',
             opacity: 0.5,
             name: 'Urgent'
         };
 
         var reliefHigh = {
-            x: {{ histogram_stats["Relief"]["High"] | safe}},
+            x: {{ histogram_stats["Relief"]["High"]["data"] | safe}},
             type: 'histogram',
             opacity: 0.5,
             name: 'High'
         };
 
         var reliefNormal = {
-            x: {{ histogram_stats["Relief"]["Normal"] | safe}},
+            x: {{ histogram_stats["Relief"]["Normal"]["data"] | safe}},
             type: 'histogram',
             opacity: 0.5,
             name: 'Normal'
         };
 
         var reliefLow = {
-            x: {{ histogram_stats["Relief"]["Low"] | safe}},
+            x: {{ histogram_stats["Relief"]["Low"]["data"] | safe}},
             type: 'histogram',
             opacity: 0.5,
             name: 'Low'
@@ -351,110 +293,45 @@
         var reliefData = [reliefUrgent, reliefHigh, reliefNormal, reliefLow];
         Plotly.newPlot('reliefHistogram', reliefData, reliefLayout, { responsive: true });
 
-        var resolutionUrgent = {
-            x: {{ histogram_stats["Resolved"]["Urgent"] | safe }},
+        var resolvedUrgent = {
+            x: {{ histogram_stats["Resolved"]["Urgent"]["data"] | safe }},
             type: 'histogram',
             opacity: 0.5,
             name: 'Urgent'
         };
 
-        var resolutionHigh = {
-            x: {{ histogram_stats["Resolved"]["High"] | safe}},
+        var resolvedHigh = {
+            x: {{ histogram_stats["Resolved"]["High"]["data"] | safe}},
             type: 'histogram',
             opacity: 0.5,
             name: 'High'
         };
 
-        var resolutionNormal = {
-            x: {{ histogram_stats["Resolved"]["Normal"] | safe }},
+        var resolvedNormal = {
+            x: {{ histogram_stats["Resolved"]["Normal"]["data"] | safe }},
             type: 'histogram',
             opacity: 0.5,
             name: 'Normal'
         };
 
-        var resolutionLow = {
-            x: {{ histogram_stats["Resolved"]["Low"] | safe}},
+        var resolvedLow = {
+            x: {{ histogram_stats["Resolved"]["Low"]["data"] | safe}},
             type: 'histogram',
             opacity: 0.5,
             name: 'Low'
         };
 
-        var resolutionLayout = {
+        var resolvedLayout = {
             barmode: 'overlay',
             title: 'Time to Resolution',
             xaxis: { title: 'Days From Case Creation Until Resolution' },
             yaxis: { title: 'Frequency' }
         };
 
-        var resolutionData = [resolutionUrgent, resolutionHigh, resolutionNormal, resolutionLow];
-        Plotly.newPlot('resolutionHistogram', resolutionData, resolutionLayout, { responsive: true });
-
-        // Update table values
-        function median(values) {
-            if (values.length === 0) {
-                return 0;
-            }
-            // Sort the array in ascending order
-            const sortedNumbers = values.sort((a, b) => a - b);
-
-            // Calculate the median
-            let median;
-            const middleIndex = Math.floor(sortedNumbers.length / 2);
-
-            if (sortedNumbers.length % 2 === 0) {
-                // Even length array
-                median = (sortedNumbers[middleIndex - 1] + sortedNumbers[middleIndex]) / 2;
-            } else {
-                // Odd length array
-                median = sortedNumbers[middleIndex];
-            }
-
-            return median;
-        }
-
-        function average(values) {
-            if (values.length === 0) {
-                return 0;
-            }
-            let sum = 0;
-            for (let i = 0; i < values.length; i++) {
-                sum += values[i];
-            }
-            return sum / values.length;
-        }
-        function updateTable() {
-            document.getElementById("avg1").textContent = average({{ histogram_stats["Relief"]["Urgent"] | safe }}).toFixed(1);
-            document.getElementById("avg2").textContent = average({{ histogram_stats["Relief"]["High"] | safe }}).toFixed(1);
-            document.getElementById("avg3").textContent = average({{ histogram_stats["Relief"]["Normal"] | safe }}).toFixed(1);
-            document.getElementById("avg4").textContent = average({{ histogram_stats["Relief"]["Low"] | safe }}).toFixed(1);
-            document.getElementById("avg5").textContent = average({{ histogram_stats["Resolved"]["Urgent"] | safe }}).toFixed(1);
-            document.getElementById("avg6").textContent = average({{ histogram_stats["Resolved"]["High"] | safe }}).toFixed(1);
-            document.getElementById("avg7").textContent = average({{ histogram_stats["Resolved"]["Normal"] | safe }}).toFixed(1);
-            document.getElementById("avg8").textContent = average({{ histogram_stats["Resolved"]["Low"] | safe }}).toFixed(1);
-
-
-            document.getElementById("median1").textContent = median({{ histogram_stats["Relief"]["Urgent"] | safe }}).toFixed(1);
-            document.getElementById("median2").textContent = median({{ histogram_stats["Relief"]["High"] | safe }}).toFixed(1);
-            document.getElementById("median3").textContent = median({{ histogram_stats["Relief"]["Normal"] | safe }}).toFixed(1);
-            document.getElementById("median4").textContent = median({{ histogram_stats["Relief"]["Low"] | safe }}).toFixed(1);
-            document.getElementById("median5").textContent = median({{ histogram_stats["Resolved"]["Urgent"] | safe }}).toFixed(1);
-            document.getElementById("median6").textContent = median({{ histogram_stats["Resolved"]["High"] | safe }}).toFixed(1);
-            document.getElementById("median7").textContent = median({{ histogram_stats["Resolved"]["Normal"] | safe }}).toFixed(1);
-            document.getElementById("median8").textContent = median({{ histogram_stats["Resolved"]["Low"] | safe }}).toFixed(1);
-
-            document.getElementById("cases1").textContent = {{ histogram_stats["Relief"]["Urgent"] | safe }}.length;
-            document.getElementById("cases2").textContent = {{ histogram_stats["Relief"]["High"] | safe }}.length;
-            document.getElementById("cases3").textContent = {{ histogram_stats["Relief"]["Normal"] | safe }}.length;
-            document.getElementById("cases4").textContent = {{ histogram_stats["Relief"]["Low"] | safe }}.length;
-            document.getElementById("cases5").textContent = {{ histogram_stats["Resolved"]["Urgent"] | safe }}.length;
-            document.getElementById("cases6").textContent = {{ histogram_stats["Resolved"]["High"] | safe }}.length;
-            document.getElementById("cases7").textContent = {{ histogram_stats["Resolved"]["Normal"] | safe }}.length;
-            document.getElementById("cases8").textContent = {{ histogram_stats["Resolved"]["Low"] | safe }}.length;
-
-        }
-
-    // Initial table update
-    updateTable();
-</script>
-<script type="text/javascript" charset="utf8" src="{{ url_for('static', filename='js/stats.js') }}"></script>
+        var resolvedData = [resolvedUrgent, resolvedHigh, resolvedNormal, resolvedLow];
+        Plotly.newPlot('resolvedHistogram', resolvedData, resolvedLayout, { responsive: true });
+    </script>
+    <script type="text/javascript"
+            charset="utf8"
+            src="{{ url_for('static', filename='js/stats.js') }}"></script>
 {% endblock %}

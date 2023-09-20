@@ -1,0 +1,6 @@
+# Ignore files not written by us
+
+# plugins.js contains different datatables plugins that we are self-hosting rather than
+# using CDN/NPM, as described here: 
+# https://datatables.net/plug-ins/sorting/natural#Browser
+plugins.js
