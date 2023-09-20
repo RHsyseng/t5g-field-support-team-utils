@@ -14,6 +14,7 @@ import datetime
 import json
 import logging
 import re
+import statistics
 import time
 from urllib.parse import urlparse
 
@@ -578,27 +579,49 @@ def generate_histogram_stats(account=None):
               The structure of the dictionary is as follows:
               {
                   "Resolved": {
-                      "<severity1>": [<time1>, <time2>, ...],
-                      "<severity2>": [<time1>, <time2>, ...],
+                      "<severity1>": {
+                          "data": [<time1>, <time2>, ...],
+                          "mean": <mean of data>,
+                          "median": <median of data>
+                      },
+                      "<severity2>": {
+                          "data": [<time1>, <time2>, ...],
+                          "mean": <mean of data>,
+                          "median": <median of data>
+                      },
                       ...
                   },
                   "Relief": {
-                      "<severity1>": [<time1>, <time2>, ...],
-                      "<severity2>": [<time1>, <time2>, ...],
+                      "<severity1>": {
+                          "data": [<time1>, <time2>, ...],
+                          "mean": <mean of data>,
+                          "median": <median of data>
+                      },
+                      "<severity2>": {
+                          "data": [<time1>, <time2>, ...],
+                          "mean": <mean of data>,
+                          "median": <median of data>
+                      },
                       ...
                   }
               }
               The times are represented as the number of days until resolution / relief.
     """
     seconds_per_day = 60 * 60 * 24
+    base_dictionary = {
+        "Urgent": {"data": [], "mean": None, "median": None},
+        "High": {"data": [], "mean": None, "median": None},
+        "Normal": {"data": [], "mean": None, "median": None},
+        "Low": {"data": [], "mean": None, "median": None},
+    }
     cards = redis_get("cards")
     if account is not None:
         logging.warning(f"filtering cards for {account}")
         cards = {c: d for (c, d) in cards.items() if d["account"] == account}
 
     histogram_data = {
-        "Resolved": {"Urgent": [], "High": [], "Normal": [], "Low": []},
-        "Relief": {"Urgent": [], "High": [], "Normal": [], "Low": []},
+        "Resolved": base_dictionary,
+        "Relief": base_dictionary,
     }
 
     # Iterate over each entry in the input dictionary
@@ -614,7 +637,7 @@ def generate_histogram_stats(account=None):
                 datetime.datetime.strptime(resolved_at, "%Y-%m-%dT%H:%M:%SZ")
                 - datetime.datetime.strptime(case_created, "%Y-%m-%dT%H:%M:%SZ")
             ).total_seconds() / seconds_per_day
-            histogram_data["Resolved"][severity].append(days_until_resolved)
+            histogram_data["Resolved"][severity]["data"].append(days_until_resolved)
 
         # Add time to relief to the "Relief" dictionary, indexed by severity
         if relief_at is not None:
@@ -622,7 +645,15 @@ def generate_histogram_stats(account=None):
                 datetime.datetime.strptime(relief_at, "%Y-%m-%dT%H:%M:%SZ")
                 - datetime.datetime.strptime(case_created, "%Y-%m-%dT%H:%M:%SZ")
             ).total_seconds() / seconds_per_day
-            histogram_data["Relief"][severity].append(days_until_relief)
+            histogram_data["Relief"][severity]["data"].append(days_until_relief)
+
+    # Calculate mean and median for each severity level
+    for status in ["Resolved", "Relief"]:
+        for severity in histogram_data[status]:
+            data = histogram_data[status][severity]["data"]
+            if data:
+                histogram_data[status][severity]["mean"] = statistics.mean(data)
+                histogram_data[status][severity]["median"] = statistics.median(data)
 
     return histogram_data
 
