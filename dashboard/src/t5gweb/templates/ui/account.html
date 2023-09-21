@@ -284,7 +284,9 @@
                             {% elif new_comments[account][status][card]['severity'] == 'Urgent' %}
                                 {% set severity_order = 4 %}
                             {% endif %}
-                            <tr data-child-data="{{ new_comments[account][status][card] | tojson }}">
+                            <!-- data-child-data must be wrapped in SINGLE quotes.
+                                 Otherwise, our JS can't parse the data. -->
+                            <tr data-child-data='{{ new_comments[account][status][card] | tojson }}'>
                                 <td class="align-middle dt-control"></td>
                                 <td class="align-middle text-center">
                                     <a href="https://access.redhat.com/support/cases/#/case/{{ new_comments[account][status][card]['case_number'] }}"
