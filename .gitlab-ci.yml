@@ -1,11 +1,22 @@
 ---
-variables:
-  NAMESPACE: "t5g-web"
-  IMAGE: "t5gweb"
-  TAG: "latest"  # $CI_PIPELINE_IID
+include:
+  - project: enterprise-pipelines/gitlab-ci/includes
+    file: SAST/sonarqube.yml
 
 stages:
+  - static-analysis
   - sync
+
+sonarqube:
+  stage: static-analysis 
+  variables:
+    SONAR_PROJECT_KEY: "t5gfe-dashboard" # only needed if you do not include sonar-project.properties
+  rules:
+    - if: $CI_COMMIT_BRANCH == $CI_DEFAULT_BRANCH &&
+        $CI_PIPELINE_SOURCE == "push"
+  tags:
+    - docker
+    - shared
 
 github_sync:
   stage: sync
@@ -16,9 +27,9 @@ github_sync:
     - cd t5g-field-support-team-utils
     - git remote add upstream https://$GH_USER:$GH_PASS@github.com/RHsyseng/t5g-field-support-team-utils.git
     - git fetch upstream
-    - git checkout master
+    - git checkout main
     - git merge upstream/main --allow-unrelated-histories
-    - git push origin master
+    - git push origin main
     - echo "Sync has completed"
   rules:
     - if: '$CI_PIPELINE_SOURCE == "schedule"'
