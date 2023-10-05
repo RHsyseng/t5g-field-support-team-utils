@@ -1,7 +1,5 @@
 """API endpoints for t5gweb"""
-import json
-
-from flask import Blueprint, request
+from flask import Blueprint, jsonify, request
 from flask_login import login_required
 from t5gweb.cache import (
     get_bz_details,
@@ -50,26 +48,26 @@ def refresh(data_type):
     cfg = set_cfg()
     if data_type == "cards":
         get_cards(cfg)
-        return {"caching cards": "ok"}
+        return jsonify({"caching cards": "ok"})
     elif data_type == "cases":
         get_cases(cfg)
-        return {"caching cases": "ok"}
+        return jsonify({"caching cases": "ok"})
     elif data_type == "details":
         get_case_details(cfg)
-        return {"caching details": "ok"}
+        return jsonify({"caching details": "ok"})
     elif data_type == "bugs":
         get_bz_details(cfg)
     elif data_type == "escalations":
         get_escalations(cfg)
-        return {"caching escalations": "ok"}
+        return jsonify({"caching escalations": "ok"})
     elif data_type == "watchlist":
         get_watchlist(cfg)
-        return {"caching watchlist": "ok"}
+        return jsonify({"caching watchlist": "ok"})
     elif data_type == "issues":
         get_issue_details(cfg)
-        return {"caching issues": "ok"}
+        return jsonify({"caching issues": "ok"})
     else:
-        return {"error": "unknown data type: {}".format(data_type)}
+        return jsonify({"error": "unknown data type: {}".format(data_type)})
 
 
 @BP.route("/cards")
@@ -77,7 +75,7 @@ def refresh(data_type):
 def show_cards():
     """Retrieves all cards"""
     cards = redis_get("cards")
-    return cards
+    return jsonify(cards)
 
 
 @BP.route("/cases")
@@ -85,7 +83,7 @@ def show_cards():
 def show_cases():
     """Retrieves all cases"""
     cases = redis_get("cases")
-    return cases
+    return jsonify(cases)
 
 
 @BP.route("/bugs")
@@ -93,7 +91,7 @@ def show_cases():
 def show_bugs():
     """Retrieves all bugs"""
     bugs = redis_get("bugs")
-    return bugs
+    return jsonify(bugs)
 
 
 @BP.route("/escalations")
@@ -101,7 +99,7 @@ def show_bugs():
 def show_escalations():
     """Retrieves all escalations"""
     escalations = redis_get("escalations")
-    return json.dumps(escalations)
+    return jsonify(escalations)
 
 
 @BP.route("/watchlist")
@@ -109,7 +107,7 @@ def show_escalations():
 def show_watched():
     """Retrieves all cases on the watchlist"""
     watchlist = redis_get("watchlist")
-    return json.dumps(watchlist)
+    return jsonify(watchlist)
 
 
 @BP.route("/details")
@@ -117,7 +115,7 @@ def show_watched():
 def show_details():
     """Retrieves CritSit and Group Name for each case"""
     details = redis_get("details")
-    return json.dumps(details)
+    return jsonify(details)
 
 
 @BP.route("/issues")
@@ -125,11 +123,11 @@ def show_details():
 def show_issues():
     """Retrieves all JIRA issues associated with open cases"""
     issues = redis_get("issues")
-    return json.dumps(issues)
+    return jsonify(issues)
 
 
 @BP.route("/stats")
 @login_required
 def show_stats():
     stats = generate_stats()
-    return stats
+    return jsonify(stats)
