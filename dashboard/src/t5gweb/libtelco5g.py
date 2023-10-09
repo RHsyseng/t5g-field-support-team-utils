@@ -558,7 +558,9 @@ def is_bug_missing_target(item):
         return item["target_release"][0] == "---"
     else:
         # Return true if fix_versions is None/Not Found or if it's "---"
-        return item.get("fix_versions") is None or (item.get("fix_versions") and item["fix_versions"][0] == "---")
+        return item.get("fix_versions") is None or (
+            item.get("fix_versions") and item["fix_versions"][0] == "---"
+        )
 
 
 def plot_stats():
