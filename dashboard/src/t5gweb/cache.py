@@ -187,7 +187,11 @@ def get_cards(cfg, self=None, background=False):
         if "tags" in cases[case_number].keys():
             tags = cases[case_number]["tags"]
 
-        if "bug" in cases[case_number].keys() and case_number in bugs.keys():
+        if (
+            "bug" in cases[case_number].keys()
+            and bugs is not None
+            and case_number in bugs.keys()
+        ):
             bugzilla = bugs[case_number]
         else:
             bugzilla = None
