@@ -415,6 +415,7 @@ def generate_stats(account=None):
     cards = redis_get("cards")
     cases = redis_get("cases")
     bugs = redis_get("bugs")
+    issues = redis_get("issues")
 
     if account is not None:
         logging.warning("filtering cases for {}".format(account))
@@ -474,7 +475,7 @@ def generate_stats(account=None):
                 or cards[card]["crit_sit"]
             ):
                 stats["total_escalations"] += 1
-            if cards[card]["bugzilla"] is None:
+            if cards[card]["bugzilla"] is None and cards[card]["issues"] is None:
                 stats["no_bzs"] += 1
 
     for case, data in cases.items():
@@ -518,12 +519,23 @@ def generate_stats(account=None):
                 stats["no_updates"] += 1
 
     all_bugs = {}
+    no_target = {}
     if bugs:
         for case, bzs in bugs.items():
             if case in cases and cases[case]["status"] != "Closed":
                 for bug in bzs:
                     all_bugs[bug["bugzillaNumber"]] = bug
-    no_target = {b: d for (b, d) in all_bugs.items() if d["target_release"][0] == "---"}
+                    if is_bug_missing_target(bug):
+                        no_target[bug["bugzillNumber"]] = bug
+
+    if issues:
+        for case, jira_bugs in issues.items():
+            if case in cases and cases[case]["status"] != "Closed":
+                for issue in jira_bugs:
+                    all_bugs[issue["id"]] = issue
+                    if is_bug_missing_target(issue):
+                        no_target[issue["id"]] = issue
+
     stats["bugs"]["unique"] = len(all_bugs)
     stats["bugs"]["no_target"] = len(no_target)
 
@@ -531,6 +543,24 @@ def generate_stats(account=None):
     logging.warning("generated stats in {} seconds".format((end - start)))
 
     return stats
+
+
+def is_bug_missing_target(item):
+    """Determine whether the BZ or Jira Bug is missing a target
+
+    Args:
+        item (Dict): Dictionary containing information about BZ/Jira Bug
+
+    Returns:
+        bool: Whether or not the item is missing a target
+    """
+    if "target_release" in item:
+        return item["target_release"][0] == "---"
+    else:
+        # Return true if fix_versions is None/Not Found or if it's "---"
+        return item.get("fix_versions") is None or (
+            item.get("fix_versions") and item["fix_versions"][0] == "---"
+        )
 
 
 def plot_stats():
