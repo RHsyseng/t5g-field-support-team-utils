@@ -19,5 +19,6 @@ setup(
         "python3-saml==1.15.0",
         "flask-login==0.6.2",
         "prometheus-flask-exporter==0.22.4",
+        "Werkzeug==2.3.7",
     ],
 )
