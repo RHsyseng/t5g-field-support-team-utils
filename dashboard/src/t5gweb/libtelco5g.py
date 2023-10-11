@@ -526,7 +526,7 @@ def generate_stats(account=None):
                 for bug in bzs:
                     all_bugs[bug["bugzillaNumber"]] = bug
                     if is_bug_missing_target(bug):
-                        no_target[bug["bugzillNumber"]] = bug
+                        no_target[bug["bugzillaNumber"]] = bug
 
     if issues:
         for case, jira_bugs in issues.items():
