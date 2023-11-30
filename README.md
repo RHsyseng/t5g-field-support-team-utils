@@ -14,25 +14,27 @@ If desired, the script will also create the Jira cards for the new cases.
 Link to script usage: [telco5g-jira.py readme](https://github.com/RHsyseng/t5g-field-support-team-utils/blob/main/telco5g-jira.py.md)
 
 ## Dashboard Development Setup
+
 In the `dashboard` directory, you can use the `Dockerfile` and `docker-compose.yml` to
-set up a development environment. 
+set up a development environment.
 
 Note: If you are only interested in the frontend, you can comment out everything in
-`docker-compose.yml` under the "Backend" header, except for the "volumes" section at 
+`docker-compose.yml` under the "Backend" header, except for the "volumes" section at
 the bottom.
 
 Prerequisites:
+
 - [Podman](https://podman.io/get-started) or [Docker](https://docs.docker.com/engine/install/)
 - [podman-compose](https://podman-desktop.io/docs/compose/setting-up-compose) or [docker-compose](https://docs.docker.com/compose/)
 
 ### Steps
+
 1. If you are interested in setting up the backend services, fill out `cfg/sample.env`
 with any relevant details.
 2. Run `cd dashboard` and `podman-compose up -d`
 
 After it's built, you can access the dashboard at <localhost:8080/home>, and the Flower
 frontend at <localhost:8000>.
-
 
 ## CI
 
