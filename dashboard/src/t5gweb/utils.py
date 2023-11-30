@@ -183,7 +183,7 @@ def set_cfg():
         if os.environ.get("jira_labels")
         else []
     )
-    
+
     # sso
     cfg["rbac"] = os.environ.get("rbac").split(",") if os.environ.get("rbac") else []
     return cfg
