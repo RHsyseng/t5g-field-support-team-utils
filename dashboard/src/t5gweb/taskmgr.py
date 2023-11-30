@@ -22,7 +22,7 @@ def setup_scheduled_tasks(sender, **kwargs):
     cfg = set_cfg()
 
     # Anything except for 'true' will be set to False
-    read_only = (os.getenv("READ_ONLY", 'false') == 'true')
+    read_only = os.getenv("READ_ONLY", "false") == "true"
 
     if read_only is False:
         # Run tasks that alter Jira cards, send emails, or send Slack messages
@@ -40,7 +40,7 @@ def setup_scheduled_tasks(sender, **kwargs):
             t_sync_priority.s(),
             name="priority_sync",
         )
-    
+
         # tag telco5g bugzillas and JIRAs with 'Telco' and/or 'Telco:Case'
         if "telco5g" in cfg["query"]:
             sender.add_periodic_task(

@@ -25,7 +25,7 @@ Prerequisites:
 - [Podman](https://podman.io/get-started) or [Docker](https://docs.docker.com/engine/install/)
 - [podman-compose](https://podman-desktop.io/docs/compose/setting-up-compose) or [docker-compose](https://docs.docker.com/compose/)
 
-#### Steps
+### Steps
 1. If you are interested in setting up the backend services, fill out `cfg/sample.env`
 with any relevant details.
 2. Run `cd dashboard` and `podman-compose up -d`
