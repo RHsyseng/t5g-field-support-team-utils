@@ -1,5 +1,6 @@
 cfg/*
 !cfg/sample.cfg
+!cfg/sample.env
 
 ### From https://github.com/github/gitignore/blob/main/Node.gitignore
 # Logs

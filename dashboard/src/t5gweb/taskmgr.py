@@ -21,19 +21,35 @@ mgr = Celery("t5gweb", broker="redis://redis:6379/0", backend="redis://redis:637
 def setup_scheduled_tasks(sender, **kwargs):
     cfg = set_cfg()
 
-    # check for new cases
-    sender.add_periodic_task(
-        crontab(hour="*", minute="10"),  # 10 mins after every hour
-        portal_jira_sync.s(),
-        name="portal2jira_sync",
-    )
+    # Anything except for 'true' will be set to False
+    read_only = os.getenv("READ_ONLY", "false") == "true"
 
-    # ensure case severities match card priorities
-    sender.add_periodic_task(
-        crontab(hour="3", minute="12"),  # everyday at 3:12
-        t_sync_priority.s(),
-        name="priority_sync",
-    )
+    if read_only is False:
+        # Run tasks that alter Jira cards, send emails, or send Slack messages
+        logging.warning("Not read only: making changes to Jira Boards")
+        # check for new cases
+        sender.add_periodic_task(
+            crontab(hour="*", minute="10"),  # 10 mins after every hour
+            portal_jira_sync.s(),
+            name="portal2jira_sync",
+        )
+
+        # ensure case severities match card priorities
+        sender.add_periodic_task(
+            crontab(hour="3", minute="12"),  # everyday at 3:12
+            t_sync_priority.s(),
+            name="priority_sync",
+        )
+
+        # tag telco5g bugzillas and JIRAs with 'Telco' and/or 'Telco:Case'
+        if "telco5g" in cfg["query"]:
+            sender.add_periodic_task(
+                crontab(hour="*/24", minute="33"),  # once a day + 33 for randomness
+                tag_bz.s(),
+                name="tag_bz",
+            )
+    else:
+        logging.warning("Read only - Not making changes to Jira boards.")
 
     # update card cache
     sender.add_periodic_task(
@@ -86,14 +102,6 @@ def setup_scheduled_tasks(sender, **kwargs):
             crontab(hour="*/2", minute="37"),  # 12x a day
             cache_data.s("escalations"),
             name="escalations_sync",
-        )
-
-    # tag telco5g bugzillas and JIRAs with 'Telco' and/or 'Telco:Case'
-    if "telco5g" in cfg["query"]:
-        sender.add_periodic_task(
-            crontab(hour="*/24", minute="33"),  # once a day + 33 for randomness
-            tag_bz.s(),
-            name="tag_bz",
         )
 
     # update watchlist cache

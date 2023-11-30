@@ -1,0 +1,63 @@
+---
+version: '3.9'
+services:
+  redis:
+    image: redis:alpine
+    # Persist redis data so that you don't have to regather data
+    volumes:
+      - redis_data:/data
+
+  ### Frontend
+  dashboard-ui:
+    image: localhost/dashboard
+    build: .
+    command: gunicorn --bind 0.0.0.0:8080 --timeout 1200 wsgi:app
+    ports:
+      - 8080:8080
+    environment:
+      - FLASK_LOGIN_DISABLED=true  # Disable SSO Login for dev environments
+    depends_on:
+      - redis
+
+  ### Backend (can remove if only developing front end)
+
+  # Gathers data if cache is empty
+  init-cache:
+    image: localhost/dashboard
+    command: flask init-cache
+    env_file:
+      - ../cfg/sample.env
+    depends_on:
+      - redis
+
+  # Gathers data on timed basis
+  celery-worker:
+    image: localhost/dashboard
+    command: celery -A t5gweb.taskmgr worker --loglevel=info -E
+    env_file:
+      - ../cfg/sample.env
+    depends_on:
+      - redis
+
+  # Schedules celery-worker
+  celery-beat:
+    image: localhost/dashboard
+    command: celery -A t5gweb.taskmgr beat -s /tmp/schedule
+    env_file:
+      - ../cfg/sample.env
+    depends_on:
+      - redis
+
+  # Frontend for celery tasks
+  flower:
+    image: localhost/dashboard
+    command: celery -A t5gweb.taskmgr flower --address=0.0.0.0 --port=8080 --purge_offline_workers=300
+    ports:
+      - 8000:8080
+    env_file:
+      - ../cfg/sample.env
+    depends_on:
+      - redis
+
+volumes:
+  redis_data:
