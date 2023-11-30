@@ -218,7 +218,10 @@ def get_cards(cfg, self=None, background=False):
             potential_escalation = True
         else:
             potential_escalation = False
-
+        if "Daily_Telco_OCP" in issue.fields.labels:
+            daily_telco = True
+        else:
+            daily_telco = False
         if watchlist and case_number in watchlist:
             watched = True
         else:
@@ -277,6 +280,7 @@ def get_cards(cfg, self=None, background=False):
             "notified_users": notified_users,
             "relief_at": relief_at,
             "resolved_at": resolved_at,
+            "daily_telco": daily_telco,
         }
 
     end = time.time()

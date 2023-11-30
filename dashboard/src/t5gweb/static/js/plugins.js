@@ -1,3 +1,6 @@
+// This file contains plugin code from the datatables plugin and should 
+// not be modified: https://datatables.net/plug-ins/sorting/natural#Browser
+
 // Deeplink
 /*!
    Copyright 2017 SpryMedia Ltd.
