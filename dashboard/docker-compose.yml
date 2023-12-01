@@ -11,13 +11,20 @@ services:
   dashboard-ui:
     image: localhost/dashboard
     build: .
-    command: gunicorn --bind 0.0.0.0:8080 --timeout 1200 wsgi:app
+    command: gunicorn --bind 0.0.0.0:8080 --timeout 1200 wsgi:app --reload
     ports:
       - 8080:8080
     environment:
       - FLASK_LOGIN_DISABLED=true  # Disable SSO Login for dev environments
+      - FLASK_DEBUG=true
     depends_on:
       - redis
+    volumes:
+      # Reflect local changes immediately inside of container
+      - ./src:/srv:Z
+
+       # Prevent container from using local node_modules folder:
+      - /srv/t5gweb/static/node_modules/
 
   ### Backend (can remove if only developing front end)
 
