@@ -36,6 +36,12 @@ with any relevant details.
 After it's built, you can access the dashboard at <localhost:8080/home>, and the Flower
 frontend at <localhost:8000>.
 
+The `docker-compose.yml` file creates a bind mount so that any changes you make locally will immediately be reflected inside of the container. For example, if you change some text inside of `dashboard/src/t5gweb/templates/ui/index.html`, it will immediately be visible at localhost:8080/home. This can be helpful when you are developing new features.
+
+Another volume is created for `/srv/t5gweb/static/node_modules/`. Without this volume, the container will use your local node_modules folder, and you'll need to locally install npm packages. The volume uses the packages from the container, while still allowing you to make local changes elsewhere in the code.
+
+If you want to add a new JS package, you'll need to add it to `package.json` and `package-lock.json` , which are located in `dashboard/src/t5gweb/static/`. Then you need to remove the relevant volume (`podman volume rm dashboard_dashboard-ui_<HASH>`) and rebuild the image.
+
 ## CI
 
 This project has a CI that is triggered on every push.

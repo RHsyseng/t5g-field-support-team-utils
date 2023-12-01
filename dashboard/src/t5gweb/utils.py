@@ -178,9 +178,14 @@ def set_cfg():
     cfg["board"] = os.environ.get("jira_board")
     cfg["jira_query"] = os.environ.get("jira_query")
     cfg["password"] = os.environ.get("jira_pass")
-    cfg["labels"] = os.environ.get("jira_labels").split(",")
+    cfg["labels"] = (
+        os.environ.get("jira_labels").split(",")
+        if os.environ.get("jira_labels")
+        else []
+    )
+
     # sso
-    cfg["rbac"] = os.environ.get("rbac").split(",")
+    cfg["rbac"] = os.environ.get("rbac").split(",") if os.environ.get("rbac") else []
     return cfg
 
 
