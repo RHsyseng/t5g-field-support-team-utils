@@ -83,6 +83,9 @@ function format(data) {
 
 // Initialize DataTable
 $(document).ready(function () {
+  // Define configuration options for DataTable:
+
+  // Deeplinking: https://datatables.net/blog/2017-07-24#Usage
   let deeplinkList = [
     "search.search",
     "order",
@@ -90,6 +93,8 @@ $(document).ready(function () {
     "searchPanes.preSelect",
   ];
   let searchOptions = $.fn.dataTable.ext.deepLink(deeplinkList);
+
+  // General Options for DataTable
   let options = {
     pageLength: 50,
     scrollX: true,
@@ -105,6 +110,8 @@ $(document).ready(function () {
       [10, 25, 50, -1],
       [10, 25, 50, "All"],
     ],
+
+    // searchPanes: https://datatables.net/extensions/searchpanes/
     searchPanes: {
       order: [
         "Severity",
@@ -116,6 +123,8 @@ $(document).ready(function () {
       ],
       columns: [2, 3, 7, 8, 10],
       initCollapsed: true,
+
+      // Define Custom Search Pane
       panes: [
         {
           name: "Escalated?",
@@ -131,10 +140,18 @@ $(document).ready(function () {
                 );
               },
             },
+            {
+              label: "Cases on Daily Telco List",
+              value: function (rowData, rowIdx) {
+                return rowData[16] === "True";
+              },
+            },
           ],
         },
       ],
     },
+
+    // When table is loaded, remove "Loading Table..." message and display table
     initComplete: function (settings, json) {
       $("div.loading").remove();
       $(".case-table").show();
@@ -178,8 +195,15 @@ $(document).ready(function () {
         },
         targets: [3],
       },
+      // Hide Daily Telco List Column
+      {
+        targets: [16],
+        visible: false,
+      },
     ],
   };
+
+  // Initialize Table w/ options defined above
   let table = $("#data").DataTable($.extend(true, options, searchOptions));
   table.searchPanes.container().prependTo(table.table().container());
   table.searchPanes.resizePanes();

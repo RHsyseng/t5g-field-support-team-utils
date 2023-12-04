@@ -27,6 +27,7 @@
                         <th rowspan="2" class="text-center">Most Recent Comment</th>
                         <th rowspan="2" class="text-center">Days Open</th>
                         <th rowspan="2" class="text-center">Case Last Updated</th>
+                        <th rowspan="2" class="text-center">Daily Telco List</th>
                     </tr>
                     <tr>
                         <th class="text-center">On Prio-list?</th>
@@ -107,6 +108,7 @@
                                     </td>
                                     <td class="align-middle text-center">{{ new_comments[account][status][card]['case_days_open'] }}</td>
                                     <td class="align-middle text-center">{{ new_comments[account][status][card]['case_updated_date'] }}</td>
+                                    <td class="align-middle text-center">{{ new_comments[account][status][card]['daily_telco'] }}</td>
                                 </tr>
                             {% endfor %}
                         {% endfor %}
