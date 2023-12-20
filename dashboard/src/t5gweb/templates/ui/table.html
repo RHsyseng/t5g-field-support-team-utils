@@ -3,7 +3,7 @@
 {% block title %}{{ page_title }}{% endblock %}
 {% block content %}
     <div class="container-fluid copy mt-5">
-        {{ macros.cases_table(new_comments) }}
+        {{ macros.cases_table(new_comments, jira_server) }}
     </div>
     <!-- Include jQuery + DataTables -->
     <script type="text/javascript"
