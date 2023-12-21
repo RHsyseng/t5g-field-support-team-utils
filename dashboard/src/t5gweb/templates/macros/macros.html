@@ -49,7 +49,7 @@
     {% endfor %}
 {%- endmacro %}
 
-{% macro cases_table(new_comments) -%}
+{% macro cases_table(new_comments, jira_server) -%}
 <div class="container-fluid pt-2" id="expand-buttons">
     <button type="button" class="btn btn-outline-dark" id="expand-button">Expand All Rows</button>
     <button type="button" class="btn btn-outline-dark" id="collapse-button">Collapse All Rows</button>
