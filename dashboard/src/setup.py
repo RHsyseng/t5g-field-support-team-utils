@@ -2,7 +2,7 @@ from setuptools import find_packages, setup
 
 setup(
     name="t5gweb",
-    version="0.221121",
+    version="1.240110",
     packages=find_packages(),
     include_package_data=True,
     zip_safe=False,
@@ -14,7 +14,7 @@ setup(
         "slack_sdk==3.19.4",
         "redis==4.3.4",
         "python_bugzilla==3.2.0",
-        "celery==5.2.7",
+        "celery==5.3.6",
         "flower==1.2.0",
         "python3-saml==1.15.0",
         "flask-login==0.6.2",
