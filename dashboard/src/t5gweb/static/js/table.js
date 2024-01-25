@@ -33,7 +33,7 @@ function format(data) {
   }
   if (data.issues != null) {
     result +=
-      '<h3>JIRA Issues:</h3><table class="table table-bordered table-hover table-responsive w-100"><thead><tr><th>#</th><th>Summary</th><th>Priority</th><th>Severity</th><th>Target Release</th><th>Assignee</th><th>QA Contact</th><th>Last Updated</th><th>Status</th></tr></thead><tbody>';
+      '<h3>JIRA Issues:</h3><table class="table table-bordered table-hover table-responsive w-100"><thead><tr><th>#</th><th>Summary</th><th>Priority</th><th>Severity</th><th>Telco Priority</th><th>Target Release</th><th>Assignee</th><th>QA Contact</th><th>Last Updated</th><th>Status</th></tr></thead><tbody>';
     for (let issue = 0; issue < data.issues.length; issue++) {
       result +=
         '<tr><td><a href="' +
@@ -43,10 +43,18 @@ function format(data) {
         "</a></td><td>" +
         data.issues[issue].title +
         "</td><td>" +
-        data.issues[issue].priority +
+        (data.issues[issue].priority != null
+          ? data.issues[issue].priority
+          : "---") +
         "</td><td>" +
         (data.issues[issue].jira_severity != null
           ? data.issues[issue].jira_severity
+          : "---") +
+        "</td><td>" +
+        (data.issues[issue].private_keywords != null
+          ? data.issues[issue].private_keywords.find((str) =>
+              str.includes("Priority")
+            ) || "---"
           : "---") +
         "</td><td>" +
         (data.issues[issue].fix_versions != null
