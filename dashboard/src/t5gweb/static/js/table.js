@@ -286,7 +286,7 @@ $(document).ready(function () {
         // Update search section of query in place
         query = query.replace(
           /search.search=.[^&]*/i,
-          "search.search=" + search,
+          "search.search=" + search
         );
       } else {
         if (query.length > 1) {
@@ -335,7 +335,7 @@ $(document).ready(function () {
           // Update search panes section of query in place
           query = query.replace(
             /searchPanes.preSelect=.[^&]*/i,
-            "searchPanes.preSelect=" + JSON.stringify(panes),
+            "searchPanes.preSelect=" + JSON.stringify(panes)
           );
         } else {
           if (query.length > 1) {
