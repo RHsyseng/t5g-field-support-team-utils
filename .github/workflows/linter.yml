@@ -38,19 +38,18 @@ jobs:
           DEFAULT_BRANCH: main
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
           KUBERNETES_KUBECONFORM_OPTIONS: -ignore-missing-schemas
-    test:
-      name: Test Code Base
-      runs-on: ubuntu-latest
-      steps:
-        - uses: actions/checkout@v4
-        - name: Set Up Python
-          uses: actions/setup-python@v5
-          with: 
-            python-version: '3.x'
-        - name: Install Dependencies
-          run: |
-            pip install . pytest pytest-cov
-        - name: Test with pytest
-            pytest . --cov
+  test:
+    name: Test Code Base
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Set Up Python
+        uses: actions/setup-python@v5
+        with: 
+          python-version: '3.x'
+      - name: Install Dependencies
+        run: pip install . pytest pytest-cov
+      - name: Test with pytest
+        run: pytest . --cov
 
 
