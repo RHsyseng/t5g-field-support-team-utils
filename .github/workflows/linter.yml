@@ -10,8 +10,6 @@ name: Lint & Test Code Base
 # Start the job on all pull requests #
 #############################
 on:
-  push:
-    branches: [linting, initial_test]
   pull_request:
     branches: [master, main]
 
