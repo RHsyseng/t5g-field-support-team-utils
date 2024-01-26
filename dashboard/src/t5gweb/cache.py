@@ -463,6 +463,22 @@ def get_issue_details(cfg):
                     if bug.fields.priority:
                         priority = bug.fields.priority.name
 
+                    try:
+                        private_keywords_raw = bug.fields.customfield_12323649
+                    except AttributeError:
+                        private_keywords = None
+                    else:
+                        if (
+                            private_keywords_raw is not None
+                            and len(private_keywords_raw) > 0
+                        ):
+                            private_keywords = [
+                                private_keyword.value
+                                for private_keyword in private_keywords_raw
+                            ]
+                        else:
+                            private_keywords = None
+
                     case_issues.append(
                         {
                             "id": issue["resourceKey"],
@@ -481,6 +497,7 @@ def get_issue_details(cfg):
                             "priority": priority,
                             "jira_severity": jira_severity,
                             "jira_type": jira_type,
+                            "private_keywords": private_keywords,
                         }
                     )
             if len(case_issues) > 0:
