@@ -21,6 +21,7 @@ from urllib.parse import urlparse
 import redis
 import requests
 from jira import JIRA
+
 from t5gweb.utils import exists_or_zero, get_random_member, get_token
 
 # for portal to jira mapping
@@ -385,7 +386,11 @@ def redis_set(key, value):
 def redis_get(key):
     logging.warning("fetching {}..".format(key))
     r_cache = redis.Redis(host="redis")
-    data = r_cache.get(key)
+    try:
+        data = r_cache.get(key)
+    except redis.exceptions.ConnectionError:
+        logging.warning("Couldn't connect to redis host, setting data to None")
+        data = None
     if data is not None:
         data = json.loads(data.decode("utf-8"))
     else:
