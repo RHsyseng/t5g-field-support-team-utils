@@ -48,7 +48,7 @@ jobs:
         with: 
           python-version: '3.x'
       - name: Install Dependencies
-        run: pip install . pytest pytest-cov
+        run: pip install dashboard/src pytest pytest-cov
       - name: Test with pytest
         run: pytest . --cov
 
