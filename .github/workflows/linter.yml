@@ -4,37 +4,21 @@
 ## Super Linter GitHub Actions ##
 #################################
 #################################
-name: Lint Code Base
+name: Lint & Test Code Base
 
 #############################
-# Start the job on all push #
+# Start the job on all pull requests #
 #############################
 on:
-  push:
-    branches: [linting]
-    # Remove the line above to run when pushing to master
   pull_request:
     branches: [master, main]
 
-###############
-# Set the Job #
-###############
 jobs:
-  build:
-    # Name the Job
+  lint:
     name: Lint Code Base
-    # Set the agent to run on
     runs-on: ubuntu-latest
-
-    ##################
-    # Load all steps #
-    ##################
     steps:
-      ##########################
-      # Checkout the code base #
-      ##########################
-      - name: Checkout Code
-        uses: actions/checkout@v3
+      - uses: actions/checkout@v4
         with:
           # Full git history is needed to get a proper
           # list of changed files within `super-linter`
@@ -52,3 +36,19 @@ jobs:
           DEFAULT_BRANCH: main
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
           KUBERNETES_KUBECONFORM_OPTIONS: -ignore-missing-schemas
+  test:
+    name: Test Code Base
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Set Up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.x'
+      - name: Install Dependencies
+        run: | # apt packages needed for python3-saml, which is dependent on xmlsec
+          sudo apt-get update
+          sudo apt-get install -y pkg-config libxml2-dev libxmlsec1-dev libxmlsec1-openssl
+          pip install dashboard/src pytest pytest-cov
+      - name: Test with pytest
+        run: pytest . --cov
