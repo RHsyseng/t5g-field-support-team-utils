@@ -39,9 +39,12 @@ def exists_or_zero(data, key):
     return 0
 
 
-def get_previous_quarter():
-    """Creates JIRA query to get cards from previous quarter"""
-    day = date.today()
+def get_previous_quarter(day=None):
+    """Creates JIRA query to get cards from previous quarter from day
+    Day should be of type datetime.date
+    """
+    if day is None:
+        day = date.today()
     if 1 <= day.month <= 3:
         query_range = (
             f'((updated >= "{day.year-1}-10-01" AND updated <= "{day.year-1}-12-31")'
