@@ -153,12 +153,11 @@ def set_cfg():
 
     # env overrides
     cfg["team"] = json.loads(os.environ.get("team")) if os.environ.get("team") else None
-    # defaults['max_jira_results'] = 1000
-    # defaults['max_portal_results'] = 5000
     # sources
     cfg["offline_token"] = os.environ.get("offline_token")  # portal
     cfg["redhat_api"] = os.environ.get("redhat_api")  # redhat api url
     cfg["query"] = os.environ.get("case_query")
+    cfg["max_portal_results"] = os.environ.get("max_portal_results")
     cfg["bz_key"] = os.environ.get("bz_key")
     cfg["sheet_id"] = os.environ.get("sheet_id")
     cfg["watchlist_url"] = os.environ.get("watchlist_url")
@@ -180,6 +179,7 @@ def set_cfg():
     cfg["component"] = os.environ.get("jira_component")
     cfg["board"] = os.environ.get("jira_board")
     cfg["jira_query"] = os.environ.get("jira_query")
+    cfg["max_jira_results"] = os.environ.get("max_jira_results")
     cfg["password"] = os.environ.get("jira_pass")
     cfg["labels"] = (
         os.environ.get("jira_labels").split(",")
