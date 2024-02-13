@@ -278,9 +278,7 @@ def create_cards(cfg, new_cases, action="none"):
             "components": [{"name": cfg["component"]}],
             "priority": {"name": priority},
             "labels": cfg["labels"],
-            "summary": summary[:253] + ".."
-            if len(summary) > 253
-            else summary,
+            "summary": summary[:253] + ".." if len(summary) > 253 else summary,
             "description": full_description[:253] + ".."
             if len(full_description) > 253
             else full_description,
