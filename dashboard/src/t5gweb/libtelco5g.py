@@ -271,13 +271,14 @@ def create_cards(cfg, new_cases, action="none"):
             + cases[case]["description"]
             + "\r\n"
         )
+        summary = case + ": " + cases[case]["problem"]
         card_info = {
             "project": {"key": cfg["project"]},
             "issuetype": {"name": cfg["type"]},
             "components": [{"name": cfg["component"]}],
             "priority": {"name": priority},
             "labels": cfg["labels"],
-            "summary": case + ": " + cases[case]["problem"],
+            "summary": summary[:253] + ".." if len(summary) > 253 else summary,
             "description": full_description[:253] + ".."
             if len(full_description) > 253
             else full_description,
