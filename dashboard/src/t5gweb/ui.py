@@ -1,4 +1,5 @@
 """UI views for t5gweb"""
+
 # The login code was derived from:
 # https://github.com/SAML-Toolkits/python3-saml/tree/master/demo-flask
 # License - https://github.com/SAML-Toolkits/python3-saml/blob/master/LICENSE
@@ -96,6 +97,9 @@ def load_data():
 @BP.route("/", methods=["GET", "POST"])
 def login():
     """Handles redirects back and forth from SAML Provider and user creation in Redis"""
+    login_disabled = os.getenv("FLASK_LOGIN_DISABLED", "false") == "true"
+    if login_disabled:
+        return redirect(url_for("ui.index"))
     req = prepare_flask_request(request)
     auth = init_saml_auth(req)
     errors = []
