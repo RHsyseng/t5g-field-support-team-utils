@@ -97,6 +97,7 @@ def load_data():
 @BP.route("/", methods=["GET", "POST"])
 def login():
     """Handles redirects back and forth from SAML Provider and user creation in Redis"""
+    # Anything except for 'true' will be set to False
     login_disabled = os.getenv("FLASK_LOGIN_DISABLED", "false") == "true"
     if login_disabled:
         return redirect(url_for("ui.index"))
