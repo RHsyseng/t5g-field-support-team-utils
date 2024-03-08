@@ -1,0 +1,322 @@
+{% extends "skeleton.html" %}
+{% import 'macros/macros.html' as macros %}
+{% block title %}{{ page_title }}{% endblock %}
+{% block content %}
+    <!-- Include jQuery + DataTables -->
+    <script type="text/javascript"
+            charset="utf8"
+            src="{{ url_for('static', filename='node_modules/jquery/dist/jquery.min.js') }}"></script>
+    <script type="text/javascript"
+            charset="utf8"
+            src="{{ url_for('static', filename='node_modules/datatables.net/js/jquery.dataTables.js') }}"></script>
+    <script type="text/javascript"
+            charset="utf8"
+            src="{{ url_for('static', filename='node_modules/datatables.net-bs5/js/dataTables.bootstrap5.min.js') }}"></script>
+    <script type="text/javascript"
+            charset="utf8"
+            src="{{ url_for('static', filename='js/plugins.js') }}"></script>
+    <script type="text/javascript"
+            charset="utf8"
+            src="{{ url_for('static', filename='node_modules/datatables.net-searchpanes/js/dataTables.searchPanes.min.js') }}"></script>
+    <script type="text/javascript"
+            charset="utf8"
+            src="{{ url_for('static', filename='node_modules/datatables.net-searchpanes-bs5/js/searchPanes.bootstrap5.min.js') }}"></script>
+    <script type="text/javascript"
+            charset="utf8"
+            src="{{ url_for('static', filename='node_modules/datatables.net-select/js/dataTables.select.min.js') }}"></script>
+    <script type="text/javascript"
+            charset="utf8"
+            src="{{ url_for('static', filename='js/table.js') }}"></script>
+    <script type="text/javascript"
+            charset="utf8"
+            src="{{ url_for('static', filename='node_modules/plotly.js-cartesian-dist-min/plotly-cartesian.min.js') }}"></script>
+    <div class="container-fluid copy mt-5">
+        <h2>Engineer Stats: {{ engineer }}</h2>
+        <div class="row">
+            <div class="col-sm-6">
+                <table class="table table-bordered table-hover table-responsive w-100"
+                       id="overall">
+                    <thead>
+                        <tr>
+                            <th class="text-center">Metric</th>
+                            <th class="text-center">Count</th>
+                        </tr>
+                    </thead>
+                    <tbody class="list">
+                        <tr>
+                            <td class="align-middle">Open Cases</td>
+                            <td class="align-middle text-center">{{ stats['open_cases'] }}</td>
+                        </tr>
+                        <tr>
+                            <td class="align-middle">Cases On Prio-list</td>
+                            <td class="align-middle text-center">{{ stats['escalated'] }}</td>
+                        </tr>
+                        <tr>
+                            <td class="align-middle">Cases On WatchList</td>
+                            <td class="align-middle text-center">{{ stats['watched'] }}</td>
+                        </tr>
+                        <tr>
+                            <td class="align-middle">Crit Sit Cases</td>
+                            <td class="align-middle text-center">{{ stats['crit_sit'] }}</td>
+                        </tr>
+                        <tr>
+                            <td class="align-middle">Total Escalations</td>
+                            <td class="align-middle text-center">{{ stats['total_escalations'] }}</td>
+                        </tr>
+                        <tr>
+                            <td class="align-middle">High Priority Cases</td>
+                            <td class="align-middle text-center">{{ stats['high_prio'] }}</td>
+                        </tr>
+                        <tr>
+                            <td class="align-middle">Cases Opened in the Last Day / Week</td>
+                            <td class="align-middle text-center">{{ stats['daily_opened_cases'] }} / {{ stats['weekly_opened_cases'] }}</td>
+                        </tr>
+                        <tr>
+                            <td class="align-middle">Cases Closed in the Last Day / Week</td>
+                            <td class="align-middle text-center">{{ stats['daily_closed_cases'] }} / {{ stats['weekly_closed_cases'] }}</td>
+                        </tr>
+                        <tr>
+                            <td class="align-middle">Cases With No Updates In The Last Week</td>
+                            <td class="align-middle text-center">{{ stats['no_updates'] }}</td>
+                        </tr>
+                        <tr>
+                            <td class="align-middle">Cases With No Bugs Associated</td>
+                            <td class="align-middle text-center">{{ stats['no_bzs'] }}</td>
+                        </tr>
+                        <tr>
+                            <td class="align-middle">Unique Bugs</td>
+                            <td class="align-middle text-center">{{ stats['bugs']['unique'] }}</td>
+                        </tr>
+                        <tr>
+                            <td class="align-middle">Bugs With No Target</td>
+                            <td class="align-middle text-center">{{ stats['bugs']['no_target'] }}</td>
+                        </tr>
+                    </tbody>
+                </table>
+                <div class="row">{{ macros.outcomes_table(histogram_stats) }}</div>
+            </div>
+            <div class="col-12 col-sm-6">
+                <div class="card mb-2">
+                    <div class="card-body">
+                        <div class="chart-container">
+                            <canvas id="severityChart"></canvas>
+                            <script>
+                            var ctx = document.getElementById('severityChart').getContext('2d');
+                            var myChart = new Chart(ctx, {
+                                type: 'pie',
+                                data: {  labels: {{pie_stats['by_severity'][0] | safe}},
+                                datasets: [{
+                                    label: 'Severity',
+                                    data: {{pie_stats['by_severity'][1] | safe}} ,
+                                    backgroundColor: [
+                                    'rgb(255, 99, 132)',
+                                    'rgb(54, 162, 235)',
+                                    'rgb(255, 205, 86)',
+                                    'rgb(75, 192, 192)'
+                                    ],
+                                    hoverOffset: 4
+                                }]
+                            },
+                            options: {
+                                maintainAspectRatio: false,
+                                plugins: {
+                                    title: {
+                                        display: true,
+                                        text: "Cards By Severity",
+                                        color: "black",
+                                        font: {
+                                            size: 22,
+                                            weight: "normal"
+                                        }
+                                    }
+                                }
+                            }
+                            });
+                            </script>
+                        </div>
+                    </div>
+                </div>
+                <div class="card">
+                    <div class="card-body">
+                        <div class="chart-container">
+                            <canvas id="statusChart"></canvas>
+                            <script>
+                            var ctx = document.getElementById('statusChart').getContext('2d');
+                            var myChart = new Chart(ctx, {
+                                type: 'pie',
+                                data: {  labels: {{pie_stats['by_status'][0] | safe}},
+                                datasets: [{
+                                    label: 'Status',
+                                    data: {{pie_stats['by_status'][1] | safe}} ,
+                                    backgroundColor: [
+                                    'rgb(255, 99, 132)',
+                                    'rgb(54, 162, 235)',
+                                    'rgb(255, 205, 86)'
+                                    ],
+                                    hoverOffset: 4
+                                }]
+                            },
+                            options: {
+                                maintainAspectRatio: false,
+                                plugins: {
+                                    title: {
+                                        display: true,
+                                        text: "Cards by Status",
+                                        color: "black",
+                                        font: {
+                                            size: 22,
+                                            weight: "normal"
+                                        }
+                                    }
+                                }
+                            }
+                            });
+                            </script>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+    <br>
+    <!--<div class="bug-table">
+        <h2>Bugs and JIRA Issues:</h2>
+        <table class="table table-bordered table-hover table-responsive mt-5 w-100"
+               id="bugs">
+            <thead>
+                <tr>
+                    <th class="text-center">BZ/JIRA#</th>
+                    <th class="text-center">Summary</th>
+                    <th class="text-center">Priority/Severity</th>
+                    <th class="text-center">Target Release</th>
+                    <th class="text-center">Assignee</th>
+                    <th class="text-center">QA Contact</th>
+                    <th class="text-center">Last Updated</th>
+                    <th class="text-center">Status</th>
+                </tr>
+            </thead>
+            <tbody class="list">
+                {% for account in new_comments %}
+                    {% for status in new_comments[account] %}
+                        {% for card in new_comments[account][status] %}
+                            {% if new_comments[account][status][card]['bugzilla'] != None %}
+                                {% for bug in new_comments[account][status][card]['bugzilla'] %}
+                                    <tr>
+                                        <td class="align-middle text-center">
+                                            <a href="{{ bug['bugzillaLink'] }}" target="_blank">{{ bug['bugzillaNumber'] }}</a>
+                                        </td>
+                                        <td class="align-middle text-center">{{ bug['summary'] }}</td>
+                                        <td class="align-middle text-center">{{ bug['severity'] }}</td>
+                                        <td class="align-middle text-center">{{ bug['target_release'][0] }}</td>
+                                        <td class="align-middle text-center">{{ bug['assignee'] }}</td>
+                                        <td class="align-middle text-center">{{ bug['qa_contact'] }}</td>
+                                        <td class="align-middle text-center">{{ bug['last_change_time'] }}</td>
+                                        <td class="align-middle text-center">{{ bug['status'] }}</td>
+                                    </tr>
+                                {% endfor %}
+                            {% endif %}
+                            {% if new_comments[account][status][card]['issues'] != None %}
+                                {% for issue in new_comments[account][status][card]['issues'] %}
+                                    <tr>
+                                        <td class="align-middle text-center">
+                                            <a href="{{ issue['url'] }}" target="_blank">{{ issue['id'] }}</a>
+                                        </td>
+                                        <td class="align-middle text-center">{{ issue['title'] }}</td>
+                                        <td class="align-middle text-center">{{ issue['priority'] }}</td>
+                                        <td class="align-middle text-center">{{ issue['fix_versions'] }}</td>
+                                        <td class="align-middle text-center">{{ issue['assignee'] }}</td>
+                                        <td class="align-middle text-center">{{ issue['qa_contact'] }}</td>
+                                        <td class="align-middle text-center">{{ issue['updated'] }}</td>
+                                        <td class="issue-middle text-center">{{ issue['status'] }}</td>
+                                    </tr>
+                                {% endfor %}
+                            {% endif %}
+                        {% endfor %}
+                    {% endfor %}
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>-->
+    <br>
+    <h2>Cases:</h2>
+    {{ macros.cases_table(new_comments, jira_server) }}
+    <script>
+    // Create the histograms
+    var reliefUrgent = {
+        x: {{ histogram_stats["Relief"]["Urgent"]["data"] | safe }},
+        type: 'histogram',
+        opacity: 0.5,
+        name: 'Urgent'
+    };
+
+    var reliefHigh = {
+        x: {{ histogram_stats["Relief"]["High"]["data"] | safe}},
+        type: 'histogram',
+        opacity: 0.5,
+        name: 'High'
+    };
+
+    var reliefNormal = {
+        x: {{ histogram_stats["Relief"]["Normal"]["data"] | safe}},
+        type: 'histogram',
+        opacity: 0.5,
+        name: 'Normal'
+    };
+
+    var reliefLow = {
+        x: {{ histogram_stats["Relief"]["Low"]["data"] | safe}},
+        type: 'histogram',
+        opacity: 0.5,
+        name: 'Low'
+    };
+
+
+    var reliefLayout = {
+        barmode: 'overlay',
+        title: 'Time to Relief',
+        xaxis: { title: 'Days From Case Creation Until Relief' },
+        yaxis: { title: 'Frequency' }
+    };
+
+    var reliefData = [reliefUrgent, reliefHigh, reliefNormal, reliefLow];
+    Plotly.newPlot('reliefHistogram', reliefData, reliefLayout, { responsive: true });
+
+    var resolvedUrgent = {
+        x: {{ histogram_stats["Resolved"]["Urgent"]["data"] | safe }},
+        type: 'histogram',
+        opacity: 0.5,
+        name: 'Urgent'
+    };
+
+    var resolvedHigh = {
+        x: {{ histogram_stats["Resolved"]["High"]["data"] | safe}},
+        type: 'histogram',
+        opacity: 0.5,
+        name: 'High'
+    };
+
+    var resolvedNormal = {
+        x: {{ histogram_stats["Resolved"]["Normal"]["data"] | safe }},
+        type: 'histogram',
+        opacity: 0.5,
+        name: 'Normal'
+    };
+
+    var resolvedLow = {
+        x: {{ histogram_stats["Resolved"]["Low"]["data"] | safe}},
+        type: 'histogram',
+        opacity: 0.5,
+        name: 'Low'
+    };
+    
+    var resolvedLayout = {
+        barmode: 'overlay',
+        title: 'Time to Resolution',
+        xaxis: { title: 'Days From Case Creation Until Resolution' },
+        yaxis: { title: 'Frequency' }
+    };
+
+    var resolvedData = [resolvedUrgent, resolvedHigh, resolvedNormal, resolvedLow];
+    Plotly.newPlot('resolvedHistogram', resolvedData, resolvedLayout, { responsive: true });
+    </script>
+{% endblock %}
