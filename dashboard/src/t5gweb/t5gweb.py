@@ -1,4 +1,5 @@
 """core CRUD functions for t5gweb"""
+
 import logging
 import re
 from copy import deepcopy
