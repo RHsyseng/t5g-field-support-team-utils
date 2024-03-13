@@ -411,7 +411,7 @@ def get_case_from_link(jira_conn, card):
     return None
 
 
-def generate_stats(account=None):
+def generate_stats(account=None, engineer=None):
     """generate some stats"""
 
     logging.warning("generating stats")
@@ -425,144 +425,8 @@ def generate_stats(account=None):
     if account is not None:
         logging.warning("filtering cases for {}".format(account))
         cards = {c: d for (c, d) in cards.items() if d["account"] == account}
-        cases = {c: d for (c, d) in cases.items() if d["account"] == account}
-
-    today = datetime.date.today()
-
-    customers = [cards[card]["account"] for card in cards]
-    engineers = [cards[card]["assignee"]["displayName"] for card in cards]
-    severities = [cards[card]["severity"] for card in cards]
-    statuses = [cards[card]["case_status"] for card in cards]
-
-    stats = {
-        "by_customer": {c: 0 for c in customers},
-        "by_engineer": {e: 0 for e in engineers},
-        "by_severity": {s: 0 for s in severities},
-        "by_status": {s: 0 for s in statuses},
-        "high_prio": 0,
-        "escalated": 0,
-        "watched": 0,
-        "open_cases": 0,
-        "weekly_closed_cases": 0,
-        "weekly_opened_cases": 0,
-        "daily_closed_cases": 0,
-        "daily_opened_cases": 0,
-        "no_updates": 0,
-        "no_bzs": 0,
-        "bugs": {"unique": 0, "no_target": 0},
-        "crit_sit": 0,
-        "total_escalations": 0,
-    }
-
-    for card, data in cards.items():
-        account = data["account"]
-        engineer = data["assignee"]["displayName"]
-        severity = data["severity"]
-        status = data["case_status"]
-
-        stats["by_status"][status] += 1
-
-        if status != "Closed":
-            stats["by_customer"][account] += 1
-            stats["by_engineer"][engineer] += 1
-            stats["by_severity"][severity] += 1
-            if severity == "High" or severity == "Urgent":
-                stats["high_prio"] += 1
-            if cards[card]["escalated"]:
-                stats["escalated"] += 1
-            if cards[card]["watched"]:
-                stats["watched"] += 1
-            if cards[card]["crit_sit"]:
-                stats["crit_sit"] += 1
-            if (
-                cards[card]["escalated"]
-                or cards[card]["watched"]
-                or cards[card]["crit_sit"]
-            ):
-                stats["total_escalations"] += 1
-            if cards[card]["bugzilla"] is None and cards[card]["issues"] is None:
-                stats["no_bzs"] += 1
-
-    for case, data in cases.items():
-        if data["status"] == "Closed":
-            if (
-                today
-                - datetime.datetime.strptime(
-                    data["closeddate"], "%Y-%m-%dT%H:%M:%SZ"
-                ).date()
-            ).days < 7:
-                stats["weekly_closed_cases"] += 1
-            if (
-                today
-                - datetime.datetime.strptime(
-                    data["closeddate"], "%Y-%m-%dT%H:%M:%SZ"
-                ).date()
-            ).days <= 1:
-                stats["daily_closed_cases"] += 1
-        else:
-            stats["open_cases"] += 1
-            if (
-                today
-                - datetime.datetime.strptime(
-                    data["createdate"], "%Y-%m-%dT%H:%M:%SZ"
-                ).date()
-            ).days < 7:
-                stats["weekly_opened_cases"] += 1
-            if (
-                today
-                - datetime.datetime.strptime(
-                    data["createdate"], "%Y-%m-%dT%H:%M:%SZ"
-                ).date()
-            ).days <= 1:
-                stats["daily_opened_cases"] += 1
-            if (
-                today
-                - datetime.datetime.strptime(
-                    data["last_update"], "%Y-%m-%dT%H:%M:%SZ"
-                ).date()
-            ).days < 7:
-                stats["no_updates"] += 1
-
-    all_bugs = {}
-    no_target = {}
-    if bugs:
-        for case, bzs in bugs.items():
-            if case in cases and cases[case]["status"] != "Closed":
-                for bug in bzs:
-                    all_bugs[bug["bugzillaNumber"]] = bug
-                    if is_bug_missing_target(bug):
-                        no_target[bug["bugzillaNumber"]] = bug
-
-    if issues:
-        for case, jira_bugs in issues.items():
-            if case in cases and cases[case]["status"] != "Closed":
-                for issue in jira_bugs:
-                    all_bugs[issue["id"]] = issue
-                    if is_bug_missing_target(issue):
-                        no_target[issue["id"]] = issue
-
-    stats["bugs"]["unique"] = len(all_bugs)
-    stats["bugs"]["no_target"] = len(no_target)
-
-    end = time.time()
-    logging.warning("generated stats in {} seconds".format((end - start)))
-
-    return stats
-
-def generate_user_stats(engineer=None):
-    """generate user stats"""
-
-    logging.warning("generating user stats")
-    start = time.time()
-
-    cards = redis_get("cards")
-    cases = redis_get("cases")
-    bugs = redis_get("bugs")
-    issues = redis_get("issues")
-
-    if engineer is not None:
-        logging.warning("filtering cases for {}".format(engineer))
-        cards = {c: d for (c, d) in cards.items() if d["assignee"]["displayName"] == engineer}
+        if engineer is None:
+            cases = {c: d for (c, d) in cases.items() if d["account"] == account}
 
     today = datetime.date.today()
 

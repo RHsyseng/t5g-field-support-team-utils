@@ -23,7 +23,6 @@ from onelogin.saml2.utils import OneLogin_Saml2_Utils
 from t5gweb.libtelco5g import (
     generate_histogram_stats,
     generate_stats,
-    generate_user_stats,
     plot_stats,
     redis_get,
     redis_set,
@@ -417,8 +416,7 @@ def get_account(account):
 def get_engineer(engineer):
     """show bugs, cases and stats by for a given engineer"""
     load_data()
-    stats = generate_user_stats(engineer)
-    #comments = get_new_comments(new_comments_only=False, account=engineer)
+    stats = generate_stats(engineer=engineer)
     comments = get_new_comments(new_comments_only=False, engineer=engineer)
     
     pie_stats = {
@@ -432,10 +430,9 @@ def get_engineer(engineer):
         ),
     }
 
-    # TODO: remove closed cards
     histogram_stats = generate_histogram_stats(engineer=engineer)
     return render_template(
-        "ui/engineer.html",
+        "ui/account.html",
         page_title=engineer,
         account=engineer,
         now=load_data.now,
@@ -444,4 +441,5 @@ def get_engineer(engineer):
         jira_server=load_data.jira_server,
         pie_stats=pie_stats,
         histogram_stats=histogram_stats,
+        engineer_view=True,
     )
