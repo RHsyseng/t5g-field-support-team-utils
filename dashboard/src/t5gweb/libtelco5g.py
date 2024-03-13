@@ -657,7 +657,9 @@ def generate_histogram_stats(account=None, engineer=None):
 
     if engineer is not None:
         logging.warning(f"filtering cards for {account}")
-        cards = {c: d for (c, d) in cards.items() if d["assignee"]["displayName"] == engineer}
+        cards = {
+            c: d for (c, d) in cards.items() if d["assignee"]["displayName"] == engineer
+        }
 
     histogram_data = {
         "Resolved": base_dictionary,

@@ -418,7 +418,7 @@ def get_engineer(engineer):
     load_data()
     stats = generate_stats(engineer=engineer)
     comments = get_new_comments(new_comments_only=False, engineer=engineer)
-    
+
     pie_stats = {
         "by_severity": (
             list(stats["by_severity"].keys()),

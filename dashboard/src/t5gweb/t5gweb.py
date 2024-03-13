@@ -40,7 +40,9 @@ def get_new_comments(new_comments_only=True, account=None, engineer=None):
     if account is not None:
         cards = {c: d for (c, d) in cards.items() if d["account"] == account}
     if engineer is not None:
-        cards = {c: d for (c, d) in cards.items() if d["assignee"]["displayName"] == engineer}
+        cards = {
+            c: d for (c, d) in cards.items() if d["assignee"]["displayName"] == engineer
+        }
     logging.warning("found %d JIRA cards" % (len(cards)))
     time_now = datetime.now(timezone.utc)
 
