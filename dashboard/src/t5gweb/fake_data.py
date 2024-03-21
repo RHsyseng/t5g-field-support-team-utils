@@ -63,7 +63,7 @@ def generate_fake_cases(fake, number_of_cases):
                 + "Z",
                 "owner": fake.name(),
                 "problem": fake.sentence(),
-                "product": f"{fake.word()} {fake.numerify("#.#")}",
+                "product": f"{fake.word()} {fake.numerify('#.#')}",
                 "severity": fake.random_element(
                     ["1 (Urgent)", "2 (High)", "3 (Normal)", "4 (Low)"]
                 ),
@@ -129,25 +129,31 @@ def generate_fake_issues(fake, private_keywords):
     for _ in range(fake.random_int(1, 5)):
         issue = {
             "assignee": fake.safe_email() if fake.boolean() else None,
-            "fix_versions": [
-                f"{fake.word()}-{fake.numerify('#.##')}" if fake.boolean() else "---"
-            ]
-            if fake.boolean()
-            else None,
+            "fix_versions": (
+                [f"{fake.word()}-{fake.numerify('#.##')}" if fake.boolean() else "---"]
+                if fake.boolean()
+                else None
+            ),
             "id": fake.random_number(6),
-            "jira_severity": fake.random_element(
-                ["Critical", "Important", "Moderate", "Low", "Informational"]
-            )
-            if fake.boolean()
-            else None,
-            "jira_type": fake.random_element(["Feature Request", "Bug"])
-            if fake.boolean()
-            else None,
-            "priority": fake.random_element(
-                ["Major", "Minor", "Normal", "Blocker", "Critical", "Undefined"]
-            )
-            if fake.boolean()
-            else None,
+            "jira_severity": (
+                fake.random_element(
+                    ["Critical", "Important", "Moderate", "Low", "Informational"]
+                )
+                if fake.boolean()
+                else None
+            ),
+            "jira_type": (
+                fake.random_element(["Feature Request", "Bug"])
+                if fake.boolean()
+                else None
+            ),
+            "priority": (
+                fake.random_element(
+                    ["Major", "Minor", "Normal", "Blocker", "Critical", "Undefined"]
+                )
+                if fake.boolean()
+                else None
+            ),
             "private_keywords": private_keywords,
             "qa_contact": fake.safe_email() if fake.boolean() else None,
             "status": fake.random_element(
@@ -290,9 +296,9 @@ def generate_fake_card(fake, bugs, issues, case_number, case_details):
             "daily_telco": fake.boolean(),
             "description": case_details["description"],
             "escalated": fake.boolean(),
-            "escalated_link": f"https://{fake.safe_domain_name()}"
-            if fake.boolean()
-            else None,
+            "escalated_link": (
+                f"https://{fake.safe_domain_name()}" if fake.boolean() else None
+            ),
             "group_name": fake.word() if fake.boolean() else None,
             "issues": issues.get(case_number),
             "labels": [fake.word() for _ in range(fake.random_int(1, 3))],
@@ -303,10 +309,11 @@ def generate_fake_card(fake, bugs, issues, case_number, case_details):
             "potential_escalation": fake.boolean(),
             "priority": fake.random_element(["Major", "Minor"]),
             "product": case_details["product"],
-            "relief_at": fake.date_time_this_decade().replace(microsecond=0).isoformat()
-            + "Z"
-            if fake.boolean()
-            else None,
+            "relief_at": (
+                fake.date_time_this_decade().replace(microsecond=0).isoformat() + "Z"
+                if fake.boolean()
+                else None
+            ),
             "resolved_at": (
                 fake.date_time_this_decade().replace(microsecond=0).isoformat() + "Z"
                 if fake.boolean()
