@@ -1,4 +1,5 @@
 """core CRUD functions for t5gweb"""
+import json
 import logging
 import re
 from copy import deepcopy
@@ -6,6 +7,8 @@ from datetime import date, datetime, timezone
 
 import click
 from flask.cli import with_appcontext
+
+from t5gweb.fake_data import generate_fake_data
 from t5gweb.utils import set_cfg
 
 from . import cache, libtelco5g
@@ -120,42 +123,79 @@ def organize_cards(detailed_cards, account_list):
 
 
 @click.command("init-cache")
+@click.option(
+    "--fake-data",
+    envvar="fake_data",
+    is_flag=True,
+    default=False,
+    help="Do you want to generate fake data?",
+)
+@click.option(
+    "--overwrite-cache",
+    envvar="overwrite_cache",
+    is_flag=True,
+    default=False,
+    help=(
+        "Do you want to overwrite your database with fake data? If set to false, "
+        "fake data will only be inserted if the relevant db entry is empty."
+    ),
+)
+@click.option(
+    "--number-of-cases",
+    envvar="number_of_cases",
+    default=10,
+    help="How many fake cases to create in your db",
+)
 @with_appcontext
-def init_cache():
-    cfg = set_cfg()
-    logging.warning("checking caches")
-    cases = libtelco5g.redis_get("cases")
-    cards = libtelco5g.redis_get("cards")
-    bugs = libtelco5g.redis_get("bugs")
-    issues = libtelco5g.redis_get("issues")
-    details = libtelco5g.redis_get("details")
-    escalations = libtelco5g.redis_get("escalations")
-    watchlist = libtelco5g.redis_get("watchlist")
-    stats = libtelco5g.redis_get("stats")
-    if cases == {}:
-        logging.warning("no cases found in cache. refreshing...")
-        cache.get_cases(cfg)
-    if details == {}:
-        logging.warning("no details found in cache. refreshing...")
-        cache.get_case_details(cfg)
-    if bugs == {}:
-        logging.warning("no bugs found in cache. refreshing...")
-        cache.get_bz_details(cfg)
-    if issues == {}:
-        logging.warning("no issues found in cache. refreshing...")
-        cache.get_issue_details(cfg)
-    if escalations == {}:
-        logging.warning("no escalations found in cache. refreshing...")
-        cache.get_escalations(cfg)
-    if watchlist == {}:
-        logging.warning("no watchlist found in cache. refreshing...")
-        cache.get_watchlist(cfg)
-    if cards == {}:
-        logging.warning("no cards found in cache. refreshing...")
-        cache.get_cards(cfg)
-    if stats == {}:
-        logging.warning("no t5g stats found in cache. refreshing...")
-        cache.get_stats()
+def init_cache(fake_data, overwrite_cache, number_of_cases):
+    """Initialize cache with real data if it's empty, or fake data if specified by user
+
+    Args:
+        fake_data (bool): Determines if fake data should be generated
+        overwrite_cache (bool): Determines if existing cache entries should be
+            overwritten by fake data
+        number_of_cases (int): Amount of fake cases that should be created
+    """
+    if not fake_data:
+        cfg = set_cfg()
+        logging.warning("checking caches")
+        cases = libtelco5g.redis_get("cases")
+        cards = libtelco5g.redis_get("cards")
+        bugs = libtelco5g.redis_get("bugs")
+        issues = libtelco5g.redis_get("issues")
+        details = libtelco5g.redis_get("details")
+        escalations = libtelco5g.redis_get("escalations")
+        watchlist = libtelco5g.redis_get("watchlist")
+        stats = libtelco5g.redis_get("stats")
+        if cases == {}:
+            logging.warning("no cases found in cache. refreshing...")
+            cache.get_cases(cfg)
+        if details == {}:
+            logging.warning("no details found in cache. refreshing...")
+            cache.get_case_details(cfg)
+        if bugs == {}:
+            logging.warning("no bugs found in cache. refreshing...")
+            cache.get_bz_details(cfg)
+        if issues == {}:
+            logging.warning("no issues found in cache. refreshing...")
+            cache.get_issue_details(cfg)
+        if escalations == {}:
+            logging.warning("no escalations found in cache. refreshing...")
+            cache.get_escalations(cfg)
+        if watchlist == {}:
+            logging.warning("no watchlist found in cache. refreshing...")
+            cache.get_watchlist(cfg)
+        if cards == {}:
+            logging.warning("no cards found in cache. refreshing...")
+            cache.get_cards(cfg)
+        if stats == {}:
+            logging.warning("no t5g stats found in cache. refreshing...")
+            cache.get_stats()
+    else:
+        data = generate_fake_data(number_of_cases)
+        for key, value in data.items():
+            if overwrite_cache or libtelco5g.redis_get(key) == {}:
+                libtelco5g.redis_set(key, json.dumps(value))
 
 
 def init_app(app):
