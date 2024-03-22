@@ -69,7 +69,7 @@ def generate_fake_cases(fake, number_of_cases, accounts):
                     fake.date_time_this_decade().replace(microsecond=0).isoformat()
                     + "Z"
                     if fake.boolean(chance_of_getting_true=90)
-                    else fake.date_time_date_time_between("-7d")
+                    else fake.date_time_between("-7d")
                     .replace(microsecond=0)
                     .isoformat()
                     + "Z"
