@@ -19,7 +19,16 @@ def generate_fake_data(number_of_cases):
     issues = {}
     bugs = {}
     cards = {}
-    cases = generate_fake_cases(fake, number_of_cases)
+    accounts = [fake.company() for _ in range(10)]
+    engineers = [
+        {
+            "displayName": fake.name(),
+            "key": fake.user_name(),
+            "name": fake.user_name(),
+        }
+        for _ in range(5)
+    ]
+    cases = generate_fake_cases(fake, number_of_cases, accounts)
     for case_number, case_details in cases.items():
         if fake.boolean():
             # Generate fake issues for case
@@ -31,18 +40,21 @@ def generate_fake_data(number_of_cases):
             bugs[case_number] = generate_fake_bugs(fake, case_number)
 
         # Generate fake card for case
-        card = generate_fake_card(fake, bugs, issues, case_number, case_details)
+        card = generate_fake_card(
+            fake, engineers, bugs, issues, case_number, case_details
+        )
         cards.update(card)
 
     return {"issues": issues, "bugs": bugs, "cases": cases, "cards": cards}
 
 
-def generate_fake_cases(fake, number_of_cases):
+def generate_fake_cases(fake, number_of_cases, accounts):
     """Generate fake portal cases for use in development environments
 
     Args:
         fake (faker.proxy.Faker): Faker object
         number_of_cases (int): Amount of fake cases to generate
+        accounts (list): Fake companies to assign cases to
 
     Returns:
         dict: A dictionary that contains fake cases
@@ -51,11 +63,17 @@ def generate_fake_cases(fake, number_of_cases):
     for _ in range(number_of_cases):
         entry = {
             str(fake.random_number(8)): {
-                "account": fake.company(),
-                "createdate": fake.date_time_this_decade()
-                .replace(microsecond=0)
-                .isoformat()
-                + "Z",
+                "account": fake.random_element(accounts),
+                "createdate": (
+                    # 90% random date this decade, 10% random date this week
+                    fake.date_time_this_decade().replace(microsecond=0).isoformat()
+                    + "Z"
+                    if fake.boolean(chance_of_getting_true=90)
+                    else fake.date_time_date_time_between("-7d")
+                    .replace(microsecond=0)
+                    .isoformat()
+                    + "Z"
+                ),
                 "description": fake.paragraph(),
                 "last_update": fake.date_time_this_decade()
                 .replace(microsecond=0)
@@ -221,11 +239,12 @@ def generate_fake_bugs(fake, case):
     return case_bugs
 
 
-def generate_fake_card(fake, bugs, issues, case_number, case_details):
+def generate_fake_card(fake, engineers, bugs, issues, case_number, case_details):
     """Generate fake T5G cards using previously generated fake data.
 
     Args:
         fake (faker.proxy.Faker): Faker object
+        engineers (list): Pool of fakepod engineers to assign to card
         bugs (dict): All fake bugs that have been generated
         issues (dict): All fake Jira issues that have been generated
         case_number (int): ID of fake case to create card for
@@ -240,12 +259,8 @@ def generate_fake_card(fake, bugs, issues, case_number, case_details):
         fake.bothify("????-####").upper(): {
             "account": case_details["account"],
             "assignee": (
-                {
-                    "displayName": fake.name(),
-                    "key": fake.user_name(),
-                    "name": fake.user_name(),
-                }
-                if fake.boolean()
+                fake.random_element(engineers)
+                if fake.boolean(chance_of_getting_true=95)
                 else {"displayName": None, "key": None, "name": None}
             ),
             "bugzilla": bugs.get(case_number),
@@ -310,12 +325,26 @@ def generate_fake_card(fake, bugs, issues, case_number, case_details):
             "priority": fake.random_element(["Major", "Minor"]),
             "product": case_details["product"],
             "relief_at": (
-                fake.date_time_this_decade().replace(microsecond=0).isoformat() + "Z"
+                fake.date_time_between(
+                    start_date=datetime.datetime.strptime(
+                        case_details["createdate"], "%Y-%m-%dT%H:%M:%SZ"
+                    )
+                )
+                .replace(microsecond=0)
+                .isoformat()
+                + "Z"
                 if fake.boolean()
                 else None
             ),
             "resolved_at": (
-                fake.date_time_this_decade().replace(microsecond=0).isoformat() + "Z"
+                fake.date_time_between(
+                    start_date=datetime.datetime.strptime(
+                        case_details["createdate"], "%Y-%m-%dT%H:%M:%SZ"
+                    )
+                )
+                .replace(microsecond=0)
+                .isoformat()
+                + "Z"
                 if fake.boolean()
                 else None
             ),
