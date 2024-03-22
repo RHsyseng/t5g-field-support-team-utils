@@ -48,7 +48,7 @@ You will be able to see your page by running your Flask server and visiting `<UR
 Our templates are contained within `dashboard/src/t5gweb/templates` and our endpoints are
 defined in `dashboard/src/t5gweb/ui.py`.
 
-## Alter Javascript
+## Alter JavaScript
 
 We are using a framework called [DataTables](https://datatables.net/) to add interactive tables to our dashboard. The majority of our JavaScript is related to these tables:
 
@@ -132,7 +132,9 @@ def test_addition():
 If this test fails, we know that our `addition()` function isn't doing what we desire,
 and there is a bug somewhere in our code. This will help us catch bugs before they are deployed to production. It also helps when you make a change, to know at a glance that your code isn't breaking anything else.
 
-Unit tests should be able to run in isolation, without contacting any external services, like API's or databases. A unit test is meant to test only our code, and shouldn't be affected by things like state or internet connection, which can fluctuate and result in unreliable unit tests. This is different than an integration test or end-to-end test, which might include testing whether your code can create a card on an instance of Jira.
+Unit tests should be able to run in isolation, without contacting any external services, like APIs or databases. A unit test is meant to test only our code, and shouldn't be affected by things like state or internet connection, which can fluctuate and result in unreliable unit tests.
+
+This is different than an integration test or end-to-end test, which might include testing whether your code can create a card on an instance of Jira.
 
 As a result, when testing functions that require an external connection, you should "mock" all of these connections. A mock can stand-in for a call to an API/DB in your test. More info is available [here](https://microsoft.github.io/code-with-engineering-playbook/automated-testing/unit-testing/mocking/#mocks).
 
@@ -178,7 +180,7 @@ Our unit tests are located in `tests/`, and we run tests automatically for PR's 
 
 ## Add a new scheduled task
 
-We use [Celery beat](https://docs.celeryq.dev/en/stable/userguide/periodic-tasks.html) to run our scheduled tasks, which gather data from various API's and combine it into what is visible on our dashboard.
+We use [Celery beat](https://docs.celeryq.dev/en/stable/userguide/periodic-tasks.html) to run our scheduled tasks, which gather data from various APIs and combine it into what is visible on our dashboard.
 
 Here's a simple example of how you can add a new scheduled task:
 
