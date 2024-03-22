@@ -61,21 +61,23 @@ def generate_fake_cases(fake, number_of_cases, accounts):
     """
     cases = {}
     for _ in range(number_of_cases):
+        create_date = (
+            # 90% of cases "created" this decade, 10% "created" this week
+            fake.date_time_this_decade().replace(microsecond=0).isoformat() + "Z"
+            if fake.boolean(chance_of_getting_true=90)
+            else fake.date_time_between("-7d").replace(microsecond=0).isoformat() + "Z"
+        )
         entry = {
             str(fake.random_number(8)): {
                 "account": fake.random_element(accounts),
-                "createdate": (
-                    # 90% of cases "created" this decade, 10% "created" this week
-                    fake.date_time_this_decade().replace(microsecond=0).isoformat()
-                    + "Z"
-                    if fake.boolean(chance_of_getting_true=90)
-                    else fake.date_time_between("-7d")
-                    .replace(microsecond=0)
-                    .isoformat()
-                    + "Z"
-                ),
+                "createdate": create_date,
                 "description": fake.paragraph(),
-                "last_update": fake.date_time_this_decade()
+                # last_update must be after createdate
+                "last_update": fake.date_time_between(
+                    start_date=datetime.datetime.strptime(
+                        create_date, "%Y-%m-%dT%H:%M:%SZ"
+                    )
+                )
                 .replace(microsecond=0)
                 .isoformat()
                 + "Z",
