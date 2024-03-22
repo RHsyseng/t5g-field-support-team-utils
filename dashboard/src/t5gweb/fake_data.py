@@ -65,7 +65,7 @@ def generate_fake_cases(fake, number_of_cases, accounts):
             str(fake.random_number(8)): {
                 "account": fake.random_element(accounts),
                 "createdate": (
-                    # 90% random date this decade, 10% random date this week
+                    # 90% of cases "created" this decade, 10% "created" this week
                     fake.date_time_this_decade().replace(microsecond=0).isoformat()
                     + "Z"
                     if fake.boolean(chance_of_getting_true=90)
@@ -81,7 +81,7 @@ def generate_fake_cases(fake, number_of_cases, accounts):
                 + "Z",
                 "owner": fake.name(),
                 "problem": fake.sentence(),
-                "product": f"{fake.word()} {fake.numerify('#.#')}",
+                "product": f"{fake.word()} {fake.numerify('#.#')}",  # Ex: Word 4.5
                 "severity": fake.random_element(
                     ["1 (Urgent)", "2 (High)", "3 (Normal)", "4 (Low)"]
                 ),
@@ -90,15 +90,18 @@ def generate_fake_cases(fake, number_of_cases, accounts):
                 ),
             }
         }
+
         # Handle values that may not be present in case
         for case in entry:
             if fake.boolean():
-                entry[case]["bug"] = str(fake.random_number(7))
+                entry[case]["bug"] = str(fake.random_number(7))  # ex: 1234567
             if fake.boolean():
+                # list of words that is any length from 0 to 3 inclusive
                 entry[case]["tags"] = [
                     fake.word() for _ in range(fake.random_int(0, 3))
                 ]
             if entry[case]["status"] == "Closed":
+                # closeddate must be after the createdate
                 entry[case]["closeddate"] = (
                     fake.date_time_between(
                         start_date=datetime.datetime.strptime(
@@ -148,11 +151,12 @@ def generate_fake_issues(fake, private_keywords):
         issue = {
             "assignee": fake.safe_email() if fake.boolean() else None,
             "fix_versions": (
+                # ex: [Word-4.56] or ["---"] or None
                 [f"{fake.word()}-{fake.numerify('#.##')}" if fake.boolean() else "---"]
                 if fake.boolean()
                 else None
             ),
-            "id": fake.random_number(6),
+            "id": fake.random_number(6),  # ex: 123456
             "jira_severity": (
                 fake.random_element(
                     ["Critical", "Important", "Moderate", "Low", "Informational"]
@@ -256,6 +260,7 @@ def generate_fake_card(fake, engineers, bugs, issues, case_number, case_details)
     time_now = datetime.datetime.now(datetime.timezone.utc)
 
     card = {
+        # ex: TEST-1234
         fake.bothify("????-####").upper(): {
             "account": case_details["account"],
             "assignee": (
@@ -276,7 +281,7 @@ def generate_fake_card(fake, engineers, bugs, issues, case_number, case_details)
                 ]
             ),
             "case_created": case_details["createdate"],
-            "case_days_open": (
+            "case_days_open": (  # Calculate number of days since "createdate"
                 time_now.replace(tzinfo=None)
                 - datetime.datetime.strptime(
                     case_details["createdate"], "%Y-%m-%dT%H:%M:%SZ"
@@ -284,6 +289,7 @@ def generate_fake_card(fake, engineers, bugs, issues, case_number, case_details)
             ).days,
             "case_number": case_number,
             "case_status": case_details["status"],
+            # Convert last_update to correct format
             "case_updated_date": datetime.datetime.strftime(
                 datetime.datetime.strptime(
                     case_details["last_update"], "%Y-%m-%dT%H:%M:%SZ"
@@ -324,7 +330,7 @@ def generate_fake_card(fake, engineers, bugs, issues, case_number, case_details)
             "potential_escalation": fake.boolean(),
             "priority": fake.random_element(["Major", "Minor"]),
             "product": case_details["product"],
-            "relief_at": (
+            "relief_at": (  # relief_at must be after createdate
                 fake.date_time_between(
                     start_date=datetime.datetime.strptime(
                         case_details["createdate"], "%Y-%m-%dT%H:%M:%SZ"
@@ -336,7 +342,7 @@ def generate_fake_card(fake, engineers, bugs, issues, case_number, case_details)
                 if fake.boolean()
                 else None
             ),
-            "resolved_at": (
+            "resolved_at": (  # resolved_at must be after createdate
                 fake.date_time_between(
                     start_date=datetime.datetime.strptime(
                         case_details["createdate"], "%Y-%m-%dT%H:%M:%SZ"
