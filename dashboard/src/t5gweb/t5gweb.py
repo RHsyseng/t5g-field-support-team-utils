@@ -4,9 +4,9 @@ import logging
 import re
 from copy import deepcopy
 from datetime import date, datetime, timezone
+
 import click
 from flask.cli import with_appcontext
-
 from t5gweb.fake_data import generate_fake_data
 from t5gweb.utils import set_cfg
 
