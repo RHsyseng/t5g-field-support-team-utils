@@ -279,9 +279,11 @@ def create_cards(cfg, new_cases, action="none"):
             "priority": {"name": priority},
             "labels": cfg["labels"],
             "summary": summary[:253] + ".." if len(summary) > 253 else summary,
-            "description": full_description[:253] + ".."
-            if len(full_description) > 253
-            else full_description,
+            "description": (
+                full_description[:253] + ".."
+                if len(full_description) > 253
+                else full_description
+            ),
         }
 
         if assignee:
@@ -425,8 +427,24 @@ def generate_stats(account=None, engineer=None):
     if account is not None:
         logging.warning("filtering cases for {}".format(account))
         cards = {c: d for (c, d) in cards.items() if d["account"] == account}
-        if engineer is None:
-            cases = {c: d for (c, d) in cases.items() if d["account"] == account}
+        cases = {c: d for (c, d) in cases.items() if d["account"] == account}
+    if engineer is not None:
+        logging.warning("filtering cases for {}".format(engineer))
+        cards = {
+            c: d for (c, d) in cards.items() if d["assignee"]["displayName"] == engineer
+        }
+
+        # get case number and assignee from cards so that we can determine which cases
+        # belong to the engineer
+        temp_cases = {}
+        for case, details in cases.items():
+            for card in cards:
+                if (
+                    case == cards[card]["case_number"]
+                    and cards[card]["assignee"]["displayName"] == engineer
+                ):
+                    temp_cases[case] = details
+        cases = temp_cases
 
     today = datetime.date.today()
 
