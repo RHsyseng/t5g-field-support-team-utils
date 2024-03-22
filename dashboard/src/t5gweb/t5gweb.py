@@ -4,7 +4,6 @@ import logging
 import re
 from copy import deepcopy
 from datetime import date, datetime, timezone
-
 import click
 from flask.cli import with_appcontext
 

@@ -215,7 +215,10 @@ def generate_fake_bugs(fake, case):
         bugzilla_number = str(fake.random_number(6))
 
         bug = {
-            "bugzillaLink": f"https://{fake.safe_domain_name()}/show_bug.cgi?id={bugzilla_number}",
+            "bugzillaLink": (
+                f"https://{fake.safe_domain_name()}"
+                f"/show_bug.cgi?id={bugzilla_number}"
+            ),
             "bugzillaNumber": bugzilla_number,
             "caseNumber": case,
             "linkedAt": fake.date_time_this_decade().isoformat() + "Z",
