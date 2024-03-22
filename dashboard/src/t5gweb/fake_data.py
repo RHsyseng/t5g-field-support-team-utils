@@ -230,7 +230,7 @@ def generate_fake_bugs(fake, case):
                 ]
             ),
             "summary": fake.sentence(),
-            "target_release": [fake.bothify(text="#.#z") if fake.boolean else "---"],
+            "target_release": [fake.numerify(text="#.#z") if fake.boolean else "---"],
             "assignee": fake.safe_email(),
             "last_change_time": fake.date_time_this_decade().isoformat(),
             "internal_whiteboard": fake.word(),
