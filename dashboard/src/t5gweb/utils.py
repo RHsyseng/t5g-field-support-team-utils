@@ -276,3 +276,17 @@ def slack_notify(ini, blist):
             )
         except SlackApiError as slack_error:
             logging.warning("failed to post to slack: %s", slack_error)
+
+
+def make_pie_dict(stats):
+    """get the code simplified"""
+    return {
+        "by_severity": (
+            list(stats["by_severity"].keys()),
+            list(stats["by_severity"].values()),
+        ),
+        "by_status": (
+            list(stats["by_status"].keys()),
+            list(stats["by_status"].values()),
+        ),
+    }
