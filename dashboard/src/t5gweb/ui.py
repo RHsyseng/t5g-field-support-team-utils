@@ -29,7 +29,7 @@ from t5gweb.libtelco5g import (
 )
 from t5gweb.t5gweb import get_new_cases, get_new_comments, get_trending_cards, plots
 from t5gweb.taskmgr import refresh_background
-from t5gweb.utils import set_cfg, make_pie_dict
+from t5gweb.utils import make_pie_dict, set_cfg
 
 BP = Blueprint("ui", __name__, url_prefix="/")
 login_manager = LoginManager()
