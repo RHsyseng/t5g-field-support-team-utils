@@ -29,7 +29,7 @@ from t5gweb.libtelco5g import (
 )
 from t5gweb.t5gweb import get_new_cases, get_new_comments, get_trending_cards, plots
 from t5gweb.taskmgr import refresh_background
-from t5gweb.utils import set_cfg
+from t5gweb.utils import set_cfg, make_pie_dict
 
 BP = Blueprint("ui", __name__, url_prefix="/")
 login_manager = LoginManager()
@@ -386,18 +386,7 @@ def get_account(account):
     load_data()
     stats = generate_stats(account)
     comments = get_new_comments(new_comments_only=False, account=account)
-
-    pie_stats = {
-        "by_severity": (
-            list(stats["by_severity"].keys()),
-            list(stats["by_severity"].values()),
-        ),
-        "by_status": (
-            list(stats["by_status"].keys()),
-            list(stats["by_status"].values()),
-        ),
-    }
-
+    pie_stats = make_pie_dict(stats)
     histogram_stats = generate_histogram_stats(account)
     return render_template(
         "ui/account.html",
@@ -419,18 +408,7 @@ def get_engineer(engineer):
     load_data()
     stats = generate_stats(engineer=engineer)
     comments = get_new_comments(new_comments_only=False, engineer=engineer)
-
-    pie_stats = {
-        "by_severity": (
-            list(stats["by_severity"].keys()),
-            list(stats["by_severity"].values()),
-        ),
-        "by_status": (
-            list(stats["by_status"].keys()),
-            list(stats["by_status"].values()),
-        ),
-    }
-
+    pie_stats = make_pie_dict(stats)
     histogram_stats = generate_histogram_stats(engineer=engineer)
     return render_template(
         "ui/account.html",
