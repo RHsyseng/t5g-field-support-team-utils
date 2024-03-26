@@ -46,11 +46,11 @@ function format(data) {
         (data.issues[issue].priority != null
           ? data.issues[issue].priority
           : "---") +
-        "</td><td> " +
+        "</td><td>" +
         (data.issues[issue].jira_severity != null
           ? data.issues[issue].jira_severity
           : "---") +
-        "</td><td> " +
+        "</td><td>" +
         (data.issues[issue].private_keywords != null
           ? data.issues[issue].private_keywords.find((str) =>
               str.includes("Priority"),
