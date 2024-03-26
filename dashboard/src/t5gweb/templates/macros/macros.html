@@ -109,24 +109,24 @@
                             </td>
                             {% if new_comments[account][status][card]['escalated'] %}
                                 {% if new_comments[account][status][card]['escalated_link'] %}
-                                    <td class="align-middle text-center">
+                                    <td class="align-middle text-center fw-bold">
                                         <a href="{{ new_comments[account][status][card]['escalated_link'] }}">Yes</a>
                                     </td>
                                 {% else %}
-                                    <td class="align-middle text-center">Yes</td>
+                                    <td class="align-middle text-center fw-bold">Yes</td>
                                 {% endif %}
                             {% elif new_comments[account][status][card]['potential_escalation'] %}
-                                <td class="align-middle text-center">Potentially</td>
+                                <td class="align-middle text-center fw-bold">Potentially</td>
                             {% else %}
                                 <td class="align-middle text-center">No</td>
                             {% endif %}
                             {% if new_comments[account][status][card]['watched'] %}
-                                <td class="align-middle text-center">Yes</td>
+                                <td class="align-middle text-center fw-bold">Yes</td>
                             {% else %}
                                 <td class="align-middle text-center">No</td>
                             {% endif %}
                             {% if new_comments[account][status][card]['crit_sit'] %}
-                                <td class="align-middle text-center">Yes</td>
+                                <td class="align-middle text-center fw-bold">Yes</td>
                             {% else %}
                                 <td class="align-middle text-center">No</td>
                             {% endif %}
