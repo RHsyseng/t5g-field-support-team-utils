@@ -109,8 +109,8 @@
                             </td>
                             {% if new_comments[account][status][card]['escalated'] %}
                                 {% if new_comments[account][status][card]['escalated_link'] %}
-                                    <td class="align-middle text-center">
-                                        <a href="{{ new_comments[account][status][card]['escalated_link'] }} fw-bold">Yes</a>
+                                    <td class="align-middle text-center fw-bold">
+                                        <a href="{{ new_comments[account][status][card]['escalated_link'] }}">Yes</a>
                                     </td>
                                 {% else %}
                                     <td class="align-middle text-center fw-bold">Yes</td>
