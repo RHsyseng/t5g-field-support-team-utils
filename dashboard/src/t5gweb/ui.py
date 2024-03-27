@@ -202,12 +202,12 @@ def login():
 @login_required
 def index():
     """list new cases"""
-    load_data()
+    plot_data = plots()
     return render_template(
         "ui/index.html",
-        new_cases=load_data.new_cases,
-        values=load_data.y,
-        now=load_data.now,
+        new_cases=get_new_cases(),
+        values=list(plot_data.values()),
+        now=redis_get("timestamp"),
     )
 
 
@@ -268,7 +268,6 @@ def refresh_status(task_id):
 def refresh():
     """Forces an update to the dashboard"""
     task = refresh_background.delay()
-    load_data()
     return jsonify({}), 202, {"Location": url_for("ui.refresh_status", task_id=task.id)}
 
 
@@ -276,12 +275,12 @@ def refresh():
 @login_required
 def report_view():
     """Retrieves cards that have been updated within the last week and creates report"""
-    load_data()
+    cfg = set_cfg()
     return render_template(
         "ui/updates.html",
-        now=load_data.now,
-        new_comments=load_data.accounts,
-        jira_server=load_data.jira_server,
+        now=redis_get("timestamp"),
+        new_comments=get_new_comments(),
+        jira_server=cfg["server"],
         page_title="recent updates",
     )
 
@@ -290,12 +289,12 @@ def report_view():
 @login_required
 def report_view_all():
     """Retrieves all cards and creates report"""
-    load_data()
+    cfg = set_cfg()
     return render_template(
         "ui/updates.html",
-        now=load_data.now,
-        new_comments=load_data.accounts_all,
-        jira_server=load_data.jira_server,
+        now=redis_get("timestamp"),
+        new_comments=get_new_comments(new_comments_only=False),
+        jira_server=cfg["server"],
         page_title="all cards",
     )
 
@@ -306,12 +305,12 @@ def trends():
     """Retrieves cards that have been labeled with 'Trends' within
     the previous quarter and creates report
     """
-    load_data()
+    cfg = set_cfg()
     return render_template(
         "ui/updates.html",
-        now=load_data.now,
-        new_comments=load_data.trending_cards,
-        jira_server=load_data.jira_server,
+        now=redis_get("timestamp"),
+        new_comments=get_trending_cards(),
+        jira_server=cfg["server"],
         page_title="trends",
     )
 
@@ -320,12 +319,12 @@ def trends():
 @login_required
 def table_view():
     """Sorts new cards by severity and creates table"""
-    load_data()
+    cfg = set_cfg()
     return render_template(
         "ui/table.html",
-        now=load_data.now,
-        new_comments=load_data.accounts,
-        jira_server=load_data.jira_server,
+        now=redis_get("timestamp"),
+        new_comments=get_new_comments(),
+        jira_server=cfg["server"],
         page_title="severity",
     )
 
@@ -334,12 +333,12 @@ def table_view():
 @login_required
 def table_view_all():
     """Sorts all cards by severity and creates table"""
-    load_data()
+    cfg = set_cfg()
     return render_template(
         "ui/table.html",
-        now=load_data.now,
-        new_comments=load_data.accounts_all,
-        jira_server=load_data.jira_server,
+        now=redis_get("timestamp"),
+        new_comments=get_new_comments(new_comments_only=False),
+        jira_server=cfg["server"],
         page_title="all-severity",
     )
 
@@ -350,12 +349,12 @@ def weekly_updates():
     """Retrieves cards and displays them plainly for easy copy/pasting
     and distribution
     """
-    load_data()
+    cfg = set_cfg()
     return render_template(
         "ui/weekly_report.html",
-        now=load_data.now,
-        new_comments=load_data.accounts,
-        jira_server=load_data.jira_server,
+        now=redis_get("timestamp"),
+        new_comments=get_new_comments(),
+        jira_server=cfg["server"],
         page_title="weekly-update",
     )
 
@@ -364,13 +363,12 @@ def weekly_updates():
 @login_required
 def get_stats():
     """generate some stats"""
-    load_data()
     stats = generate_stats()
     x_values, y_values = plot_stats()
     histogram_stats = generate_histogram_stats()
     return render_template(
         "ui/stats.html",
-        now=load_data.now,
+        now=redis_get("timestamp"),
         stats=stats,
         x_values=x_values,
         y_values=y_values,
@@ -383,7 +381,7 @@ def get_stats():
 @login_required
 def get_account(account):
     """show bugs, cases and stats by for a given account"""
-    load_data()
+    cfg = set_cfg()
     stats = generate_stats(account)
     comments = get_new_comments(new_comments_only=False, account=account)
     pie_stats = make_pie_dict(stats)
@@ -392,10 +390,10 @@ def get_account(account):
         "ui/account.html",
         page_title=account,
         account=account,
-        now=load_data.now,
+        now=redis_get("timestamp"),
         stats=stats,
         new_comments=comments,
-        jira_server=load_data.jira_server,
+        jira_server=cfg["server"],
         pie_stats=pie_stats,
         histogram_stats=histogram_stats,
     )
@@ -405,7 +403,7 @@ def get_account(account):
 @login_required
 def get_engineer(engineer):
     """show bugs, cases and stats by for a given engineer"""
-    load_data()
+    cfg = set_cfg()
     stats = generate_stats(engineer=engineer)
     comments = get_new_comments(new_comments_only=False, engineer=engineer)
     pie_stats = make_pie_dict(stats)
@@ -414,10 +412,10 @@ def get_engineer(engineer):
         "ui/account.html",
         page_title=engineer,
         account=engineer,
-        now=load_data.now,
+        now=redis_get("timestamp"),
         stats=stats,
         new_comments=comments,
-        jira_server=load_data.jira_server,
+        jira_server=cfg["server"],
         pie_stats=pie_stats,
         histogram_stats=histogram_stats,
         engineer_view=True,
