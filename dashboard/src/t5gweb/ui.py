@@ -202,7 +202,7 @@ def login():
 @login_required
 def index():
     """list new cases"""
-    plot_data = plots()         
+    plot_data = plots()
     return render_template(
         "ui/index.html",
         new_cases=get_new_cases(),
