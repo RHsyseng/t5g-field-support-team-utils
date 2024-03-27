@@ -35,9 +35,9 @@ def get_new_cases():
     return new_cases
 
 
-def get_new_comments(cards,new_comments_only=True, account=None, engineer=None):
+def get_new_comments(new_comments_only=True, account=None, engineer=None):
     # fetch cards from redis cache
-    # cards = libtelco5g.redis_get("cards")
+    cards = libtelco5g.redis_get("cards")
     if account is not None:
         cards = {c: d for (c, d) in cards.items() if d["account"] == account}
     if engineer is not None:
