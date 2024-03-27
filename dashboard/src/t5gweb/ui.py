@@ -202,7 +202,7 @@ def login():
 @login_required
 def index():
     """list new cases"""
-   
+    plot_data = plots()         
     return render_template(
         "ui/index.html",
         new_cases=get_new_cases(),
@@ -268,7 +268,6 @@ def refresh_status(task_id):
 def refresh():
     """Forces an update to the dashboard"""
     task = refresh_background.delay()
-    load_data()
     return jsonify({}), 202, {"Location": url_for("ui.refresh_status", task_id=task.id)}
 
 
