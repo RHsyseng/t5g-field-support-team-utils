@@ -80,20 +80,6 @@ def prepare_flask_request(request):
     }
 
 
-def load_data():
-    """Load data for dashboard"""
-
-    cfg = set_cfg()
-    load_data.new_cases = get_new_cases()
-    plot_data = plots()
-    load_data.y = list(plot_data.values())
-    load_data.accounts = get_new_comments()
-    load_data.accounts_all = get_new_comments(new_comments_only=False)
-    load_data.trending_cards = get_trending_cards()
-    load_data.now = redis_get("timestamp")
-    load_data.jira_server = cfg["server"]
-
-
 @BP.route("/", methods=["GET", "POST"])
 def login():
     """Handles redirects back and forth from SAML Provider and user creation in Redis"""
@@ -276,10 +262,11 @@ def refresh():
 def report_view():
     """Retrieves cards that have been updated within the last week and creates report"""
     cfg = set_cfg()
+    cards = redis_get("cards")
     return render_template(
         "ui/updates.html",
         now=redis_get("timestamp"),
-        new_comments=get_new_comments(),
+        new_comments=get_new_comments(cards),
         jira_server=cfg["server"],
         page_title="recent updates",
     )
@@ -290,10 +277,11 @@ def report_view():
 def report_view_all():
     """Retrieves all cards and creates report"""
     cfg = set_cfg()
+    cards = redis_get("cards")
     return render_template(
         "ui/updates.html",
         now=redis_get("timestamp"),
-        new_comments=get_new_comments(new_comments_only=False),
+        new_comments=get_new_comments(cards=cards, new_comments_only=False),
         jira_server=cfg["server"],
         page_title="all cards",
     )
@@ -306,10 +294,11 @@ def trends():
     the previous quarter and creates report
     """
     cfg = set_cfg()
+    cards = redis_get("cards")
     return render_template(
         "ui/updates.html",
         now=redis_get("timestamp"),
-        new_comments=get_trending_cards(),
+        new_comments=get_trending_cards(cards),
         jira_server=cfg["server"],
         page_title="trends",
     )
@@ -320,10 +309,11 @@ def trends():
 def table_view():
     """Sorts new cards by severity and creates table"""
     cfg = set_cfg()
+    cards = redis_get("cards")
     return render_template(
         "ui/table.html",
         now=redis_get("timestamp"),
-        new_comments=get_new_comments(),
+        new_comments=get_new_comments(cards),
         jira_server=cfg["server"],
         page_title="severity",
     )
@@ -334,10 +324,11 @@ def table_view():
 def table_view_all():
     """Sorts all cards by severity and creates table"""
     cfg = set_cfg()
+    cards = redis_get("cards")
     return render_template(
         "ui/table.html",
         now=redis_get("timestamp"),
-        new_comments=get_new_comments(new_comments_only=False),
+        new_comments=get_new_comments(cards=cards, new_comments_only=False),
         jira_server=cfg["server"],
         page_title="all-severity",
     )
@@ -350,10 +341,11 @@ def weekly_updates():
     and distribution
     """
     cfg = set_cfg()
+    cards = redis_get("cards")
     return render_template(
         "ui/weekly_report.html",
         now=redis_get("timestamp"),
-        new_comments=get_new_comments(),
+        new_comments=get_new_comments(cards),
         jira_server=cfg["server"],
         page_title="weekly-update",
     )
@@ -383,7 +375,8 @@ def get_account(account):
     """show bugs, cases and stats by for a given account"""
     cfg = set_cfg()
     stats = generate_stats(account)
-    comments = get_new_comments(new_comments_only=False, account=account)
+    cards = redis_get("cards")
+    comments = get_new_comments(cards=cards, new_comments_only=False, account=account)
     pie_stats = make_pie_dict(stats)
     histogram_stats = generate_histogram_stats(account)
     return render_template(
@@ -404,8 +397,9 @@ def get_account(account):
 def get_engineer(engineer):
     """show bugs, cases and stats by for a given engineer"""
     cfg = set_cfg()
+    cards = redis_get("cards")
     stats = generate_stats(engineer=engineer)
-    comments = get_new_comments(new_comments_only=False, engineer=engineer)
+    comments = get_new_comments(cards=cards, new_comments_only=False, engineer=engineer)
     pie_stats = make_pie_dict(stats)
     histogram_stats = generate_histogram_stats(engineer=engineer)
     return render_template(
