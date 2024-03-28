@@ -80,20 +80,6 @@ def prepare_flask_request(request):
     }
 
 
-def load_data():
-    """Load data for dashboard"""
-
-    cfg = set_cfg()
-    load_data.new_cases = get_new_cases()
-    plot_data = plots()
-    load_data.y = list(plot_data.values())
-    load_data.accounts = get_new_comments()
-    load_data.accounts_all = get_new_comments(new_comments_only=False)
-    load_data.trending_cards = get_trending_cards()
-    load_data.now = redis_get("timestamp")
-    load_data.jira_server = cfg["server"]
-
-
 @BP.route("/", methods=["GET", "POST"])
 def login():
     """Handles redirects back and forth from SAML Provider and user creation in Redis"""
