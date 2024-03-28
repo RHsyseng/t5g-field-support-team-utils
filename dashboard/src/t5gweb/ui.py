@@ -193,7 +193,7 @@ def index():
         "ui/index.html",
         new_cases=get_new_cases(),
         values=list(plot_data.values()),
-        now=redis_get("time_stamp"),
+        now=redis_get("timestamp"),
     )
 
 
@@ -265,7 +265,7 @@ def report_view():
     cards = redis_get("cards")
     return render_template(
         "ui/updates.html",
-        now=redis_get("time_stamp"),
+        now=redis_get("timestamp"),
         new_comments=get_new_comments(cards),
         jira_server=cfg["server"],
         page_title="recent updates",
@@ -280,7 +280,7 @@ def report_view_all():
     cards = redis_get("cards")
     return render_template(
         "ui/updates.html",
-        now=redis_get("time_stamp"),
+        now=redis_get("timestamp"),
         new_comments=get_new_comments(cards=cards, new_comments_only=False),
         jira_server=cfg["server"],
         page_title="all cards",
@@ -297,7 +297,7 @@ def trends():
     cards = redis_get("cards")
     return render_template(
         "ui/updates.html",
-        now=redis_get("time_stamp"),
+        now=redis_get("timestamp"),
         new_comments=get_trending_cards(cards),
         jira_server=cfg["server"],
         page_title="trends",
@@ -312,7 +312,7 @@ def table_view():
     cards = redis_get("cards")
     return render_template(
         "ui/table.html",
-        now=redis_get("time_stamp"),
+        now=redis_get("timestamp"),
         new_comments=get_new_comments(cards),
         jira_server=cfg["server"],
         page_title="severity",
@@ -327,7 +327,7 @@ def table_view_all():
     cards = redis_get("cards")
     return render_template(
         "ui/table.html",
-        now=redis_get("time_stamp"),
+        now=redis_get("timestamp"),
         new_comments=get_new_comments(cards=cards, new_comments_only=False),
         jira_server=cfg["server"],
         page_title="all-severity",
@@ -344,7 +344,7 @@ def weekly_updates():
     cards = redis_get("cards")
     return render_template(
         "ui/weekly_report.html",
-        now=redis_get("time_stamp"),
+        now=redis_get("timestamp"),
         new_comments=get_new_comments(cards),
         jira_server=cfg["server"],
         page_title="weekly-update",
@@ -360,7 +360,7 @@ def get_stats():
     histogram_stats = generate_histogram_stats()
     return render_template(
         "ui/stats.html",
-        now=redis_get("time_stamp"),
+        now=redis_get("timestamp"),
         stats=stats,
         x_values=x_values,
         y_values=y_values,
@@ -383,7 +383,7 @@ def get_account(account):
         "ui/account.html",
         page_title=account,
         account=account,
-        now=redis_get("time_stamp"),
+        now=redis_get("timestamp"),
         stats=stats,
         new_comments=comments,
         jira_server=cfg["server"],
@@ -406,7 +406,7 @@ def get_engineer(engineer):
         "ui/account.html",
         page_title=engineer,
         account=engineer,
-        now=redis_get("time_stamp"),
+        now=redis_get("timestamp"),
         stats=stats,
         new_comments=comments,
         jira_server=cfg["server"],
