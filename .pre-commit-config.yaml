@@ -1,7 +1,7 @@
 repos:
   # Using this mirror lets us use mypyc-compiled black, which is about 2x faster
   - repo: https://github.com/psf/black-pre-commit-mirror
-    rev: 24.3.0
+    rev: 23.11.0
     hooks:
       - id: black
         # It is recommended to specify the latest version of Python
@@ -9,6 +9,19 @@ repos:
         # pre-commit's default_language_version, see
         # https://pre-commit.com/#top_level-default_language_version
         language_version: python3.12
+
+  - repo: https://github.com/pycqa/isort
+    rev: 5.12.0
+    hooks:
+      - id: isort
+        args: [--profile=black]
+
+  # flake8
+  - repo: https://github.com/pycqa/flake8
+    rev: 7.0.0
+    hooks:
+      - id: flake8
+        args: [--config=.github/linters/.flake8]
 
   # gitleaks
   - repo: https://github.com/gitleaks/gitleaks
@@ -22,3 +35,10 @@ repos:
     hooks:
       - id: yamllint
         args: [-c=.github/linters/.yaml-lint.yml]
+
+  # prettier
+  - repo: https://github.com/pre-commit/mirrors-prettier
+    rev: 'v3.1.0'
+    hooks:
+      - id: prettier
+        types: [javascript]
