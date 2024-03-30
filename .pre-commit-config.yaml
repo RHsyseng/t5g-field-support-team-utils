@@ -10,6 +10,7 @@ repos:
         # https://pre-commit.com/#top_level-default_language_version
         language_version: python3.12
 
+  # isort
   - repo: https://github.com/pycqa/isort
     rev: 5.12.0
     hooks:
