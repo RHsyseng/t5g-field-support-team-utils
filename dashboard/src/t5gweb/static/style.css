@@ -209,3 +209,19 @@ span.anchor {
 .new-cases {
   padding-top: 70px;
 }
+/* Telco priority */
+.telco-priority-1 {
+  color: red !important;
+}
+
+.telco-priority-2 {
+  color: orange !important;
+}
+
+.telco-priority-3 {
+  color: blue !important;
+}
+
+.telco-priority-4 {
+  color: black !important;
+}
