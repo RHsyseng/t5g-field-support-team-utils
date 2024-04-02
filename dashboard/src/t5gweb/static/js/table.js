@@ -59,7 +59,7 @@ function format(data) {
         (data.issues[issue].jira_severity != null
           ? data.issues[issue].jira_severity
           : "---") +
-        `</td><td class="telco-priority-${priorityNum}">` +
+        '</td><td class="telco-priority-' + priorityNum + '">' +
         (data.issues[issue].private_keywords != null
           ? data.issues[issue].private_keywords.find((str) =>
               str.includes("Priority"),
