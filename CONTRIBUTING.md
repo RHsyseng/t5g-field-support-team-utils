@@ -204,3 +204,18 @@ def setup_scheduled_tasks(sender, **kwargs):
 ```
 
 Now, the message will be printed every 15 minutes.
+
+### Common Debugging Techniques
+
+To see how the DataTables framework parses your data, you can use the following snippet (adapted from DataTables [docs](https://datatables.net/reference/api/row().data()#Examples)):
+
+```{javascript}
+$(document).ready(function () {
+...
+  $('#data tbody').on('click', 'tr', function () {
+    console.log(table.row(this).data());
+  });
+...
+```
+
+This can be useful when setting up and modifying your table's configuration, especially with regards to searching and ordering.
