@@ -38,7 +38,7 @@ function format(data) {
       const telcoPriority =
         data.issues[issue].private_keywords != null
           ? data.issues[issue].private_keywords.find((str) =>
-              str.includes("Priority")
+              str.includes("Priority"),
             )
           : null;
       const priorityNum = telcoPriority
