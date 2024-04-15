@@ -31,7 +31,11 @@
             charset="utf8"
             src="{{ url_for('static', filename='node_modules/plotly.js-cartesian-dist-min/plotly-cartesian.min.js') }}"></script>
     <div class="container-fluid copy mt-5">
+        {% if engineer_view == True %}
+        <h2>Engineer Stats: {{ account }}</h2>
+        {% else %}
         <h2>Account Stats: {{ account }}</h2>
+        {% endif %}
         <div class="row">
             <div class="col-sm-6">
                 <table class="table table-bordered table-hover table-responsive w-100"
@@ -179,6 +183,7 @@
         </div>
     </div>
     <br>
+    {% if engineer_view != True %}
     <div class="bug-table">
         <h2>Bugs and JIRA Issues:</h2>
         <table class="table table-bordered table-hover table-responsive mt-5 w-100"
@@ -237,6 +242,7 @@
             </tbody>
         </table>
     </div>
+    {% endif %}
     <br>
     <h2>Cases:</h2>
     {{ macros.cases_table(new_comments, jira_server) }}

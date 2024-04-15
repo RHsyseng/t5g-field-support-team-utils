@@ -134,7 +134,7 @@ def get_cards(cfg, self=None, background=False):
                 },
             )
         issue = jira_conn.issue(card)
-        comments = jira_conn.comments(issue)
+        comments = issue.fields.comment.comments
         card_comments = []
         for comment in comments:
             body = comment.body
