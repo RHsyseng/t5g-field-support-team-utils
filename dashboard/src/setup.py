@@ -20,5 +20,6 @@ setup(
         "flask-login==0.6.2",
         "prometheus-flask-exporter==0.22.4",
         "Werkzeug==2.3.7",
+        "xmlsec==1.3.13",
     ],
 )
