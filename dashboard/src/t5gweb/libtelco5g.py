@@ -295,6 +295,8 @@ def create_cards(cfg, new_cases, action="none"):
         if action == "create":
             logging.warning("creating card for case {}".format(case))
             new_card = jira_conn.create_issue(fields=card_info)
+            # Updating the card with the Release_Note_Text field.
+            new_card.update(fields={"customfield_12317313": "TRACK"})
             logging.warning("created {}".format(new_card.key))
 
             email_content.append(
