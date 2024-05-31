@@ -293,6 +293,14 @@ def make_pie_dict(stats):
 
 
 def get_fake_data(path="data/fake_data.json"):
+    """Retrieve fake data from JSON file
+
+    Args:
+        path (str, optional): Path to JSON. Defaults to "data/fake_data.json".
+
+    Returns:
+        dict: Dictionary that contains deserialized JSON data
+    """
     path = os.path.abspath(path)
     with open(path) as fake_data:
         data = json.load(fake_data)
