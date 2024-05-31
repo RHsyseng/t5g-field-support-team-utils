@@ -1,14 +1,15 @@
 """core CRUD functions for t5gweb"""
+
 import json
 import logging
 import re
 from copy import deepcopy
 from datetime import date, datetime, timezone
+import os
 
 import click
 from flask.cli import with_appcontext
-from t5gweb.fake_data import generate_fake_data
-from t5gweb.utils import set_cfg
+from t5gweb.utils import set_cfg, get_fake_data
 
 from . import cache, libtelco5g
 
@@ -122,39 +123,11 @@ def organize_cards(detailed_cards, account_list):
 
 
 @click.command("init-cache")
-@click.option(
-    "--fake-data",
-    envvar="fake_data",
-    is_flag=True,
-    default=False,
-    help="Do you want to generate fake data?",
-)
-@click.option(
-    "--overwrite-cache",
-    envvar="overwrite_cache",
-    is_flag=True,
-    default=False,
-    help=(
-        "Do you want to overwrite your database with fake data? If set to false, "
-        "fake data will only be inserted if the relevant db entry is empty."
-    ),
-)
-@click.option(
-    "--number-of-cases",
-    envvar="number_of_cases",
-    default=10,
-    help="How many fake cases to create in your db",
-)
 @with_appcontext
-def init_cache(fake_data, overwrite_cache, number_of_cases):
-    """Initialize cache with real data if it's empty, or fake data if specified by user
-
-    Args:
-        fake_data (bool): Determines if fake data should be generated
-        overwrite_cache (bool): Determines if existing cache entries should be
-            overwritten by fake data
-        number_of_cases (int): Amount of fake cases that should be created
-    """
+def init_cache():
+    """Initialize cache with real data if it's empty, or fake data if specified by user"""
+    # Anything except for 'true' will be set to False
+    fake_data = os.getenv("fake_data", "false") == "true"
     if not fake_data:
         cfg = set_cfg()
         logging.warning("checking caches")
@@ -191,10 +164,10 @@ def init_cache(fake_data, overwrite_cache, number_of_cases):
             logging.warning("no t5g stats found in cache. refreshing...")
             cache.get_stats()
     else:
-        data = generate_fake_data(number_of_cases)
+        logging.warning("using fake data")
+        data = get_fake_data()
         for key, value in data.items():
-            if overwrite_cache or libtelco5g.redis_get(key) == {}:
-                libtelco5g.redis_set(key, json.dumps(value))
+            libtelco5g.redis_set(key, json.dumps(value))
 
 
 def init_app(app):

@@ -276,3 +276,10 @@ def slack_notify(ini, blist):
             )
         except SlackApiError as slack_error:
             logging.warning("failed to post to slack: %s", slack_error)
+
+
+def get_fake_data(path="data/fake_data.json"):
+    path = os.path.abspath(path)
+    with open(path) as fake_data:
+        data = json.load(fake_data)
+    return data
