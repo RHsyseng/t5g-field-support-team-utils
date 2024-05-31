@@ -2,14 +2,14 @@
 
 import json
 import logging
+import os
 import re
 from copy import deepcopy
 from datetime import date, datetime, timezone
-import os
 
 import click
 from flask.cli import with_appcontext
-from t5gweb.utils import set_cfg, get_fake_data
+from t5gweb.utils import get_fake_data, set_cfg
 
 from . import cache, libtelco5g
 
@@ -127,7 +127,7 @@ def organize_cards(detailed_cards, account_list):
 @click.command("init-cache")
 @with_appcontext
 def init_cache():
-    """Initialize cache with real data if it's empty, or fake data if specified by user"""
+    """Initialize cache with real data, or fake data if set by user in an env var"""
     # Anything except for 'true' will be set to False
     fake_data = os.getenv("fake_data", "false") == "true"
     if not fake_data:

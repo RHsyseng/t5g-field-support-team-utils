@@ -1,7 +1,7 @@
-import datetime
-import re
 import argparse
+import datetime
 import json
+import re
 
 from faker import Faker
 
@@ -132,7 +132,7 @@ def generate_fake_private_keywords(fake):
     option = fake.random_element([1, 2, 3])
 
     if option == 1:
-        return [fake.word(), f"Telco:Priority-{fake.random_int(1,4)}"]
+        return [fake.word(), f"Telco:Priority-{fake.random_int(1, 4)}"]
     elif option == 2:
         return [fake.word(), fake.word()]
     else:
