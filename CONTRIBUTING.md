@@ -1,6 +1,13 @@
-# Some Common Ways to Contribute
+# Contribution Guide
 
-## Add a new page
+## Pre-Commit
+
+We have a `.pre-commit-config.yaml` file in our repository that will help you avoid common linting/formatting mistakes when you commit your changes. You can get set up by following
+pre-commit's [quick start guide](https://pre-commit.com/#quick-start).
+
+## Some Common Ways to Contribute
+
+### Add a new page
 
 The official Flask documentation contains a useful [walkthrough](https://flask.palletsprojects.com/en/3.0.x/quickstart/#rendering-templates) of how to add/modify a new web view.
 
@@ -48,7 +55,7 @@ You will be able to see your page by running your Flask server and visiting `<UR
 Our templates are contained within `dashboard/src/t5gweb/templates` and our endpoints are
 defined in `dashboard/src/t5gweb/ui.py`.
 
-## Alter JavaScript
+### Alter JavaScript
 
 We are using a framework called [DataTables](https://datatables.net/) to add interactive tables to our dashboard. The majority of our JavaScript is related to these tables:
 
@@ -98,7 +105,7 @@ And that's it, we can now filter our table by "Case Status":
 
 The DataTables [documentation](https://datatables.net) is very extensive, and can help you find and make any other changes that you might think of.
 
-## Adding tests
+### Adding tests
 
 We use [pytest](https://docs.pytest.org/en/8.0.x/) for our unit tests. Pytest's docs are very helpful, but here's a simple example to get started:
 
@@ -178,7 +185,7 @@ In this case, the API call will not take place, and will instead be represented 
 
 Our unit tests are located in `tests/`, and we run tests automatically for PR's and commits on the `main` branch via GitHub Actions (`.github/workflows/linter.yml`). You can run tests locally by installing pytest and pytest-mock, and then running `pytest` from the root directory of the repository (`t5g-field-support-team-utils/`).
 
-## Add a new scheduled task
+### Add a new scheduled task
 
 We use [Celery beat](https://docs.celeryq.dev/en/stable/userguide/periodic-tasks.html) to run our scheduled tasks, which gather data from various APIs and combine it into what is visible on our dashboard.
 
@@ -204,3 +211,18 @@ def setup_scheduled_tasks(sender, **kwargs):
 ```
 
 Now, the message will be printed every 15 minutes.
+
+### Common Debugging Techniques
+
+To see how the DataTables framework parses your data, you can use the following snippet (adapted from DataTables [docs](https://datatables.net/reference/api/row().data()#Examples)):
+
+```{javascript}
+$(document).ready(function () {
+...
+  $('#data tbody').on('click', 'tr', function () {
+    console.log(table.row(this).data());
+  });
+...
+```
+
+This can be useful when setting up and modifying your table's configuration, especially with regards to searching and ordering.

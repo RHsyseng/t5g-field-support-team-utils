@@ -278,6 +278,20 @@ def slack_notify(ini, blist):
             logging.warning("failed to post to slack: %s", slack_error)
 
 
+def make_pie_dict(stats):
+    """get the code simplified"""
+    return {
+        "by_severity": (
+            list(stats["by_severity"].keys()),
+            list(stats["by_severity"].values()),
+        ),
+        "by_status": (
+            list(stats["by_status"].keys()),
+            list(stats["by_status"].values()),
+        ),
+    }
+
+
 def get_fake_data(path="data/fake_data.json"):
     path = os.path.abspath(path)
     with open(path) as fake_data:

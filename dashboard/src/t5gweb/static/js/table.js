@@ -35,6 +35,15 @@ function format(data) {
     result +=
       '<h3>JIRA Issues:</h3><table class="table table-bordered table-hover table-responsive w-100"><thead><tr><th>#</th><th>Summary</th><th>Priority</th><th>Severity</th><th>Telco Priority</th><th>Target Release</th><th>Assignee</th><th>QA Contact</th><th>Last Updated</th><th>Status</th></tr></thead><tbody>';
     for (let issue = 0; issue < data.issues.length; issue++) {
+      const telcoPriority =
+        data.issues[issue].private_keywords != null
+          ? data.issues[issue].private_keywords.find((str) =>
+              str.includes("Priority"),
+            )
+          : null;
+      const priorityNum = telcoPriority
+        ? telcoPriority.charAt(telcoPriority.length - 1)
+        : 0;
       result +=
         '<tr><td><a href="' +
         data.issues[issue].url +
@@ -50,7 +59,7 @@ function format(data) {
         (data.issues[issue].jira_severity != null
           ? data.issues[issue].jira_severity
           : "---") +
-        "</td><td>" +
+        `</td><td class="telco-priority-${priorityNum}">` +
         (data.issues[issue].private_keywords != null
           ? data.issues[issue].private_keywords.find((str) =>
               str.includes("Priority"),
@@ -142,7 +151,7 @@ $(document).ready(function () {
               label: "Cases on Prio-list or Watchlist or Crit Sit",
               value: function (rowData, rowIdx) {
                 return (
-                  rowData[3] === "Yes" ||
+                  rowData[3].includes("Yes") ||
                   rowData[4] === "Yes" ||
                   rowData[5] === "Yes"
                 );

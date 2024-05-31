@@ -42,6 +42,8 @@ Another volume is created for `/srv/t5gweb/static/node_modules/`. Without this v
 
 If you want to add a new JS package, you'll need to add it to `package.json` and `package-lock.json` , which are located in `dashboard/src/t5gweb/static/`. Then you need to remove the relevant volume (`podman volume rm dashboard_dashboard-ui_<HASH>`) and rebuild the image.
 
+
+Please see our [CONTRIBUTING.md](https://github.com/RHsyseng/t5g-field-support-team-utils/blob/main/CONTRIBUTING.md) for further development help.
 ## CI
 
 This project has a CI that is triggered on every push.
