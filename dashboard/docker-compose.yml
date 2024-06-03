@@ -11,7 +11,7 @@ services:
   dashboard-ui:
     image: localhost/dashboard
     build: .
-    command: gunicorn --bind 0.0.0.0:8080 --timeout 1200 wsgi:app --reload
+    command: bash -c "gunicorn --bind 0.0.0.0:8080 --timeout 1200 wsgi:app --reload"
     env_file:
       - ../cfg/sample.env
     ports:
@@ -33,7 +33,7 @@ services:
   # Gathers data if cache is empty
   init-cache:
     image: localhost/dashboard
-    command: flask init-cache
+    command: bash -c "flask init-cache"
     env_file:
       - ../cfg/sample.env
     depends_on:

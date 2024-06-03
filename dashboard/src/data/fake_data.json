@@ -1,0 +1,1703 @@
+{
+  "issues": {
+    "81381364": [
+      {
+        "assignee": null,
+        "fix_versions": null,
+        "id": 782815,
+        "jira_severity": "Important",
+        "jira_type": "Feature Request",
+        "priority": "Normal",
+        "private_keywords": ["velit", "Telco:Priority-1"],
+        "qa_contact": null,
+        "status": "POST",
+        "title": "Team executive care mission decision black.",
+        "updated": "2021-10-11T18:29:58.184712",
+        "url": "https://example.com"
+      },
+      {
+        "assignee": "ericterry@example.com",
+        "fix_versions": null,
+        "id": 146311,
+        "jira_severity": null,
+        "jira_type": "Bug",
+        "priority": null,
+        "private_keywords": ["velit", "Telco:Priority-1"],
+        "qa_contact": null,
+        "status": "Release Pending",
+        "title": "Ipsam consequuntur libero suscipit.",
+        "updated": "2020-02-11T03:32:52.522047",
+        "url": "https://example.com"
+      },
+      {
+        "assignee": null,
+        "fix_versions": null,
+        "id": 719634,
+        "jira_severity": "Critical",
+        "jira_type": null,
+        "priority": "Undefined",
+        "private_keywords": ["velit", "Telco:Priority-1"],
+        "qa_contact": "james67@example.net",
+        "status": "Closed",
+        "title": "文言リンク腐ったハードウェアキャビンクルー。",
+        "updated": "2020-12-02T10:00:58.475378",
+        "url": "https://example.com"
+      },
+      {
+        "assignee": "oi@example.org",
+        "fix_versions": ["---"],
+        "id": 949823,
+        "jira_severity": "Critical",
+        "jira_type": "Feature Request",
+        "priority": null,
+        "private_keywords": ["velit", "Telco:Priority-1"],
+        "qa_contact": null,
+        "status": "Verified",
+        "title": "Itaque odio maiores vero veritatis ut.",
+        "updated": "2022-07-24T17:50:30.290004",
+        "url": "https://example.com"
+      }
+    ],
+    "26580516": [
+      {
+        "assignee": "adadiajose-antonio@example.org",
+        "fix_versions": ["mission-8.51"],
+        "id": 319569,
+        "jira_severity": null,
+        "jira_type": null,
+        "priority": "Minor",
+        "private_keywords": ["quos", "Telco:Priority-4"],
+        "qa_contact": "ujin92@example.org",
+        "status": "Release Pending",
+        "title": "Dolorem quae odio facere eius voluptate quisquam.",
+        "updated": "2023-10-27T16:21:29.503622",
+        "url": "https://example.com"
+      },
+      {
+        "assignee": null,
+        "fix_versions": ["---"],
+        "id": 974810,
+        "jira_severity": null,
+        "jira_type": "Bug",
+        "priority": null,
+        "private_keywords": ["quos", "Telco:Priority-4"],
+        "qa_contact": null,
+        "status": "ON_QA",
+        "title": "Est doloremque maxime a iusto hic veniam.",
+        "updated": "2024-05-04T04:28:57.975809",
+        "url": "https://example.org"
+      },
+      {
+        "assignee": "lucianamorillo@example.org",
+        "fix_versions": ["差別する-6.80"],
+        "id": 122150,
+        "jira_severity": null,
+        "jira_type": "Feature Request",
+        "priority": null,
+        "private_keywords": ["quos", "Telco:Priority-4"],
+        "qa_contact": null,
+        "status": "POST",
+        "title": "あったチーズ連続腐ったチーズ。",
+        "updated": "2022-09-18T19:07:07.002879",
+        "url": "https://example.org"
+      },
+      {
+        "assignee": "ines72@example.net",
+        "fix_versions": ["explain-2.92"],
+        "id": 217148,
+        "jira_severity": null,
+        "jira_type": "Feature Request",
+        "priority": "Major",
+        "private_keywords": ["quos", "Telco:Priority-4"],
+        "qa_contact": null,
+        "status": "POST",
+        "title": "Excepturi impedit fugiat natus excepturi reprehenderit doloremque.",
+        "updated": "2021-07-19T10:17:08.834893",
+        "url": "https://example.org"
+      }
+    ],
+    "69958124": [
+      {
+        "assignee": "doyuni@example.com",
+        "fix_versions": ["tempore-8.80"],
+        "id": 540427,
+        "jira_severity": "Low",
+        "jira_type": null,
+        "priority": "Normal",
+        "private_keywords": null,
+        "qa_contact": null,
+        "status": "Closed",
+        "title": "Now minute technology only magazine.",
+        "updated": "2023-09-16T00:00:25.057846",
+        "url": "https://example.com"
+      },
+      {
+        "assignee": null,
+        "fix_versions": ["---"],
+        "id": 638353,
+        "jira_severity": "Moderate",
+        "jira_type": null,
+        "priority": "Normal",
+        "private_keywords": null,
+        "qa_contact": "millerlori@example.com",
+        "status": "New",
+        "title": "Add sound coach every cut never ten become.",
+        "updated": "2022-05-06T17:25:34.067347",
+        "url": "https://example.org"
+      }
+    ],
+    "39780307": [
+      {
+        "assignee": "lgim@example.net",
+        "fix_versions": null,
+        "id": 744396,
+        "jira_severity": null,
+        "jira_type": "Bug",
+        "priority": null,
+        "private_keywords": null,
+        "qa_contact": "yejin03@example.org",
+        "status": "POST",
+        "title": "Aspernatur magnam porro in et perferendis vel.",
+        "updated": "2020-03-28T16:56:24.459826",
+        "url": "https://example.org"
+      },
+      {
+        "assignee": "jmendizabal@example.com",
+        "fix_versions": ["---"],
+        "id": 761464,
+        "jira_severity": null,
+        "jira_type": null,
+        "priority": null,
+        "private_keywords": null,
+        "qa_contact": null,
+        "status": "ASSIGNED",
+        "title": "Accusantium ratione reprehenderit quas at.",
+        "updated": "2023-11-02T19:05:41.118903",
+        "url": "https://example.net"
+      },
+      {
+        "assignee": null,
+        "fix_versions": ["デッド-2.23"],
+        "id": 520100,
+        "jira_severity": "Moderate",
+        "jira_type": "Bug",
+        "priority": "Major",
+        "private_keywords": null,
+        "qa_contact": null,
+        "status": "POST",
+        "title": "Tempore praesentium sequi sint.",
+        "updated": "2023-04-01T06:00:23.449973",
+        "url": "https://example.org"
+      },
+      {
+        "assignee": null,
+        "fix_versions": null,
+        "id": 438511,
+        "jira_severity": "Informational",
+        "jira_type": null,
+        "priority": "Blocker",
+        "private_keywords": null,
+        "qa_contact": null,
+        "status": "ON_QA",
+        "title": "Aut laudantium explicabo nihil eligendi.",
+        "updated": "2022-06-08T16:40:33.968680",
+        "url": "https://example.org"
+      },
+      {
+        "assignee": "blackdillon@example.com",
+        "fix_versions": null,
+        "id": 939684,
+        "jira_severity": "Critical",
+        "jira_type": null,
+        "priority": "Major",
+        "private_keywords": null,
+        "qa_contact": "eungyeongo@example.net",
+        "status": "New",
+        "title": "Ipsam quis voluptates distinctio dignissimos voluptatibus atque illo.",
+        "updated": "2022-12-20T18:39:43.763476",
+        "url": "https://example.org"
+      }
+    ],
+    "11348873": [
+      {
+        "assignee": "seunghyeoni@example.net",
+        "fix_versions": ["million-7.75"],
+        "id": 206986,
+        "jira_severity": "Low",
+        "jira_type": null,
+        "priority": null,
+        "private_keywords": null,
+        "qa_contact": null,
+        "status": "Closed",
+        "title": "Dignissimos incidunt molestias quaerat exercitationem.",
+        "updated": "2020-11-14T09:44:21.030453",
+        "url": "https://example.com"
+      },
+      {
+        "assignee": null,
+        "fix_versions": null,
+        "id": 67322,
+        "jira_severity": "Low",
+        "jira_type": "Bug",
+        "priority": null,
+        "private_keywords": null,
+        "qa_contact": "yeongsug26@example.net",
+        "status": "Closed",
+        "title": "Error molestias esse repellendus nesciunt quo expedita incidunt.",
+        "updated": "2021-05-14T21:30:57.537613",
+        "url": "https://example.com"
+      }
+    ]
+  },
+  "bugs": {
+    "81381364": [
+      {
+        "bugzillaLink": "https://example.org/show_bug.cgi?id=45935",
+        "bugzillaNumber": "45935",
+        "caseNumber": "81381364",
+        "linkedAt": "2020-01-07T05:46:34.492952Z",
+        "status": "ON_DEV",
+        "summary": "Quite wife however TV law fund.",
+        "target_release": ["1.5z"],
+        "assignee": "qmorcillo@example.org",
+        "last_change_time": "2020-03-12T10:30:36.213593",
+        "internal_whiteboard": "beatae",
+        "qa_contact": "takuma34@example.net",
+        "severity": "high"
+      },
+      {
+        "bugzillaLink": "https://example.com/show_bug.cgi?id=901769",
+        "bugzillaNumber": "901769",
+        "caseNumber": "81381364",
+        "linkedAt": "2021-07-07T23:30:18.952779Z",
+        "status": "POST",
+        "summary": "Asperiores itaque quam aliquid repellat voluptatem itaque.",
+        "target_release": ["1.3z"],
+        "assignee": "robertcalhoun@example.com",
+        "last_change_time": "2020-05-04T06:05:04.421141",
+        "internal_whiteboard": "ratione",
+        "qa_contact": "seongyeongceol@example.org",
+        "severity": "high"
+      },
+      {
+        "bugzillaLink": "https://example.org/show_bug.cgi?id=335121",
+        "bugzillaNumber": "335121",
+        "caseNumber": "81381364",
+        "linkedAt": "2023-12-20T00:18:37.782231Z",
+        "status": "ON_QA",
+        "summary": "Maiores iure odio earum accusantium nostrum.",
+        "target_release": ["6.3z"],
+        "assignee": "yui08@example.net",
+        "last_change_time": "2023-10-15T17:34:22.375439",
+        "internal_whiteboard": "if",
+        "qa_contact": "palomarjeremias@example.net",
+        "severity": "high"
+      }
+    ],
+    "52162678": [
+      {
+        "bugzillaLink": "https://example.org/show_bug.cgi?id=644808",
+        "bugzillaNumber": "644808",
+        "caseNumber": "52162678",
+        "linkedAt": "2021-07-02T00:51:38.038298Z",
+        "status": "POST",
+        "summary": "Bed fall character door green save identify.",
+        "target_release": ["6.0z"],
+        "assignee": "carmelita70@example.net",
+        "last_change_time": "2022-06-08T06:02:08.591229",
+        "internal_whiteboard": "lose",
+        "qa_contact": "imyeongja@example.org",
+        "severity": "low"
+      },
+      {
+        "bugzillaLink": "https://example.net/show_bug.cgi?id=713792",
+        "bugzillaNumber": "713792",
+        "caseNumber": "52162678",
+        "linkedAt": "2024-05-21T12:50:29.292718Z",
+        "status": "RELEASE_PENDING",
+        "summary": "Distinctio necessitatibus eveniet voluptas unde.",
+        "target_release": ["5.2z"],
+        "assignee": "yui09@example.org",
+        "last_change_time": "2020-09-08T12:50:56.248919",
+        "internal_whiteboard": "magni",
+        "qa_contact": "mohamed76@example.net",
+        "severity": "medium"
+      },
+      {
+        "bugzillaLink": "https://example.net/show_bug.cgi?id=826634",
+        "bugzillaNumber": "826634",
+        "caseNumber": "52162678",
+        "linkedAt": "2021-12-12T17:50:37.784180Z",
+        "status": "POST",
+        "summary": "Quibusdam deleniti molestias incidunt veniam.",
+        "target_release": ["2.1z"],
+        "assignee": "otahanako@example.net",
+        "last_change_time": "2021-09-11T15:04:41.321686",
+        "internal_whiteboard": "fugiat",
+        "qa_contact": "albert64@example.com",
+        "severity": "unspecified"
+      },
+      {
+        "bugzillaLink": "https://example.org/show_bug.cgi?id=333373",
+        "bugzillaNumber": "333373",
+        "caseNumber": "52162678",
+        "linkedAt": "2023-06-28T21:05:40.398572Z",
+        "status": "ON_DEV",
+        "summary": "Facere veniam natus illum nostrum rem.",
+        "target_release": ["5.8z"],
+        "assignee": "hanakonakamura@example.net",
+        "last_change_time": "2020-01-31T19:56:26.980108",
+        "internal_whiteboard": "近代化する",
+        "qa_contact": "taro61@example.net",
+        "severity": "medium"
+      }
+    ],
+    "54770653": [
+      {
+        "bugzillaLink": "https://example.net/show_bug.cgi?id=606865",
+        "bugzillaNumber": "606865",
+        "caseNumber": "54770653",
+        "linkedAt": "2021-04-24T19:54:50.763850Z",
+        "status": "ON_QA",
+        "summary": "雪運転倒連続障害舗装。",
+        "target_release": ["5.4z"],
+        "assignee": "hyeonjun80@example.net",
+        "last_change_time": "2024-04-08T12:25:02.591496",
+        "internal_whiteboard": "voluptas",
+        "qa_contact": "harrisdakota@example.com",
+        "severity": "medium"
+      },
+      {
+        "bugzillaLink": "https://example.net/show_bug.cgi?id=648180",
+        "bugzillaNumber": "648180",
+        "caseNumber": "54770653",
+        "linkedAt": "2022-09-08T13:08:23.251463Z",
+        "status": "POST",
+        "summary": "Parent up story.",
+        "target_release": ["6.7z"],
+        "assignee": "chucho96@example.org",
+        "last_change_time": "2023-05-22T03:08:51.663539",
+        "internal_whiteboard": "phone",
+        "qa_contact": "michael36@example.org",
+        "severity": "medium"
+      },
+      {
+        "bugzillaLink": "https://example.net/show_bug.cgi?id=520415",
+        "bugzillaNumber": "520415",
+        "caseNumber": "54770653",
+        "linkedAt": "2022-03-25T09:58:55.670831Z",
+        "status": "ON_QA",
+        "summary": "Job page position.",
+        "target_release": ["1.6z"],
+        "assignee": "evita93@example.net",
+        "last_change_time": "2021-06-30T05:26:20.180132",
+        "internal_whiteboard": "ニュース",
+        "qa_contact": "mteruel@example.com",
+        "severity": "low"
+      },
+      {
+        "bugzillaLink": "https://example.org/show_bug.cgi?id=843216",
+        "bugzillaNumber": "843216",
+        "caseNumber": "54770653",
+        "linkedAt": "2021-02-21T01:51:06.814443Z",
+        "status": "CLOSED",
+        "summary": "Non in consectetur omnis.",
+        "target_release": ["1.2z"],
+        "assignee": "yeongja16@example.com",
+        "last_change_time": "2023-06-18T14:10:45.976264",
+        "internal_whiteboard": "quaerat",
+        "qa_contact": "smithcathy@example.org",
+        "severity": "urgent"
+      }
+    ],
+    "39780307": [
+      {
+        "bugzillaLink": "https://example.org/show_bug.cgi?id=396342",
+        "bugzillaNumber": "396342",
+        "caseNumber": "39780307",
+        "linkedAt": "2020-12-08T11:06:47.667026Z",
+        "status": "ON_QA",
+        "summary": "Deleniti similique maiores nobis.",
+        "target_release": ["8.9z"],
+        "assignee": "qmun@example.net",
+        "last_change_time": "2022-10-27T22:02:03.207403",
+        "internal_whiteboard": "aliquam",
+        "qa_contact": "maria-jose30@example.org",
+        "severity": "medium"
+      }
+    ],
+    "11348873": [
+      {
+        "bugzillaLink": "https://example.com/show_bug.cgi?id=163568",
+        "bugzillaNumber": "163568",
+        "caseNumber": "11348873",
+        "linkedAt": "2023-06-03T11:20:56.268712Z",
+        "status": "POST",
+        "summary": "葉障害特徴目的。",
+        "target_release": ["4.6z"],
+        "assignee": "haeun02@example.com",
+        "last_change_time": "2023-12-13T17:33:32.425159",
+        "internal_whiteboard": "recent",
+        "qa_contact": "sbriggs@example.net",
+        "severity": "high"
+      },
+      {
+        "bugzillaLink": "https://example.com/show_bug.cgi?id=33875",
+        "bugzillaNumber": "33875",
+        "caseNumber": "11348873",
+        "linkedAt": "2023-05-09T07:05:04.775866Z",
+        "status": "POST",
+        "summary": "Ut iste est unde fugiat.",
+        "target_release": ["0.0z"],
+        "assignee": "adrian40@example.org",
+        "last_change_time": "2022-10-03T05:51:15.756553",
+        "internal_whiteboard": "ノート",
+        "qa_contact": "labe@example.org",
+        "severity": "unspecified"
+      },
+      {
+        "bugzillaLink": "https://example.org/show_bug.cgi?id=834238",
+        "bugzillaNumber": "834238",
+        "caseNumber": "11348873",
+        "linkedAt": "2022-09-05T12:47:41.988868Z",
+        "status": "ON_QA",
+        "summary": "Item boy response knowledge may thousand music.",
+        "target_release": ["6.8z"],
+        "assignee": "shimizuosamu@example.net",
+        "last_change_time": "2021-02-03T15:13:58.508455",
+        "internal_whiteboard": "minima",
+        "qa_contact": "anna98@example.com",
+        "severity": "medium"
+      },
+      {
+        "bugzillaLink": "https://example.org/show_bug.cgi?id=727140",
+        "bugzillaNumber": "727140",
+        "caseNumber": "11348873",
+        "linkedAt": "2021-10-14T11:24:55.115234Z",
+        "status": "VERIFIED",
+        "summary": "Fugiat ab corporis qui possimus officiis consequatur.",
+        "target_release": ["7.2z"],
+        "assignee": "olga20@example.org",
+        "last_change_time": "2023-08-02T20:35:45.248142",
+        "internal_whiteboard": "eligendi",
+        "qa_contact": "qthomas@example.com",
+        "severity": "low"
+      },
+      {
+        "bugzillaLink": "https://example.com/show_bug.cgi?id=703481",
+        "bugzillaNumber": "703481",
+        "caseNumber": "11348873",
+        "linkedAt": "2023-05-24T07:59:04.121135Z",
+        "status": "ASSIGNED",
+        "summary": "Adipisci ex hic vitae in earum.",
+        "target_release": ["0.4z"],
+        "assignee": "deborah04@example.org",
+        "last_change_time": "2021-02-12T03:17:29.445896",
+        "internal_whiteboard": "tempora",
+        "qa_contact": "tylersavage@example.net",
+        "severity": "low"
+      }
+    ]
+  },
+  "cases": {
+    "81381364": {
+      "account": "Pepito Gil Vargas S.A.",
+      "createdate": "2020-02-13T00:00:09Z",
+      "description": "Rerum blanditiis non deserunt voluptas quaerat. Distinctio reiciendis vel ad incidunt aut ea.",
+      "last_update": "2020-06-04T19:53:44Z",
+      "owner": "Isa Escribano Barriga",
+      "problem": "Aliquam aut voluptates dicta facere quasi saepe.",
+      "product": "dolores 0.2",
+      "severity": "3 (Normal)",
+      "status": "Closed",
+      "closeddate": "2020-03-04T16:47:10Z"
+    },
+    "52162678": {
+      "account": "合同会社小川情報",
+      "createdate": "2024-01-17T19:41:58Z",
+      "description": "Qui excepturi aliquid eligendi dolores veritatis explicabo.",
+      "last_update": "2024-04-16T06:59:53Z",
+      "owner": "Madeline Oliver",
+      "problem": "Quibusdam repudiandae aspernatur nisi praesentium cum.",
+      "product": "販売 6.9",
+      "severity": "1 (Urgent)",
+      "status": "Waiting on Customer",
+      "tags": []
+    },
+    "75350493": {
+      "account": "김차박",
+      "createdate": "2021-12-19T22:51:50Z",
+      "description": "Fine level speak themselves speech could. Study candidate address wear. First degree response able state more.",
+      "last_update": "2022-06-07T19:00:13Z",
+      "owner": "Shelly Ramirez",
+      "problem": "タワー持っていましたアクセルペダル錯覚。",
+      "product": "cum 2.8",
+      "severity": "1 (Urgent)",
+      "status": "Closed",
+      "bug": "3451672",
+      "closeddate": "2024-04-11T23:29:45Z"
+    },
+    "85918297": {
+      "account": "Tecnologías del Norte S.L.N.E",
+      "createdate": "2022-11-21T13:56:47Z",
+      "description": "Fugiat enim consequuntur earum excepturi. Quaerat excepturi nulla aliquam cum voluptatem.",
+      "last_update": "2023-06-09T22:07:00Z",
+      "owner": "Brian Cross",
+      "problem": "Conference mission audience idea foreign.",
+      "product": "corrupti 8.7",
+      "severity": "3 (Normal)",
+      "status": "Waiting on Red Hat",
+      "bug": "7156075",
+      "tags": ["花嫁"]
+    },
+    "26580516": {
+      "account": "김차박",
+      "createdate": "2020-04-16T00:55:59Z",
+      "description": "Hic maxime ipsum laborum.",
+      "last_update": "2023-03-26T23:12:45Z",
+      "owner": "鈴木 千代",
+      "problem": "Quod inventore facere aperiam sint praesentium temporibus iste.",
+      "product": "トス 6.4",
+      "severity": "1 (Urgent)",
+      "status": "Waiting on Customer",
+      "bug": "7690810",
+      "tags": ["pick"]
+    },
+    "69958124": {
+      "account": "Tecnologías del Norte S.L.N.E",
+      "createdate": "2021-10-15T18:54:31Z",
+      "description": "Molestiae ut ab provident quia. Repellendus alias corrupti ducimus quos sapiente. Eos provident iusto reiciendis maxime totam architecto consectetur.",
+      "last_update": "2021-10-30T09:56:23Z",
+      "owner": "김민재",
+      "problem": "Magnam tempore magnam nemo perspiciatis rem.",
+      "product": "autem 3.4",
+      "severity": "4 (Low)",
+      "status": "Closed",
+      "tags": ["quae"],
+      "closeddate": "2022-06-16T06:42:00Z"
+    },
+    "54770653": {
+      "account": "Familia Bueno S.L.",
+      "createdate": "2024-02-27T18:57:37Z",
+      "description": "Dream role free walk. Individual man tell response purpose character would.",
+      "last_update": "2024-03-02T00:32:53Z",
+      "owner": "김영수",
+      "problem": "コーラス尊敬するアクセルペダル。",
+      "product": "scene 5.3",
+      "severity": "4 (Low)",
+      "status": "Waiting on Red Hat"
+    },
+    "39780307": {
+      "account": "Familia Bueno S.L.",
+      "createdate": "2024-04-10T12:50:24Z",
+      "description": "Similique voluptatum alias hic fuga deleniti explicabo. Asperiores aliquid vel laborum tempore velit pariatur nemo.",
+      "last_update": "2024-04-21T19:44:16Z",
+      "owner": "Jennifer Torres",
+      "problem": "International not type very.",
+      "product": "at 6.2",
+      "severity": "4 (Low)",
+      "status": "Waiting on Customer",
+      "bug": "5444191",
+      "tags": []
+    },
+    "1337377": {
+      "account": "Tecnologías del Norte S.L.N.E",
+      "createdate": "2021-07-10T09:40:21Z",
+      "description": "Debate daughter purpose voice. Security fall ready usually. Teacher cost both general where. Agreement decade friend which.",
+      "last_update": "2024-03-24T09:33:39Z",
+      "owner": "Catherine Kaiser",
+      "problem": "Ok choose today watch source firm drug.",
+      "product": "擁する 6.0",
+      "severity": "1 (Urgent)",
+      "status": "Waiting on Red Hat",
+      "bug": "5022874"
+    },
+    "11348873": {
+      "account": "유한회사 류이서",
+      "createdate": "2021-04-25T00:42:04Z",
+      "description": "Fugiat ab vitae temporibus. Dignissimos eos iusto veniam recusandae eius. Non culpa praesentium unde delectus in cupiditate.",
+      "last_update": "2022-05-14T21:22:23Z",
+      "owner": "Joel Walsh",
+      "problem": "Eos rerum ipsum iure dolor.",
+      "product": "specific 8.9",
+      "severity": "4 (Low)",
+      "status": "Waiting on Red Hat"
+    }
+  },
+  "cards": {
+    "RUOX-3184": {
+      "account": "Pepito Gil Vargas S.A.",
+      "assignee": {
+        "displayName": "안성수",
+        "key": "taro32",
+        "name": "thomas12"
+      },
+      "bugzilla": [
+        {
+          "bugzillaLink": "https://example.org/show_bug.cgi?id=45935",
+          "bugzillaNumber": "45935",
+          "caseNumber": "81381364",
+          "linkedAt": "2020-01-07T05:46:34.492952Z",
+          "status": "ON_DEV",
+          "summary": "Quite wife however TV law fund.",
+          "target_release": ["1.5z"],
+          "assignee": "qmorcillo@example.org",
+          "last_change_time": "2020-03-12T10:30:36.213593",
+          "internal_whiteboard": "beatae",
+          "qa_contact": "takuma34@example.net",
+          "severity": "high"
+        },
+        {
+          "bugzillaLink": "https://example.com/show_bug.cgi?id=901769",
+          "bugzillaNumber": "901769",
+          "caseNumber": "81381364",
+          "linkedAt": "2021-07-07T23:30:18.952779Z",
+          "status": "POST",
+          "summary": "Asperiores itaque quam aliquid repellat voluptatem itaque.",
+          "target_release": ["1.3z"],
+          "assignee": "robertcalhoun@example.com",
+          "last_change_time": "2020-05-04T06:05:04.421141",
+          "internal_whiteboard": "ratione",
+          "qa_contact": "seongyeongceol@example.org",
+          "severity": "high"
+        },
+        {
+          "bugzillaLink": "https://example.org/show_bug.cgi?id=335121",
+          "bugzillaNumber": "335121",
+          "caseNumber": "81381364",
+          "linkedAt": "2023-12-20T00:18:37.782231Z",
+          "status": "ON_QA",
+          "summary": "Maiores iure odio earum accusantium nostrum.",
+          "target_release": ["6.3z"],
+          "assignee": "yui08@example.net",
+          "last_change_time": "2023-10-15T17:34:22.375439",
+          "internal_whiteboard": "if",
+          "qa_contact": "palomarjeremias@example.net",
+          "severity": "high"
+        }
+      ],
+      "card_created": "2023-07-28T05:59:40.681843.000+0000",
+      "card_status": "Ready To Close",
+      "case_created": "2020-02-13T00:00:09Z",
+      "case_days_open": 1567,
+      "case_number": "81381364",
+      "case_status": "Closed",
+      "case_updated_date": "2020-06-04 19:53",
+      "comments": [
+        ["Soluta culpa debitis voluptatibus.", "2023-05-17T05:44:05.830199Z"],
+        [
+          "Doloremque consequatur doloremque fugit non. Occaecati tempore autem rerum. Nisi laudantium est vero nam cum soluta.",
+          "2022-05-29T11:31:21.884817Z"
+        ]
+      ],
+      "contributor": [
+        { "displayName": "橋本 花子", "key": "nbarranco", "name": "jessica35" },
+        {
+          "displayName": "장서윤",
+          "key": "marcosalegria",
+          "name": "corbachopatricio"
+        }
+      ],
+      "crit_sit": false,
+      "daily_telco": true,
+      "description": "Rerum blanditiis non deserunt voluptas quaerat. Distinctio reiciendis vel ad incidunt aut ea.",
+      "escalated": true,
+      "escalated_link": "https://example.org",
+      "group_name": "deleniti",
+      "issues": [
+        {
+          "assignee": null,
+          "fix_versions": null,
+          "id": 782815,
+          "jira_severity": "Important",
+          "jira_type": "Feature Request",
+          "priority": "Normal",
+          "private_keywords": ["velit", "Telco:Priority-1"],
+          "qa_contact": null,
+          "status": "POST",
+          "title": "Team executive care mission decision black.",
+          "updated": "2021-10-11T18:29:58.184712",
+          "url": "https://example.com"
+        },
+        {
+          "assignee": "ericterry@example.com",
+          "fix_versions": null,
+          "id": 146311,
+          "jira_severity": null,
+          "jira_type": "Bug",
+          "priority": null,
+          "private_keywords": ["velit", "Telco:Priority-1"],
+          "qa_contact": null,
+          "status": "Release Pending",
+          "title": "Ipsam consequuntur libero suscipit.",
+          "updated": "2020-02-11T03:32:52.522047",
+          "url": "https://example.com"
+        },
+        {
+          "assignee": null,
+          "fix_versions": null,
+          "id": 719634,
+          "jira_severity": "Critical",
+          "jira_type": null,
+          "priority": "Undefined",
+          "private_keywords": ["velit", "Telco:Priority-1"],
+          "qa_contact": "james67@example.net",
+          "status": "Closed",
+          "title": "文言リンク腐ったハードウェアキャビンクルー。",
+          "updated": "2020-12-02T10:00:58.475378",
+          "url": "https://example.com"
+        },
+        {
+          "assignee": "oi@example.org",
+          "fix_versions": ["---"],
+          "id": 949823,
+          "jira_severity": "Critical",
+          "jira_type": "Feature Request",
+          "priority": null,
+          "private_keywords": ["velit", "Telco:Priority-1"],
+          "qa_contact": null,
+          "status": "Verified",
+          "title": "Itaque odio maiores vero veritatis ut.",
+          "updated": "2022-07-24T17:50:30.290004",
+          "url": "https://example.com"
+        }
+      ],
+      "labels": ["dicta", "ipsa"],
+      "notified_users": [
+        {
+          "ssoUsername": "apineiro@example.com",
+          "title": "Luisina del Arnaiz"
+        },
+        { "ssoUsername": "ortizpeter@example.org", "title": "Sean Palmer" }
+      ],
+      "potential_escalation": true,
+      "priority": "Major",
+      "product": "dolores 0.2",
+      "relief_at": "2024-03-22T14:11:11Z",
+      "resolved_at": null,
+      "severity": "Normal",
+      "summary": "Aliquam aut voluptates dicta facere quasi saepe.",
+      "tags": [],
+      "watched": true
+    },
+    "CEBO-8132": {
+      "account": "合同会社小川情報",
+      "assignee": {
+        "displayName": "Jennifer Hill",
+        "key": "minjun91",
+        "name": "jeonghyi30"
+      },
+      "bugzilla": [
+        {
+          "bugzillaLink": "https://example.org/show_bug.cgi?id=644808",
+          "bugzillaNumber": "644808",
+          "caseNumber": "52162678",
+          "linkedAt": "2021-07-02T00:51:38.038298Z",
+          "status": "POST",
+          "summary": "Bed fall character door green save identify.",
+          "target_release": ["6.0z"],
+          "assignee": "carmelita70@example.net",
+          "last_change_time": "2022-06-08T06:02:08.591229",
+          "internal_whiteboard": "lose",
+          "qa_contact": "imyeongja@example.org",
+          "severity": "low"
+        },
+        {
+          "bugzillaLink": "https://example.net/show_bug.cgi?id=713792",
+          "bugzillaNumber": "713792",
+          "caseNumber": "52162678",
+          "linkedAt": "2024-05-21T12:50:29.292718Z",
+          "status": "RELEASE_PENDING",
+          "summary": "Distinctio necessitatibus eveniet voluptas unde.",
+          "target_release": ["5.2z"],
+          "assignee": "yui09@example.org",
+          "last_change_time": "2020-09-08T12:50:56.248919",
+          "internal_whiteboard": "magni",
+          "qa_contact": "mohamed76@example.net",
+          "severity": "medium"
+        },
+        {
+          "bugzillaLink": "https://example.net/show_bug.cgi?id=826634",
+          "bugzillaNumber": "826634",
+          "caseNumber": "52162678",
+          "linkedAt": "2021-12-12T17:50:37.784180Z",
+          "status": "POST",
+          "summary": "Quibusdam deleniti molestias incidunt veniam.",
+          "target_release": ["2.1z"],
+          "assignee": "otahanako@example.net",
+          "last_change_time": "2021-09-11T15:04:41.321686",
+          "internal_whiteboard": "fugiat",
+          "qa_contact": "albert64@example.com",
+          "severity": "unspecified"
+        },
+        {
+          "bugzillaLink": "https://example.org/show_bug.cgi?id=333373",
+          "bugzillaNumber": "333373",
+          "caseNumber": "52162678",
+          "linkedAt": "2023-06-28T21:05:40.398572Z",
+          "status": "ON_DEV",
+          "summary": "Facere veniam natus illum nostrum rem.",
+          "target_release": ["5.8z"],
+          "assignee": "hanakonakamura@example.net",
+          "last_change_time": "2020-01-31T19:56:26.980108",
+          "internal_whiteboard": "近代化する",
+          "qa_contact": "taro61@example.net",
+          "severity": "medium"
+        }
+      ],
+      "card_created": "2022-09-09T00:23:48.916620.000+0000",
+      "card_status": "Debugging",
+      "case_created": "2024-01-17T19:41:58Z",
+      "case_days_open": 133,
+      "case_number": "52162678",
+      "case_status": "Waiting on Customer",
+      "case_updated_date": "2024-04-16 06:59",
+      "comments": [
+        [
+          "Several hit simple personal home. Old great notice.",
+          "2023-02-18T08:54:32.175537Z"
+        ],
+        [
+          "Labore maxime aliquam natus expedita a.",
+          "2023-03-01T07:46:42.482113Z"
+        ],
+        [
+          "Et sapiente veritatis. Et temporibus voluptates. Illo consequuntur corporis sint maiores.",
+          "2020-07-20T22:50:17.508872Z"
+        ]
+      ],
+      "contributor": [
+        {
+          "displayName": "Kelly Colon",
+          "key": "jeonghocoe",
+          "name": "castrolisa"
+        },
+        { "displayName": "中村 直子", "key": "wcortina", "name": "dohyeoncoe" },
+        {
+          "displayName": "Peter Meyers",
+          "key": "deborahbryant",
+          "name": "tmatsumoto"
+        }
+      ],
+      "crit_sit": false,
+      "daily_telco": false,
+      "description": "Qui excepturi aliquid eligendi dolores veritatis explicabo.",
+      "escalated": true,
+      "escalated_link": "https://example.com",
+      "group_name": null,
+      "issues": null,
+      "labels": ["sequi"],
+      "notified_users": [
+        { "ssoUsername": "jeongsun85@example.net", "title": "Timothy White" },
+        {
+          "ssoUsername": "nakamuranaoko@example.org",
+          "title": "Antonio Collins"
+        }
+      ],
+      "potential_escalation": true,
+      "priority": "Major",
+      "product": "販売 6.9",
+      "relief_at": "2024-01-24T23:54:39Z",
+      "resolved_at": null,
+      "severity": "Urgent",
+      "summary": "Quibusdam repudiandae aspernatur nisi praesentium cum.",
+      "tags": [],
+      "watched": false
+    },
+    "ZQMY-6207": {
+      "account": "김차박",
+      "assignee": {
+        "displayName": "Úrsula Tovar",
+        "key": "andrea18",
+        "name": "nereamaestre"
+      },
+      "bugzilla": null,
+      "card_created": "2021-07-19T00:04:10.390436.000+0000",
+      "card_status": "Backport",
+      "case_created": "2021-12-19T22:51:50Z",
+      "case_days_open": 892,
+      "case_number": "75350493",
+      "case_status": "Closed",
+      "case_updated_date": "2022-06-07 19:00",
+      "comments": [
+        [
+          "So second reason live teach movie I. Agree middle student bag grow. Likely almost training personal.",
+          "2024-03-25T23:37:07.158915Z"
+        ],
+        [
+          "Church nature chair company TV policy. Wall various foreign agency when. Question analysis drive example color draw difficult there.",
+          "2021-08-08T03:21:18.010731Z"
+        ],
+        [
+          "Natus accusamus ut ab harum reiciendis. Accusantium reprehenderit magni alias.",
+          "2022-07-11T22:10:48.628691Z"
+        ],
+        [
+          "キャビネット管理する中央中世キャビン持っていました。転倒月必要式ヒール君は。",
+          "2023-12-13T16:43:35.462819Z"
+        ],
+        [
+          "パイオニアコピー指名コピーブレーキ証言する。屋根裏癌錯覚尿見出し。保証金尿敵ブランチアクセルペダル。",
+          "2023-11-14T14:24:06.677226Z"
+        ]
+      ],
+      "contributor": [
+        { "displayName": "이준호", "key": "tyu", "name": "vgim" }
+      ],
+      "crit_sit": false,
+      "daily_telco": false,
+      "description": "Fine level speak themselves speech could. Study candidate address wear. First degree response able state more.",
+      "escalated": false,
+      "escalated_link": "https://example.com",
+      "group_name": null,
+      "issues": null,
+      "labels": ["asperiores", "憲法"],
+      "notified_users": [
+        { "ssoUsername": "kenneth04@example.net", "title": "이성훈" },
+        { "ssoUsername": "jun21@example.net", "title": "Albino Ros Puig" }
+      ],
+      "potential_escalation": true,
+      "priority": "Minor",
+      "product": "cum 2.8",
+      "relief_at": null,
+      "resolved_at": "2022-05-05T08:37:19Z",
+      "severity": "Urgent",
+      "summary": "タワー持っていましたアクセルペダル錯覚。",
+      "tags": [],
+      "watched": true
+    },
+    "ZAXQ-9451": {
+      "account": "Tecnologías del Norte S.L.N.E",
+      "assignee": {
+        "displayName": "近藤 涼平",
+        "key": "hmassey",
+        "name": "reinagarrido"
+      },
+      "bugzilla": null,
+      "card_created": "2023-01-24T16:18:14.809966.000+0000",
+      "card_status": "Done",
+      "case_created": "2022-11-21T13:56:47Z",
+      "case_days_open": 555,
+      "case_number": "85918297",
+      "case_status": "Waiting on Red Hat",
+      "case_updated_date": "2023-06-09 22:07",
+      "comments": [
+        [
+          "ブランチ見出し探査式スマッシュスキーム。パーセントブレーキ厳しいそれ。ささやきベルベットノート脊椎戦略的運評議会。",
+          "2020-09-28T14:54:49.267874Z"
+        ],
+        ["Break gun reveal.", "2020-06-23T04:16:23.160662Z"]
+      ],
+      "contributor": [
+        {
+          "displayName": "Mary Burnett",
+          "key": "sayuriinoue",
+          "name": "anthonyday"
+        },
+        { "displayName": "斎藤 知実", "key": "li", "name": "ctanaka" }
+      ],
+      "crit_sit": true,
+      "daily_telco": true,
+      "description": "Fugiat enim consequuntur earum excepturi. Quaerat excepturi nulla aliquam cum voluptatem.",
+      "escalated": false,
+      "escalated_link": "https://example.com",
+      "group_name": null,
+      "issues": null,
+      "labels": ["quae"],
+      "notified_users": [
+        { "ssoUsername": "oi@example.net", "title": "Eutropio Cobo Saura" },
+        { "ssoUsername": "mendozaashlee@example.com", "title": "John Olsen" }
+      ],
+      "potential_escalation": true,
+      "priority": "Major",
+      "product": "corrupti 8.7",
+      "relief_at": null,
+      "resolved_at": null,
+      "severity": "Normal",
+      "summary": "Conference mission audience idea foreign.",
+      "tags": ["花嫁"],
+      "watched": false
+    },
+    "BPQE-8673": {
+      "account": "김차박",
+      "assignee": {
+        "displayName": "Jennifer Hill",
+        "key": "minjun91",
+        "name": "jeonghyi30"
+      },
+      "bugzilla": null,
+      "card_created": "2021-08-02T19:25:43.916863.000+0000",
+      "card_status": "Ready To Close",
+      "case_created": "2020-04-16T00:55:59Z",
+      "case_days_open": 1504,
+      "case_number": "26580516",
+      "case_status": "Waiting on Customer",
+      "case_updated_date": "2023-03-26 23:12",
+      "comments": [
+        [
+          "Usually piece but arrive garden. Thank source she light question in.",
+          "2020-09-26T19:22:47.920440Z"
+        ],
+        [
+          "Could foreign mind myself surface old charge. Management production up our allow maintain page fish. A artist drug them particular.",
+          "2023-10-20T07:52:53.311021Z"
+        ],
+        [
+          "Suscipit excepturi placeat cum nam. Quaerat hic voluptatibus et voluptatibus architecto. Quidem quibusdam veritatis hic iure.",
+          "2020-12-04T06:37:17.923834Z"
+        ],
+        ["Illo assumenda impedit.", "2023-11-08T14:10:36.592542Z"]
+      ],
+      "contributor": [
+        { "displayName": "Mary Schmidt", "key": "junseo81", "name": "ngoodwin" }
+      ],
+      "crit_sit": false,
+      "daily_telco": true,
+      "description": "Hic maxime ipsum laborum.",
+      "escalated": false,
+      "escalated_link": null,
+      "group_name": null,
+      "issues": [
+        {
+          "assignee": "adadiajose-antonio@example.org",
+          "fix_versions": ["mission-8.51"],
+          "id": 319569,
+          "jira_severity": null,
+          "jira_type": null,
+          "priority": "Minor",
+          "private_keywords": ["quos", "Telco:Priority-4"],
+          "qa_contact": "ujin92@example.org",
+          "status": "Release Pending",
+          "title": "Dolorem quae odio facere eius voluptate quisquam.",
+          "updated": "2023-10-27T16:21:29.503622",
+          "url": "https://example.com"
+        },
+        {
+          "assignee": null,
+          "fix_versions": ["---"],
+          "id": 974810,
+          "jira_severity": null,
+          "jira_type": "Bug",
+          "priority": null,
+          "private_keywords": ["quos", "Telco:Priority-4"],
+          "qa_contact": null,
+          "status": "ON_QA",
+          "title": "Est doloremque maxime a iusto hic veniam.",
+          "updated": "2024-05-04T04:28:57.975809",
+          "url": "https://example.org"
+        },
+        {
+          "assignee": "lucianamorillo@example.org",
+          "fix_versions": ["差別する-6.80"],
+          "id": 122150,
+          "jira_severity": null,
+          "jira_type": "Feature Request",
+          "priority": null,
+          "private_keywords": ["quos", "Telco:Priority-4"],
+          "qa_contact": null,
+          "status": "POST",
+          "title": "あったチーズ連続腐ったチーズ。",
+          "updated": "2022-09-18T19:07:07.002879",
+          "url": "https://example.org"
+        },
+        {
+          "assignee": "ines72@example.net",
+          "fix_versions": ["explain-2.92"],
+          "id": 217148,
+          "jira_severity": null,
+          "jira_type": "Feature Request",
+          "priority": "Major",
+          "private_keywords": ["quos", "Telco:Priority-4"],
+          "qa_contact": null,
+          "status": "POST",
+          "title": "Excepturi impedit fugiat natus excepturi reprehenderit doloremque.",
+          "updated": "2021-07-19T10:17:08.834893",
+          "url": "https://example.org"
+        }
+      ],
+      "labels": ["maxime", "分割", "culpa"],
+      "notified_users": [
+        {
+          "ssoUsername": "robertoplana@example.net",
+          "title": "Crystal Lawrence"
+        }
+      ],
+      "potential_escalation": true,
+      "priority": "Minor",
+      "product": "トス 6.4",
+      "relief_at": null,
+      "resolved_at": "2022-04-07T10:14:58Z",
+      "severity": "Urgent",
+      "summary": "Quod inventore facere aperiam sint praesentium temporibus iste.",
+      "tags": ["pick"],
+      "watched": true
+    },
+    "OBRS-5243": {
+      "account": "Tecnologías del Norte S.L.N.E",
+      "assignee": {
+        "displayName": "Úrsula Tovar",
+        "key": "andrea18",
+        "name": "nereamaestre"
+      },
+      "bugzilla": null,
+      "card_created": "2020-05-02T16:36:15.544433.000+0000",
+      "card_status": "Debugging",
+      "case_created": "2021-10-15T18:54:31Z",
+      "case_days_open": 957,
+      "case_number": "69958124",
+      "case_status": "Closed",
+      "case_updated_date": "2021-10-30 09:56",
+      "comments": [
+        [
+          "Sed possimus consequuntur nisi ratione.",
+          "2021-03-28T09:39:50.292095Z"
+        ],
+        [
+          "特徴月メニューキャビン文言フレーム。マリン連続反射。",
+          "2020-05-10T15:04:47.950916Z"
+        ],
+        [
+          "Whether address senior moment. Month matter environmental issue.",
+          "2020-09-21T12:37:57.162296Z"
+        ],
+        [
+          "Dolorum dolore error corporis mollitia. Molestias debitis sint quam unde. Doloribus nam sunt neque.",
+          "2023-04-14T22:32:09.987134Z"
+        ],
+        [
+          "Quam ratione sed. Illum fugit harum harum.",
+          "2022-03-05T08:39:57.538189Z"
+        ]
+      ],
+      "contributor": [],
+      "crit_sit": true,
+      "daily_telco": true,
+      "description": "Molestiae ut ab provident quia. Repellendus alias corrupti ducimus quos sapiente. Eos provident iusto reiciendis maxime totam architecto consectetur.",
+      "escalated": false,
+      "escalated_link": null,
+      "group_name": null,
+      "issues": [
+        {
+          "assignee": "doyuni@example.com",
+          "fix_versions": ["tempore-8.80"],
+          "id": 540427,
+          "jira_severity": "Low",
+          "jira_type": null,
+          "priority": "Normal",
+          "private_keywords": null,
+          "qa_contact": null,
+          "status": "Closed",
+          "title": "Now minute technology only magazine.",
+          "updated": "2023-09-16T00:00:25.057846",
+          "url": "https://example.com"
+        },
+        {
+          "assignee": null,
+          "fix_versions": ["---"],
+          "id": 638353,
+          "jira_severity": "Moderate",
+          "jira_type": null,
+          "priority": "Normal",
+          "private_keywords": null,
+          "qa_contact": "millerlori@example.com",
+          "status": "New",
+          "title": "Add sound coach every cut never ten become.",
+          "updated": "2022-05-06T17:25:34.067347",
+          "url": "https://example.org"
+        }
+      ],
+      "labels": ["facilis", "wait", "中世"],
+      "notified_users": [
+        {
+          "ssoUsername": "maedakazuya@example.net",
+          "title": "Danielle Mckinney"
+        },
+        {
+          "ssoUsername": "akira92@example.com",
+          "title": "Saturnina Martinez Valls"
+        }
+      ],
+      "potential_escalation": true,
+      "priority": "Minor",
+      "product": "autem 3.4",
+      "relief_at": null,
+      "resolved_at": "2022-07-31T05:10:03Z",
+      "severity": "Low",
+      "summary": "Magnam tempore magnam nemo perspiciatis rem.",
+      "tags": ["quae"],
+      "watched": false
+    },
+    "FSZP-7052": {
+      "account": "Familia Bueno S.L.",
+      "assignee": { "displayName": null, "key": null, "name": null },
+      "bugzilla": [
+        {
+          "bugzillaLink": "https://example.net/show_bug.cgi?id=606865",
+          "bugzillaNumber": "606865",
+          "caseNumber": "54770653",
+          "linkedAt": "2021-04-24T19:54:50.763850Z",
+          "status": "ON_QA",
+          "summary": "雪運転倒連続障害舗装。",
+          "target_release": ["5.4z"],
+          "assignee": "hyeonjun80@example.net",
+          "last_change_time": "2024-04-08T12:25:02.591496",
+          "internal_whiteboard": "voluptas",
+          "qa_contact": "harrisdakota@example.com",
+          "severity": "medium"
+        },
+        {
+          "bugzillaLink": "https://example.net/show_bug.cgi?id=648180",
+          "bugzillaNumber": "648180",
+          "caseNumber": "54770653",
+          "linkedAt": "2022-09-08T13:08:23.251463Z",
+          "status": "POST",
+          "summary": "Parent up story.",
+          "target_release": ["6.7z"],
+          "assignee": "chucho96@example.org",
+          "last_change_time": "2023-05-22T03:08:51.663539",
+          "internal_whiteboard": "phone",
+          "qa_contact": "michael36@example.org",
+          "severity": "medium"
+        },
+        {
+          "bugzillaLink": "https://example.net/show_bug.cgi?id=520415",
+          "bugzillaNumber": "520415",
+          "caseNumber": "54770653",
+          "linkedAt": "2022-03-25T09:58:55.670831Z",
+          "status": "ON_QA",
+          "summary": "Job page position.",
+          "target_release": ["1.6z"],
+          "assignee": "evita93@example.net",
+          "last_change_time": "2021-06-30T05:26:20.180132",
+          "internal_whiteboard": "ニュース",
+          "qa_contact": "mteruel@example.com",
+          "severity": "low"
+        },
+        {
+          "bugzillaLink": "https://example.org/show_bug.cgi?id=843216",
+          "bugzillaNumber": "843216",
+          "caseNumber": "54770653",
+          "linkedAt": "2021-02-21T01:51:06.814443Z",
+          "status": "CLOSED",
+          "summary": "Non in consectetur omnis.",
+          "target_release": ["1.2z"],
+          "assignee": "yeongja16@example.com",
+          "last_change_time": "2023-06-18T14:10:45.976264",
+          "internal_whiteboard": "quaerat",
+          "qa_contact": "smithcathy@example.org",
+          "severity": "urgent"
+        }
+      ],
+      "card_created": "2020-03-19T10:50:12.646885.000+0000",
+      "card_status": "Eng Working",
+      "case_created": "2024-02-27T18:57:37Z",
+      "case_days_open": 92,
+      "case_number": "54770653",
+      "case_status": "Waiting on Red Hat",
+      "case_updated_date": "2024-03-02 00:32",
+      "comments": [
+        [
+          "Quasi error illo voluptate rerum molestias quia. Soluta corporis velit consectetur dignissimos veritatis rerum.",
+          "2022-01-26T09:10:06.864922Z"
+        ],
+        [
+          "Illo ab odio amet quo. Soluta odit culpa consequuntur.",
+          "2020-08-04T18:28:51.720619Z"
+        ],
+        [
+          "Science follow certainly. Seem beat debate late radio like money ball. Himself idea lose international available despite.",
+          "2023-08-27T21:03:13.253194Z"
+        ],
+        [
+          "Sunt corporis alias officia. Optio minima natus explicabo. Illo repellendus quia temporibus iure exercitationem quod.",
+          "2023-03-14T01:46:11.918620Z"
+        ]
+      ],
+      "contributor": [
+        {
+          "displayName": "Kenneth Alvarez",
+          "key": "ihervas",
+          "name": "villegasashley"
+        },
+        { "displayName": "Catherine Adams", "key": "pgim", "name": "wnakajima" }
+      ],
+      "crit_sit": true,
+      "daily_telco": false,
+      "description": "Dream role free walk. Individual man tell response purpose character would.",
+      "escalated": true,
+      "escalated_link": null,
+      "group_name": null,
+      "issues": null,
+      "labels": ["soluta"],
+      "notified_users": [
+        { "ssoUsername": "uyamamoto@example.com", "title": "Sharon Thomas" },
+        { "ssoUsername": "ygim@example.com", "title": "渡辺 翔太" }
+      ],
+      "potential_escalation": false,
+      "priority": "Minor",
+      "product": "scene 5.3",
+      "relief_at": null,
+      "resolved_at": null,
+      "severity": "Low",
+      "summary": "コーラス尊敬するアクセルペダル。",
+      "tags": [],
+      "watched": true
+    },
+    "DEFM-3023": {
+      "account": "Familia Bueno S.L.",
+      "assignee": {
+        "displayName": "Jennifer Hill",
+        "key": "minjun91",
+        "name": "jeonghyi30"
+      },
+      "bugzilla": [
+        {
+          "bugzillaLink": "https://example.org/show_bug.cgi?id=396342",
+          "bugzillaNumber": "396342",
+          "caseNumber": "39780307",
+          "linkedAt": "2020-12-08T11:06:47.667026Z",
+          "status": "ON_QA",
+          "summary": "Deleniti similique maiores nobis.",
+          "target_release": ["8.9z"],
+          "assignee": "qmun@example.net",
+          "last_change_time": "2022-10-27T22:02:03.207403",
+          "internal_whiteboard": "aliquam",
+          "qa_contact": "maria-jose30@example.org",
+          "severity": "medium"
+        }
+      ],
+      "card_created": "2023-04-03T16:59:25.904158.000+0000",
+      "card_status": "Done",
+      "case_created": "2024-04-10T12:50:24Z",
+      "case_days_open": 49,
+      "case_number": "39780307",
+      "case_status": "Waiting on Customer",
+      "case_updated_date": "2024-04-21 19:44",
+      "comments": [
+        [
+          "Partner pressure discover carry TV drive. Machine century suddenly. School certainly meet floor right growth.",
+          "2020-11-18T12:09:06.553549Z"
+        ],
+        [
+          "Officiis qui hic consequuntur aspernatur occaecati. Minima rerum laudantium culpa. Soluta inventore qui blanditiis.",
+          "2020-08-12T08:41:43.301457Z"
+        ],
+        [
+          "Saepe error iusto assumenda. Officia atque laudantium maxime adipisci quae. Assumenda reprehenderit qui ducimus natus fugiat dolores commodi.",
+          "2024-03-07T03:31:01.506752Z"
+        ],
+        [
+          "Officiis occaecati accusamus corporis nobis quisquam corporis. Sed repellat nihil debitis.",
+          "2021-03-26T02:05:27.219965Z"
+        ]
+      ],
+      "contributor": [
+        {
+          "displayName": "Laura Braun",
+          "key": "mariahayes",
+          "name": "jose-manuel66"
+        },
+        {
+          "displayName": "Miss Christy Davis",
+          "key": "kanatanaka",
+          "name": "ibanezsosimo"
+        },
+        { "displayName": "Veronica Page", "key": "tbradshaw", "name": "rbanks" }
+      ],
+      "crit_sit": false,
+      "daily_telco": false,
+      "description": "Similique voluptatum alias hic fuga deleniti explicabo. Asperiores aliquid vel laborum tempore velit pariatur nemo.",
+      "escalated": true,
+      "escalated_link": "https://example.org",
+      "group_name": null,
+      "issues": [
+        {
+          "assignee": "lgim@example.net",
+          "fix_versions": null,
+          "id": 744396,
+          "jira_severity": null,
+          "jira_type": "Bug",
+          "priority": null,
+          "private_keywords": null,
+          "qa_contact": "yejin03@example.org",
+          "status": "POST",
+          "title": "Aspernatur magnam porro in et perferendis vel.",
+          "updated": "2020-03-28T16:56:24.459826",
+          "url": "https://example.org"
+        },
+        {
+          "assignee": "jmendizabal@example.com",
+          "fix_versions": ["---"],
+          "id": 761464,
+          "jira_severity": null,
+          "jira_type": null,
+          "priority": null,
+          "private_keywords": null,
+          "qa_contact": null,
+          "status": "ASSIGNED",
+          "title": "Accusantium ratione reprehenderit quas at.",
+          "updated": "2023-11-02T19:05:41.118903",
+          "url": "https://example.net"
+        },
+        {
+          "assignee": null,
+          "fix_versions": ["デッド-2.23"],
+          "id": 520100,
+          "jira_severity": "Moderate",
+          "jira_type": "Bug",
+          "priority": "Major",
+          "private_keywords": null,
+          "qa_contact": null,
+          "status": "POST",
+          "title": "Tempore praesentium sequi sint.",
+          "updated": "2023-04-01T06:00:23.449973",
+          "url": "https://example.org"
+        },
+        {
+          "assignee": null,
+          "fix_versions": null,
+          "id": 438511,
+          "jira_severity": "Informational",
+          "jira_type": null,
+          "priority": "Blocker",
+          "private_keywords": null,
+          "qa_contact": null,
+          "status": "ON_QA",
+          "title": "Aut laudantium explicabo nihil eligendi.",
+          "updated": "2022-06-08T16:40:33.968680",
+          "url": "https://example.org"
+        },
+        {
+          "assignee": "blackdillon@example.com",
+          "fix_versions": null,
+          "id": 939684,
+          "jira_severity": "Critical",
+          "jira_type": null,
+          "priority": "Major",
+          "private_keywords": null,
+          "qa_contact": "eungyeongo@example.net",
+          "status": "New",
+          "title": "Ipsam quis voluptates distinctio dignissimos voluptatibus atque illo.",
+          "updated": "2022-12-20T18:39:43.763476",
+          "url": "https://example.org"
+        }
+      ],
+      "labels": ["quaerat"],
+      "notified_users": [
+        { "ssoUsername": "seonghyeongim@example.org", "title": "김춘자" }
+      ],
+      "potential_escalation": false,
+      "priority": "Major",
+      "product": "at 6.2",
+      "relief_at": null,
+      "resolved_at": "2024-04-20T17:53:49Z",
+      "severity": "Low",
+      "summary": "International not type very.",
+      "tags": [],
+      "watched": false
+    },
+    "AXIP-5935": {
+      "account": "Tecnologías del Norte S.L.N.E",
+      "assignee": {
+        "displayName": "Jennifer Hill",
+        "key": "minjun91",
+        "name": "jeonghyi30"
+      },
+      "bugzilla": null,
+      "card_created": "2020-10-06T21:10:52.378271.000+0000",
+      "card_status": "Backport",
+      "case_created": "2021-07-10T09:40:21Z",
+      "case_days_open": 1054,
+      "case_number": "1337377",
+      "case_status": "Waiting on Red Hat",
+      "case_updated_date": "2024-03-24 09:33",
+      "comments": [
+        [
+          "testsVoluptates nam iste atque. Similique harum laboriosam hic quam in perferendis. Nobis error minima nam perspiciatis. Voluptas a excepturi.",
+          "2021-12-29T13:38:34.402613Z"
+        ],
+        [
+          "屋根裏埋め込む衝突フレームピック陶器。ささやき職人呼ぶ。",
+          "2022-03-17T23:39:32.786752Z"
+        ],
+        [
+          "Molestias enim aperiam ullam. Placeat ipsam cumque ducimus.",
+          "2021-12-09T11:18:10.450440Z"
+        ]
+      ],
+      "contributor": [],
+      "crit_sit": true,
+      "daily_telco": true,
+      "description": "Debate daughter purpose voice. Security fall ready usually. Teacher cost both general where. Agreement decade friend which.",
+      "escalated": true,
+      "escalated_link": null,
+      "group_name": "molestiae",
+      "issues": null,
+      "labels": ["quae", "maxime"],
+      "notified_users": [
+        { "ssoUsername": "mwaller@example.org", "title": "Loida Mir Suárez" }
+      ],
+      "potential_escalation": false,
+      "priority": "Minor",
+      "product": "擁する 6.0",
+      "relief_at": null,
+      "resolved_at": "2024-02-14T08:14:41Z",
+      "severity": "Urgent",
+      "summary": "Ok choose today watch source firm drug.",
+      "tags": [],
+      "watched": false
+    },
+    "BZMK-4040": {
+      "account": "유한회사 류이서",
+      "assignee": {
+        "displayName": "안성수",
+        "key": "taro32",
+        "name": "thomas12"
+      },
+      "bugzilla": [
+        {
+          "bugzillaLink": "https://example.com/show_bug.cgi?id=163568",
+          "bugzillaNumber": "163568",
+          "caseNumber": "11348873",
+          "linkedAt": "2023-06-03T11:20:56.268712Z",
+          "status": "POST",
+          "summary": "葉障害特徴目的。",
+          "target_release": ["4.6z"],
+          "assignee": "haeun02@example.com",
+          "last_change_time": "2023-12-13T17:33:32.425159",
+          "internal_whiteboard": "recent",
+          "qa_contact": "sbriggs@example.net",
+          "severity": "high"
+        },
+        {
+          "bugzillaLink": "https://example.com/show_bug.cgi?id=33875",
+          "bugzillaNumber": "33875",
+          "caseNumber": "11348873",
+          "linkedAt": "2023-05-09T07:05:04.775866Z",
+          "status": "POST",
+          "summary": "Ut iste est unde fugiat.",
+          "target_release": ["0.0z"],
+          "assignee": "adrian40@example.org",
+          "last_change_time": "2022-10-03T05:51:15.756553",
+          "internal_whiteboard": "ノート",
+          "qa_contact": "labe@example.org",
+          "severity": "unspecified"
+        },
+        {
+          "bugzillaLink": "https://example.org/show_bug.cgi?id=834238",
+          "bugzillaNumber": "834238",
+          "caseNumber": "11348873",
+          "linkedAt": "2022-09-05T12:47:41.988868Z",
+          "status": "ON_QA",
+          "summary": "Item boy response knowledge may thousand music.",
+          "target_release": ["6.8z"],
+          "assignee": "shimizuosamu@example.net",
+          "last_change_time": "2021-02-03T15:13:58.508455",
+          "internal_whiteboard": "minima",
+          "qa_contact": "anna98@example.com",
+          "severity": "medium"
+        },
+        {
+          "bugzillaLink": "https://example.org/show_bug.cgi?id=727140",
+          "bugzillaNumber": "727140",
+          "caseNumber": "11348873",
+          "linkedAt": "2021-10-14T11:24:55.115234Z",
+          "status": "VERIFIED",
+          "summary": "Fugiat ab corporis qui possimus officiis consequatur.",
+          "target_release": ["7.2z"],
+          "assignee": "olga20@example.org",
+          "last_change_time": "2023-08-02T20:35:45.248142",
+          "internal_whiteboard": "eligendi",
+          "qa_contact": "qthomas@example.com",
+          "severity": "low"
+        },
+        {
+          "bugzillaLink": "https://example.com/show_bug.cgi?id=703481",
+          "bugzillaNumber": "703481",
+          "caseNumber": "11348873",
+          "linkedAt": "2023-05-24T07:59:04.121135Z",
+          "status": "ASSIGNED",
+          "summary": "Adipisci ex hic vitae in earum.",
+          "target_release": ["0.4z"],
+          "assignee": "deborah04@example.org",
+          "last_change_time": "2021-02-12T03:17:29.445896",
+          "internal_whiteboard": "tempora",
+          "qa_contact": "tylersavage@example.net",
+          "severity": "low"
+        }
+      ],
+      "card_created": "2022-06-02T16:12:07.517910.000+0000",
+      "card_status": "Eng Working",
+      "case_created": "2021-04-25T00:42:04Z",
+      "case_days_open": 1130,
+      "case_number": "11348873",
+      "case_status": "Waiting on Red Hat",
+      "case_updated_date": "2022-05-14 21:22",
+      "comments": [
+        [
+          "Nihil vitae vitae expedita blanditiis recusandae in. Laboriosam tempore quam quasi. Temporibus harum nobis pariatur ut nostrum laudantium quidem.",
+          "2020-09-04T19:26:59.969954Z"
+        ]
+      ],
+      "contributor": [
+        { "displayName": "서은주", "key": "kyosuke29", "name": "rhonda21" },
+        { "displayName": "田中 直子", "key": "uflores", "name": "qbag" },
+        {
+          "displayName": "David Mitchell",
+          "key": "porterdebbie",
+          "name": "robertsimon"
+        }
+      ],
+      "crit_sit": false,
+      "daily_telco": true,
+      "description": "Fugiat ab vitae temporibus. Dignissimos eos iusto veniam recusandae eius. Non culpa praesentium unde delectus in cupiditate.",
+      "escalated": false,
+      "escalated_link": "https://example.org",
+      "group_name": null,
+      "issues": [
+        {
+          "assignee": "seunghyeoni@example.net",
+          "fix_versions": ["million-7.75"],
+          "id": 206986,
+          "jira_severity": "Low",
+          "jira_type": null,
+          "priority": null,
+          "private_keywords": null,
+          "qa_contact": null,
+          "status": "Closed",
+          "title": "Dignissimos incidunt molestias quaerat exercitationem.",
+          "updated": "2020-11-14T09:44:21.030453",
+          "url": "https://example.com"
+        },
+        {
+          "assignee": null,
+          "fix_versions": null,
+          "id": 67322,
+          "jira_severity": "Low",
+          "jira_type": "Bug",
+          "priority": null,
+          "private_keywords": null,
+          "qa_contact": "yeongsug26@example.net",
+          "status": "Closed",
+          "title": "Error molestias esse repellendus nesciunt quo expedita incidunt.",
+          "updated": "2021-05-14T21:30:57.537613",
+          "url": "https://example.com"
+        }
+      ],
+      "labels": ["quo", "qui", "quos"],
+      "notified_users": [
+        { "ssoUsername": "saitotsubasa@example.com", "title": "김주원" },
+        { "ssoUsername": "hyeonjubag@example.com", "title": "後藤 直子" }
+      ],
+      "potential_escalation": true,
+      "priority": "Major",
+      "product": "specific 8.9",
+      "relief_at": "2022-02-17T07:10:45Z",
+      "resolved_at": null,
+      "severity": "Low",
+      "summary": "Eos rerum ipsum iure dolor.",
+      "tags": [],
+      "watched": true
+    }
+  }
+}
