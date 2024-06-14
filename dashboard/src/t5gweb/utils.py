@@ -186,11 +186,8 @@ def set_cfg():
         if os.environ.get("jira_labels")
         else []
     )
-    cfg["sla_settings"] = (
-        json.loads(os.environ.get("sla_settings"))
-        if os.environ.get("sla_settings")
-        else None
-    )
+    if os.environ.get("sla_settings"):
+        cfg["sla_settings"] = json.loads(os.environ.get("sla_settings"))
     # sso
     cfg["rbac"] = os.environ.get("rbac").split(",") if os.environ.get("rbac") else []
     return cfg
