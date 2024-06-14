@@ -238,7 +238,10 @@ def set_defaults():
     defaults["slack_channel"] = ""
     defaults["max_jira_results"] = 1000
     defaults["max_portal_results"] = 5000
-    defaults["sla_settings"] = {"days": {"Urgent": 14,"High": 20,"Normal": 90,"Low": 180},"partners": []}
+    defaults["sla_settings"] = {
+        "days": {"Urgent": 14, "High": 20, "Normal": 90, "Low": 180},
+        "partners": [],
+    }
     return defaults
 
 
