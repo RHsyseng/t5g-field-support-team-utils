@@ -263,7 +263,7 @@ def slack_notify(ini, blist):
                 r"(?<=\nIt is initially being tracked by )[\w ]*", msgs[i]
             )
             for j in ini["team"]:
-                if j["name"] == assign[0]:
+                if assign and j["name"] == assign[0]:
                     userid = j["slack_user"]
             msgs[i] = re.sub(r"\nIt is initially being tracked by.*", "", msgs[i])
             msgs[i - 1] = (
