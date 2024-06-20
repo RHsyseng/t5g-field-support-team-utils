@@ -186,7 +186,8 @@ def set_cfg():
         if os.environ.get("jira_labels")
         else []
     )
-
+    if os.environ.get("sla_settings"):
+        cfg["sla_settings"] = json.loads(os.environ.get("sla_settings"))
     # sso
     cfg["rbac"] = os.environ.get("rbac").split(",") if os.environ.get("rbac") else []
     return cfg
@@ -234,6 +235,10 @@ def set_defaults():
     defaults["slack_channel"] = ""
     defaults["max_jira_results"] = 1000
     defaults["max_portal_results"] = 5000
+    defaults["sla_settings"] = {
+        "days": {"Urgent": 14, "High": 20, "Normal": 90, "Low": 180},
+        "partners": [],
+    }
     return defaults
 
 

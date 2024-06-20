@@ -301,6 +301,7 @@ def trends():
         new_comments=get_trending_cards(cards),
         jira_server=cfg["server"],
         page_title="trends",
+        sla_settings=cfg["sla_settings"],
     )
 
 
@@ -316,6 +317,7 @@ def table_view():
         new_comments=get_new_comments(cards),
         jira_server=cfg["server"],
         page_title="severity",
+        sla_settings=cfg["sla_settings"],
     )
 
 
@@ -331,6 +333,7 @@ def table_view_all():
         new_comments=get_new_comments(cards=cards, new_comments_only=False),
         jira_server=cfg["server"],
         page_title="all-severity",
+        sla_settings=cfg["sla_settings"],
     )
 
 
@@ -348,6 +351,7 @@ def weekly_updates():
         new_comments=get_new_comments(cards),
         jira_server=cfg["server"],
         page_title="weekly-update",
+        sla_settings=cfg["sla_settings"],
     )
 
 
@@ -389,6 +393,7 @@ def get_account(account):
         jira_server=cfg["server"],
         pie_stats=pie_stats,
         histogram_stats=histogram_stats,
+        sla_settings=cfg["sla_settings"],
     )
 
 
@@ -413,4 +418,5 @@ def get_engineer(engineer):
         pie_stats=pie_stats,
         histogram_stats=histogram_stats,
         engineer_view=True,
+        sla_settings=cfg["sla_settings"],
     )

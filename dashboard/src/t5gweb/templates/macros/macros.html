@@ -49,7 +49,7 @@
     {% endfor %}
 {%- endmacro %}
 
-{% macro cases_table(new_comments, jira_server) -%}
+{% macro cases_table(new_comments, jira_server, sla_settings) -%}
 <div class="container-fluid pt-2" id="expand-buttons">
     <button type="button" class="btn btn-outline-dark" id="expand-button">Expand All Rows</button>
     <button type="button" class="btn btn-outline-dark" id="collapse-button">Collapse All Rows</button>
@@ -154,7 +154,23 @@
                             <td class="align-middle">
                                 <span class="fw-bold fst-italic">{{ new_comments[account][status][card]['comments'][-1][1][:10] }}</span> - {{ new_comments[account][status][card]['comments'][-1][0] | safe }}
                             </td>
-                            <td class="align-middle text-center">{{ new_comments[account][status][card]['case_days_open'] }}</td>
+                            <td class="align-middle text-center">
+                                {% set severity_text = new_comments[account][status][card]['severity'] %}
+                                {% set days_color = ' ' %}
+                                {% if new_comments[account][status][card]['case_status'] != "Closed" %}
+                                    {% if new_comments[account][status][card]['account'] in sla_settings["partners"] %}
+                                        {% if new_comments[account][status][card]['case_days_open'] > sla_settings["days"][severity_text]/2 %}
+                                            {% set days_color = 'badge severity high' %}
+                                            {% if new_comments[account][status][card]['case_days_open'] >= sla_settings["days"][severity_text] %}
+                                                {% set days_color = 'badge severity urgent' %}
+                                            {% endif %}
+                                        {% endif %}
+                                    {% endif %}
+                                {% endif %}
+                                <span class="{{ days_color }}">
+                                    {{ new_comments[account][status][card]['case_days_open'] }}
+                                </span>
+                            </td>
                             <td class="align-middle text-center">{{ new_comments[account][status][card]['case_updated_date'] }}</td>
                             <td class="align-middle text-center">{{ new_comments[account][status][card]['daily_telco'] }}</td>
                         </tr>
@@ -165,3 +181,4 @@
     </table>
 </div>
 {%- endmacro %}
+

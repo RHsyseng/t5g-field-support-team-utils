@@ -245,7 +245,7 @@
     {% endif %}
     <br>
     <h2>Cases:</h2>
-    {{ macros.cases_table(new_comments, jira_server) }}
+    {{ macros.cases_table(new_comments, jira_server, sla_settings) }}
     <script>
     // Create the histograms
     var reliefUrgent = {
