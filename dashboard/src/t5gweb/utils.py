@@ -265,6 +265,9 @@ def slack_notify(ini, blist):
             for j in ini["team"]:
                 if assign and j["name"] == assign[0]:
                     userid = j["slack_user"]
+                else:
+                    userid = None
+                    logging.warning("`assign` is not defined, won't ping slack users")
             msgs[i] = re.sub(r"\nIt is initially being tracked by.*", "", msgs[i])
             msgs[i - 1] = (
                 msgs[i - 1] + f"\nIt is initially being tracked by <@{userid}>"
