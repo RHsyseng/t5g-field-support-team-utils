@@ -6,6 +6,7 @@
 import json
 import os
 from urllib.parse import urljoin, urlparse
+import logging
 
 from flask import (
     Blueprint,
@@ -101,7 +102,9 @@ def login():
         request_id = None
         if "AuthNRequestID" in session:
             request_id = session["AuthNRequestID"]
-
+        logging.warning("request_id")
+        logging.warning(request_id)
+        logging.warning(session)
         auth.process_response(request_id=request_id)
         errors = auth.get_errors()
         not_auth_warn = not auth.is_authenticated()
