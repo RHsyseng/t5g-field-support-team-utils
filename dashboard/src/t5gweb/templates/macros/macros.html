@@ -138,7 +138,11 @@
                             <td class="align-middle text-center">{{ new_comments[account][status][card]['case_status'] }}</td>
                             <td class="align-middle text-center">{{ new_comments[account][status][card]['card_status'] }}</td>
                             <td class="align-middle text-center">
-                                <a href="{{ url_for('ui.get_engineer', engineer=new_comments[account][status][card]['assignee']['displayName']) }}">{{ new_comments[account][status][card]['assignee']['displayName'] }}</a>
+                                {% if new_comments[account][status][card]['assignee']['displayName'] != None %}
+                                    <a href="{{ url_for('ui.get_engineer', engineer=new_comments[account][status][card]['assignee']['displayName']) }}">{{ new_comments[account][status][card]['assignee']['displayName'] }}</a>
+                                {% else %}
+                                    None
+                                {% endif %}
                                 {% if new_comments[account][status][card]['contributor'] | length %}
                                     <br>
                                     <br>
