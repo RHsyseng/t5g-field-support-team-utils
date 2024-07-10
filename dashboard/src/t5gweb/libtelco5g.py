@@ -697,9 +697,7 @@ def generate_histogram_stats(account=None, engineer=None):
         if resolved_at is not None:
             if isinstance(resolved_at, int):
                 # Timestamp is provided w/ empty milliseconds, so divide by 1000
-                resolved_at = datetime.datetime.fromtimestamp(
-                    resolved_at / 1000, tz=datetime.timezone.utc
-                )
+                resolved_at = datetime.datetime.fromtimestamp(resolved_at / 1000)
             else:
                 resolved_at = datetime.datetime.strptime(
                     resolved_at, "%Y-%m-%dT%H:%M:%SZ"
@@ -714,9 +712,7 @@ def generate_histogram_stats(account=None, engineer=None):
         if relief_at is not None:
             if isinstance(relief_at, int):
                 # Timestamp is provided w/ empty milliseconds, so divide by 1000
-                relief_at = datetime.datetime.fromtimestamp(
-                    relief_at / 1000, tz=datetime.timezone.utc
-                )
+                relief_at = datetime.datetime.fromtimestamp(relief_at / 1000)
             else:
                 relief_at = datetime.datetime.strptime(relief_at, "%Y-%m-%dT%H:%M:%SZ")
             days_until_relief = (
