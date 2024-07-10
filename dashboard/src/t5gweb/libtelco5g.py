@@ -693,22 +693,34 @@ def generate_histogram_stats(account=None, engineer=None):
         relief_at = details.get("relief_at")
         case_created = details.get("case_created")
 
-        logging.warning(resolved_at)
-        logging.warning(type(resolved_at))
-        logging.warning(card)
-
         # Add time to resolution to the "Resolved" dictionary, indexed by severity
         if resolved_at is not None:
+            if isinstance(resolved_at, int):
+                # Timestamp is provided w/ empty milliseconds, so divide by 1000
+                resolved_at = datetime.datetime.fromtimestamp(
+                    resolved_at / 1000, tz=datetime.timezone.utc
+                )
+            else:
+                resolved_at = datetime.datetime.strptime(
+                    resolved_at, "%Y-%m-%dT%H:%M:%SZ"
+                )
             days_until_resolved = (
-                datetime.datetime.strptime(resolved_at, "%Y-%m-%dT%H:%M:%SZ")
+                resolved_at
                 - datetime.datetime.strptime(case_created, "%Y-%m-%dT%H:%M:%SZ")
             ).total_seconds() / seconds_per_day
             histogram_data["Resolved"][severity]["data"].append(days_until_resolved)
 
         # Add time to relief to the "Relief" dictionary, indexed by severity
         if relief_at is not None:
+            if isinstance(relief_at, int):
+                # Timestamp is provided w/ empty milliseconds, so divide by 1000
+                relief_at = datetime.datetime.fromtimestamp(
+                    relief_at / 1000, tz=datetime.timezone.utc
+                )
+            else:
+                relief_at = datetime.datetime.strptime(relief_at, "%Y-%m-%dT%H:%M:%SZ")
             days_until_relief = (
-                datetime.datetime.strptime(relief_at, "%Y-%m-%dT%H:%M:%SZ")
+                relief_at
                 - datetime.datetime.strptime(case_created, "%Y-%m-%dT%H:%M:%SZ")
             ).total_seconds() / seconds_per_day
             histogram_data["Relief"][severity]["data"].append(days_until_relief)
