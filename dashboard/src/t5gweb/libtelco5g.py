@@ -693,6 +693,10 @@ def generate_histogram_stats(account=None, engineer=None):
         relief_at = details.get("relief_at")
         case_created = details.get("case_created")
 
+        logging.warning(resolved_at)
+        logging.warning(type(resolved_at))
+        logging.warning(card)
+
         # Add time to resolution to the "Resolved" dictionary, indexed by severity
         if resolved_at is not None:
             days_until_resolved = (
