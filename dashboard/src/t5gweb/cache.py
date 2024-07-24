@@ -9,7 +9,6 @@ import xmlrpc
 
 import bugzilla
 import requests
-
 from jira.exceptions import JIRAError
 from t5gweb import libtelco5g
 from t5gweb.utils import format_date, make_headers
@@ -80,7 +79,7 @@ def get_escalations(cfg):
     project = libtelco5g.get_project_id(jira_conn, cfg["jira_escalations_project"])
     escalations_label = cfg["jira_escalations_label"]
     jira_query = (
-        f'project = {project.id} AND labels = '
+        f"project = {project.id} AND labels = "
         f'"{escalations_label}" AND status != "Closed"'
     )
 
