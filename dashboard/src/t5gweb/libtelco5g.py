@@ -21,7 +21,13 @@ from urllib.parse import urlparse
 import redis
 import requests
 from jira import JIRA
-from t5gweb.utils import exists_or_zero, get_random_member, get_token
+from t5gweb.utils import (
+    exists_or_zero,
+    get_random_member,
+    get_token,
+    make_headers,
+    format_date,
+)
 
 # for portal to jira mapping
 portal2jira_sevs = {
@@ -191,7 +197,7 @@ def add_watcher_to_case(cfg, case, username, token):
     payload = {"user": [{"ssoUsername": username}]}
 
     # Send the POST request to add the watcher
-    headers = {"Authorization": "Bearer " + token, "Content-Type": "application/json"}
+    headers = make_headers(token)
     url = f"{cfg['redhat_api']}/v1/cases/{case}/notifiedusers"
     response = requests.post(url, headers=headers, json=payload)
 
@@ -506,42 +512,17 @@ def generate_stats(account=None, engineer=None):
 
     for case, data in cases.items():
         if data["status"] == "Closed":
-            if (
-                today
-                - datetime.datetime.strptime(
-                    data["closeddate"], "%Y-%m-%dT%H:%M:%SZ"
-                ).date()
-            ).days < 7:
+            if (today - (format_date(data["closeddate"]).date())).days < 7:
                 stats["weekly_closed_cases"] += 1
-            if (
-                today
-                - datetime.datetime.strptime(
-                    data["closeddate"], "%Y-%m-%dT%H:%M:%SZ"
-                ).date()
-            ).days <= 1:
+            if (today - format_date(data["closeddate"]).date()).days <= 1:
                 stats["daily_closed_cases"] += 1
         else:
             stats["open_cases"] += 1
-            if (
-                today
-                - datetime.datetime.strptime(
-                    data["createdate"], "%Y-%m-%dT%H:%M:%SZ"
-                ).date()
-            ).days < 7:
+            if (today - format_date(data["createdate"]).date()).days < 7:
                 stats["weekly_opened_cases"] += 1
-            if (
-                today
-                - datetime.datetime.strptime(
-                    data["createdate"], "%Y-%m-%dT%H:%M:%SZ"
-                ).date()
-            ).days <= 1:
+            if (today - format_date(data["createdate"]).date()).days <= 1:
                 stats["daily_opened_cases"] += 1
-            if (
-                today
-                - datetime.datetime.strptime(
-                    data["last_update"], "%Y-%m-%dT%H:%M:%SZ"
-                ).date()
-            ).days < 7:
+            if (today - format_date(data["last_update"]).date()).days < 7:
                 stats["no_updates"] += 1
 
     all_bugs = {}
@@ -699,12 +680,9 @@ def generate_histogram_stats(account=None, engineer=None):
                 # Timestamp is provided w/ empty milliseconds, so divide by 1000
                 resolved_at = datetime.datetime.fromtimestamp(resolved_at / 1000)
             else:
-                resolved_at = datetime.datetime.strptime(
-                    resolved_at, "%Y-%m-%dT%H:%M:%SZ"
-                )
+                resolved_at = format_date(resolved_at)
             days_until_resolved = (
-                resolved_at
-                - datetime.datetime.strptime(case_created, "%Y-%m-%dT%H:%M:%SZ")
+                resolved_at - format_date(case_created)
             ).total_seconds() / seconds_per_day
             histogram_data["Resolved"][severity]["data"].append(days_until_resolved)
 
@@ -714,10 +692,9 @@ def generate_histogram_stats(account=None, engineer=None):
                 # Timestamp is provided w/ empty milliseconds, so divide by 1000
                 relief_at = datetime.datetime.fromtimestamp(relief_at / 1000)
             else:
-                relief_at = datetime.datetime.strptime(relief_at, "%Y-%m-%dT%H:%M:%SZ")
+                relief_at = format_date(relief_at)
             days_until_relief = (
-                relief_at
-                - datetime.datetime.strptime(case_created, "%Y-%m-%dT%H:%M:%SZ")
+                relief_at - format_date(case_created)
             ).total_seconds() / seconds_per_day
             histogram_data["Relief"][severity]["data"].append(days_until_relief)
 
