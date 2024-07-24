@@ -4,9 +4,9 @@
 # https://github.com/SAML-Toolkits/python3-saml/tree/master/demo-flask
 # License - https://github.com/SAML-Toolkits/python3-saml/blob/master/LICENSE
 import json
+import logging
 import os
 from urllib.parse import urljoin, urlparse
-import logging
 
 from flask import (
     Blueprint,

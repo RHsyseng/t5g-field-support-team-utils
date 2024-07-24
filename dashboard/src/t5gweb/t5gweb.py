@@ -9,7 +9,7 @@ from datetime import date, datetime, timezone
 
 import click
 from flask.cli import with_appcontext
-from t5gweb.utils import get_fake_data, set_cfg, format_date
+from t5gweb.utils import format_date, get_fake_data, set_cfg
 
 from . import cache, libtelco5g
 

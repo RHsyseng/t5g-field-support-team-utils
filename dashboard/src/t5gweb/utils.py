@@ -1,12 +1,12 @@
 """utils.py: utility functions for the t5gweb"""
 
+import datetime
 import json
 import logging
 import os
 import random
 import re
 import smtplib
-import datetime
 from email.message import EmailMessage
 
 import requests
@@ -44,7 +44,7 @@ def get_previous_quarter(day=None):
     Day should be of type datetime.date
     """
     if day is None:
-        day = date.today()
+        day = datetime.date.today()
     if 1 <= day.month <= 3:
         query_range = (
             f'((updated >= "{day.year-1}-10-01" AND updated <= "{day.year-1}-12-31")'

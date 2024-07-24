@@ -23,10 +23,10 @@ import requests
 from jira import JIRA
 from t5gweb.utils import (
     exists_or_zero,
+    format_date,
     get_random_member,
     get_token,
     make_headers,
-    format_date,
 )
 
 # for portal to jira mapping

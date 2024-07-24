@@ -12,7 +12,7 @@ import requests
 
 from jira.exceptions import JIRAError
 from t5gweb import libtelco5g
-from t5gweb.utils import make_headers, format_date
+from t5gweb.utils import format_date, make_headers
 
 
 def get_cases(cfg):
@@ -79,7 +79,10 @@ def get_escalations(cfg):
     max_cards = cfg["max_jira_results"]
     project = libtelco5g.get_project_id(jira_conn, cfg["jira_escalations_project"])
     escalations_label = cfg["jira_escalations_label"]
-    jira_query = f'project = {project.id} AND labels = "{escalations_label}" AND status != "Closed"'
+    jira_query = (
+        f'project = {project.id} AND labels = '
+        f'"{escalations_label}" AND status != "Closed"'
+    )
 
     escalated_cards = jira_conn.search_issues(jira_query, 0, max_cards).iterable
     escalations = []

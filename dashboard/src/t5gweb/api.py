@@ -9,8 +9,8 @@ from t5gweb.cache import (
     get_cases,
     get_escalations,
     get_issue_details,
-    get_watchlist,
     get_stats,
+    get_watchlist,
 )
 from t5gweb.libtelco5g import generate_stats, redis_get
 from t5gweb.utils import set_cfg
