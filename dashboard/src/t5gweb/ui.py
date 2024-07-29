@@ -4,9 +4,9 @@
 # https://github.com/SAML-Toolkits/python3-saml/tree/master/demo-flask
 # License - https://github.com/SAML-Toolkits/python3-saml/blob/master/LICENSE
 import json
+import logging
 import os
 from urllib.parse import urljoin, urlparse
-import logging
 
 from flask import (
     Blueprint,
@@ -159,12 +159,12 @@ def login():
 
         user = User(attributes["rhatUUID"][0])
         login_user(user)
-        next = request.args.get("next")
+        next_page = request.args.get("next")
 
         # Avoid 'Open Redirect'
-        if not is_safe_url(next):
+        if not is_safe_url(next_page):
             return abort(400)
-        return redirect(next or url_for("ui.index"))
+        return redirect(next_page or url_for("ui.index"))
 
     return render_template(
         "ui/login.html",

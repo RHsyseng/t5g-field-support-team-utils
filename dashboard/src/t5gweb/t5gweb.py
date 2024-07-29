@@ -9,7 +9,7 @@ from datetime import date, datetime, timezone
 
 import click
 from flask.cli import with_appcontext
-from t5gweb.utils import get_fake_data, set_cfg
+from t5gweb.utils import format_date, get_fake_data, set_cfg
 
 from . import cache, libtelco5g
 
@@ -25,14 +25,11 @@ def get_new_cases():
     new_cases = {
         c: d
         for (c, d) in sorted(cases.items(), key=lambda i: i[1]["severity"])
-        if (
-            today - datetime.strptime(d["createdate"], "%Y-%m-%dT%H:%M:%SZ").date()
-        ).days
-        <= interval
+        if (today - format_date(d["createdate"]).date()).days <= interval
     }
     for case in new_cases:
         new_cases[case]["severity"] = re.sub(
-            r"\(|\)| |[0-9]", "", new_cases[case]["severity"]
+            r"\(|\)| |\d", "", new_cases[case]["severity"]
         )
     return new_cases
 

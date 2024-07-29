@@ -1,4 +1,5 @@
 """cache.py: caching functions for the t5gweb"""
+
 import datetime
 import json
 import logging
@@ -8,8 +9,9 @@ import xmlrpc
 
 import bugzilla
 import requests
-import t5gweb.libtelco5g as libtelco5g
 from jira.exceptions import JIRAError
+from t5gweb import libtelco5g
+from t5gweb.utils import format_date, make_headers
 
 
 def get_cases(cfg):
@@ -18,10 +20,10 @@ def get_cases(cfg):
     token = libtelco5g.get_token(cfg["offline_token"])
     query = cfg["query"]
     fields = ",".join(cfg["fields"])
-    query = "({})".format(query)
+    query = f"({query})"
     num_cases = cfg["max_portal_results"]
     payload = {"q": query, "partnerSearch": "false", "rows": num_cases, "fl": fields}
-    headers = {"Accept": "application/json", "Authorization": "Bearer " + token}
+    headers = make_headers(token)
     url = f"{cfg['redhat_api']}/search/cases"
 
     logging.warning("searching the portal for cases")
@@ -29,9 +31,7 @@ def get_cases(cfg):
     r = requests.get(url, headers=headers, params=payload)
     cases_json = r.json()["response"]["docs"]
     end = time.time()
-    logging.warning(
-        "found {} cases in {} seconds".format(len(cases_json), (end - start))
-    )
+    logging.warning("found %s cases in %s seconds", len(cases_json), end - start)
     cases = {}
     for case in cases_json:
         cases[case["case_number"]] = {
@@ -77,8 +77,10 @@ def get_escalations(cfg):
     jira_conn = libtelco5g.jira_connection(cfg)
     max_cards = cfg["max_jira_results"]
     project = libtelco5g.get_project_id(jira_conn, cfg["jira_escalations_project"])
-    jira_query = 'project = {} AND labels = "{}" AND status != "Closed"'.format(
-        project.id, cfg["jira_escalations_label"]
+    escalations_label = cfg["jira_escalations_label"]
+    jira_query = (
+        f"project = {project.id} AND labels = "
+        f'"{escalations_label}" AND status != "Closed"'
     )
 
     escalated_cards = jira_conn.search_issues(jira_query, 0, max_cards).iterable
@@ -103,15 +105,15 @@ def get_cards(cfg, self=None, background=False):
     max_cards = cfg["max_jira_results"]
     start = time.time()
     project = libtelco5g.get_project_id(jira_conn, cfg["project"])
-    logging.warning("project: {}".format(project))
+    logging.warning("project: %s", project)
     board = libtelco5g.get_board_id(jira_conn, cfg["board"])
-    logging.warning("board: {}".format(board))
+    logging.warning("board: %s", board)
     if cfg["sprintname"] and cfg["sprintname"] != "":
         sprint = libtelco5g.get_latest_sprint(jira_conn, board.id, cfg["sprintname"])
         jira_query = (
             "sprint=" + str(sprint.id) + ' AND labels = "' + cfg["jira_query"] + '"'
         )
-        logging.warning("sprint: {}".format(sprint))
+        logging.warning("sprint: %s", sprint)
     else:
         jira_query = (
             "project=" + str(project.id) + ' AND labels = "' + cfg["jira_query"] + '"'
@@ -159,9 +161,7 @@ def get_cards(cfg, self=None, background=False):
             card_comments.append((body, tstamp))
         case_number = libtelco5g.get_case_from_link(jira_conn, card)
         if not case_number or case_number not in cases.keys():
-            logging.warning(
-                "card isn't associated with a case. discarding ({})".format(card)
-            )
+            logging.warning("card isn't associated with a case. discarding (%s)", card)
             continue
         assignee = {"displayName": None, "key": None, "name": None}
         if issue.fields.assignee:
@@ -265,16 +265,12 @@ def get_cards(cfg, self=None, background=False):
             "crit_sit": crit_sit,
             "group_name": group_name,
             "case_updated_date": datetime.datetime.strftime(
-                datetime.datetime.strptime(
-                    cases[case_number]["last_update"], "%Y-%m-%dT%H:%M:%SZ"
-                ),
+                format_date(cases[case_number]["last_update"]),
                 "%Y-%m-%d %H:%M",
             ),
             "case_days_open": (
                 time_now.replace(tzinfo=None)
-                - datetime.datetime.strptime(
-                    cases[case_number]["createdate"], "%Y-%m-%dT%H:%M:%SZ"
-                )
+                - format_date(cases[case_number]["createdate"])
             ).days,
             "case_created": cases[case_number]["createdate"],
             "notified_users": notified_users,
@@ -284,9 +280,11 @@ def get_cards(cfg, self=None, background=False):
         }
 
     end = time.time()
-    logging.warning("got {} cards in {} seconds".format(len(jira_cards), (end - start)))
+    logging.warning("got %s cards in %s seconds", len(jira_cards), (end - start))
     libtelco5g.redis_set("cards", json.dumps(jira_cards))
-    libtelco5g.redis_set("timestamp", json.dumps(str(datetime.datetime.utcnow())))
+    libtelco5g.redis_set(
+        "timestamp", json.dumps(str(datetime.datetime.now(datetime.timezone.utc)))
+    )
 
 
 def get_watchlist(cfg):
@@ -298,7 +296,7 @@ def get_watchlist(cfg):
     token = libtelco5g.get_token(cfg["offline_token"])
     num_cases = cfg["max_portal_results"]
     payload = {"rows": num_cases}
-    headers = {"Accept": "application/json", "Authorization": "Bearer " + token}
+    headers = make_headers(token)
     url = f"{cfg['redhat_api']}/eh/escalations?highlight=true"
 
     r = requests.get(url, headers=headers, params=payload)
@@ -307,9 +305,9 @@ def get_watchlist(cfg):
     for watched in r.json():
         watched_cases = watched["cases"]
         for case in watched_cases:
-            caseNumber = case["caseNumber"]
-            if caseNumber in cases:
-                watchlist.append(caseNumber)
+            case_number = case["caseNumber"]
+            if case_number in cases:
+                watchlist.append(case_number)
 
     libtelco5g.redis_set("watchlist", json.dumps(watchlist))
 
@@ -324,7 +322,7 @@ def get_case_details(cfg):
 
     bz_dict = {}
     token = libtelco5g.get_token(cfg["offline_token"])
-    headers = {"Accept": "application/json", "Authorization": "Bearer " + token}
+    headers = make_headers(token)
     case_details = {}
     logging.warning("getting all bugzillas and case details")
     for case in cases:
@@ -333,10 +331,7 @@ def get_case_details(cfg):
             r_case = requests.get(case_endpoint, headers=headers)
             if r_case.status_code == 401:
                 token = libtelco5g.get_token(cfg["offline_token"])
-                headers = {
-                    "Accept": "application/json",
-                    "Authorization": "Bearer " + token,
-                }
+                headers = make_headers(token)
                 r_case = requests.get(case_endpoint, headers=headers)
 
             crit_sit = r_case.json().get("critSit", False)
@@ -375,9 +370,7 @@ def get_bz_details(cfg):
                 bugs = bz_api.getbug(bug["bugzillaNumber"])
             except xmlrpc.client.Fault:
                 logging.warning(
-                    "error retrieving bug {} - restricted?".format(
-                        bug["bugzillaNumber"]
-                    )
+                    "error retrieving bug %s - restricted?", bug["bugzillaNumber"]
                 )
                 bugs = None
             if bugs:
@@ -411,7 +404,7 @@ def get_issue_details(cfg):
         return
 
     token = libtelco5g.get_token(cfg["offline_token"])
-    headers = {"Accept": "application/json", "Authorization": "Bearer " + token}
+    headers = make_headers(token)
 
     logging.warning("attempting to connect to jira...")
     jira_conn = libtelco5g.jira_connection(cfg)
@@ -428,7 +421,7 @@ def get_issue_details(cfg):
                     try:
                         bug = jira_conn.issue(issue["resourceKey"])
                     except JIRAError:
-                        logging.warning("Can't access {}".format(issue["resourceKey"]))
+                        logging.warning("Can't access %s", issue["resourceKey"])
                         continue
 
                     # Retrieve QA contact from Jira bug
@@ -486,9 +479,7 @@ def get_issue_details(cfg):
                             "title": issue["title"],
                             "status": issue["status"],
                             "updated": datetime.datetime.strftime(
-                                datetime.datetime.strptime(
-                                    str(issue["lastModifiedDate"]), "%Y-%m-%dT%H:%M:%SZ"
-                                ),
+                                format_date(str(issue["lastModifiedDate"])),
                                 "%Y-%m-%d",
                             ),
                             "qa_contact": qa_contact,
@@ -511,7 +502,7 @@ def get_stats():
     logging.warning("caching {} stats")
     all_stats = libtelco5g.redis_get("stats")
     new_stats = libtelco5g.generate_stats()
-    tstamp = datetime.datetime.utcnow()
+    tstamp = datetime.datetime.now(datetime.timezone.utc)
     today = tstamp.strftime("%Y-%m-%d")
     stats = {today: new_stats}
     all_stats.update(stats)

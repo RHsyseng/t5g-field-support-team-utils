@@ -1,12 +1,12 @@
 """utils.py: utility functions for the t5gweb"""
 
+import datetime
 import json
 import logging
 import os
 import random
 import re
 import smtplib
-from datetime import date
 from email.message import EmailMessage
 
 import requests
@@ -44,7 +44,7 @@ def get_previous_quarter(day=None):
     Day should be of type datetime.date
     """
     if day is None:
-        day = date.today()
+        day = datetime.date.today()
     if 1 <= day.month <= 3:
         query_range = (
             f'((updated >= "{day.year-1}-10-01" AND updated <= "{day.year-1}-12-31")'
@@ -310,3 +310,29 @@ def get_fake_data(path="data/fake_data.json"):
     with open(path) as fake_data:
         data = json.load(fake_data)
     return data
+
+
+def make_headers(token):
+    """Builds the HTTP headers for API requests
+
+    Args:
+        token(str): A valid bearer token
+
+    Returns:
+        dict: valid headers for use with the requests module
+    """
+    headers = {"Accept": "application/json", "Authorization": "Bearer " + token}
+    return headers
+
+
+def format_date(the_date):
+    """Converts a date string in to the required format
+
+    Args:
+        date(str): A date stored as a string
+
+    Returns:
+        datetime.date: A datetime object
+    """
+    formatted_date = datetime.datetime.strptime(the_date, "%Y-%m-%dT%H:%M:%SZ")
+    return formatted_date

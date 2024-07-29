@@ -1,4 +1,5 @@
 """API endpoints for t5gweb"""
+
 from flask import Blueprint, jsonify, request
 from flask_login import login_required
 from t5gweb.cache import (
@@ -8,6 +9,7 @@ from t5gweb.cache import (
     get_cases,
     get_escalations,
     get_issue_details,
+    get_stats,
     get_watchlist,
 )
 from t5gweb.libtelco5g import generate_stats, redis_get
@@ -29,6 +31,7 @@ def index():
             "{}refresh/escalations".format(request.base_url),
             "{}refresh/watchlist".format(request.base_url),
             "{}refresh/issues".format(request.base_url),
+            "{}refresh/stats".format(request.base_url),
             "{}cards".format(request.base_url),
             "{}cases".format(request.base_url),
             "{}bugs".format(request.base_url),
@@ -66,6 +69,9 @@ def refresh(data_type):
     elif data_type == "issues":
         get_issue_details(cfg)
         return jsonify({"caching issues": "ok"})
+    elif data_type == "stats":
+        get_stats()
+        return jsonify({"caching stats": "ok"})
     else:
         return jsonify({"error": "unknown data type: {}".format(data_type)})
 
