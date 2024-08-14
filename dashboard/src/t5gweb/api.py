@@ -1,4 +1,5 @@
 """API endpoints for t5gweb"""
+import json
 
 from flask import Blueprint, jsonify, request
 from flask_login import login_required
@@ -12,7 +13,7 @@ from t5gweb.cache import (
     get_stats,
     get_watchlist,
 )
-from t5gweb.libtelco5g import generate_stats, redis_get
+from t5gweb.libtelco5g import generate_stats, redis_get, redis_set
 from t5gweb.utils import set_cfg
 
 BP = Blueprint("api", __name__, url_prefix="/api")
@@ -61,7 +62,9 @@ def refresh(data_type):
     elif data_type == "bugs":
         get_bz_details(cfg)
     elif data_type == "escalations":
-        get_escalations(cfg)
+        cases = redis_get("cases")
+        escalations = get_escalations(cfg, cases)
+        redis_set("escalations", json.dumps(escalations))
         return jsonify({"caching escalations": "ok"})
     elif data_type == "watchlist":
         get_watchlist(cfg)
