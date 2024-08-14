@@ -196,7 +196,9 @@ def cache_data(data_type):
     elif data_type == "issues":
         cache.get_issue_details(cfg)
     elif data_type == "escalations":
-        cache.get_escalations(cfg)
+        cases = libtelco5g.redis_get("cases")
+        escalations = cache.get_escalations(cfg, cases)
+        libtelco5g.redis_set("escalations", json.dumps(escalations))
     elif data_type == "watchlist":
         cache.get_watchlist(cfg)
     else:

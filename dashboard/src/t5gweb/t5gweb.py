@@ -152,7 +152,9 @@ def init_cache():
             cache.get_issue_details(cfg)
         if escalations == {}:
             logging.warning("no escalations found in cache. refreshing...")
-            cache.get_escalations(cfg)
+            cases = libtelco5g.redis_get("cases")
+            escalations = cache.get_escalations(cfg, cases)
+            libtelco5g.redis_set("escalations", json.dumps(escalations))
         if watchlist == {}:
             logging.warning("no watchlist found in cache. refreshing...")
             cache.get_watchlist(cfg)
