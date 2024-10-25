@@ -421,6 +421,7 @@ def get_issue_details(cfg):
         logging.warning(f"Getting jira bugs for {case}")
         issues_url = f"{cfg['redhat_api']}/cases/{case}/jiras"
         issues = requests.get(issues_url, headers=headers)
+        logging.warning(issues.status_code)
         if issues.status_code == 200 and len(issues.json()) > 0:
             logging.warning(f"Successfully pulled jira bugs for {case}")
             case_issues = []
