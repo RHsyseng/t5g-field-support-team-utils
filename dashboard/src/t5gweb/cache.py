@@ -422,11 +422,13 @@ def get_issue_details(cfg):
         issues_url = f"{cfg['redhat_api']}/cases/{case}/jiras"
         issues = requests.get(issues_url, headers=headers)
         if issues.status_code == 200 and len(issues.json()) > 0:
+            logging.warning(f"Successfully pulled jira bugs for {case}")
             case_issues = []
             for issue in issues.json():
                 if "title" in issue.keys():
                     try:
                         bug = jira_conn.issue(issue["resourceKey"])
+                        logging.warning(f"Getting details of {issue["resourceKey"]}")
                     except JIRAError:
                         logging.warning("Can't access %s", issue["resourceKey"])
                         continue
