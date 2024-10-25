@@ -74,7 +74,7 @@ def setup_scheduled_tasks(sender, **kwargs):
 
     # update Jira bug details cache
     sender.add_periodic_task(
-        crontab(hour="*", minute="54"),  # hourly + offset
+        crontab(hour="*/12", minute="54"),  # twice a day
         cache_data.s("issues"),
         name="issues_sync",
     )
