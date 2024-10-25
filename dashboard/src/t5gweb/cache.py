@@ -418,18 +418,19 @@ def get_issue_details(cfg):
     jira_issues = {}
     open_cases = [case for case in cases if cases[case]["status"] != "Closed"]
     for case in open_cases:
-        logging.warning(f"Getting jira bugs for {case}")
         issues_url = f"{cfg['redhat_api']}/cases/{case}/jiras"
         issues = requests.get(issues_url, headers=headers)
-        logging.warning(issues.status_code)
+        if issues.status_code == 401:
+            token = libtelco5g.get_token(cfg["offline_token"])
+            headers = make_headers(token)
+            issues = requests.get(issues_url, headers=headers)
+
         if issues.status_code == 200 and len(issues.json()) > 0:
-            logging.warning(f"Successfully pulled jira bugs for {case}")
             case_issues = []
             for issue in issues.json():
                 if "title" in issue.keys():
                     try:
                         bug = jira_conn.issue(issue["resourceKey"])
-                        logging.warning(f"Getting details of {issue["resourceKey"]}")
                     except JIRAError:
                         logging.warning("Can't access %s", issue["resourceKey"])
                         continue
@@ -501,7 +502,6 @@ def get_issue_details(cfg):
                             "private_keywords": private_keywords,
                         }
                     )
-                    logging.warning(f"Set details for {case}/{issue['resourceKey']}")
             if len(case_issues) > 0:
                 jira_issues[case] = case_issues
 
