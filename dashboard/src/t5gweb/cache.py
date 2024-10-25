@@ -500,6 +500,7 @@ def get_issue_details(cfg):
                             "private_keywords": private_keywords,
                         }
                     )
+                    logging.warning(f"Set details for {case}/{issue['resourceKey']}")
             if len(case_issues) > 0:
                 jira_issues[case] = case_issues
 
