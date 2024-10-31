@@ -190,6 +190,8 @@ def set_cfg():
         cfg["sla_settings"] = json.loads(os.environ.get("sla_settings"))
     # sso
     cfg["rbac"] = os.environ.get("rbac").split(",") if os.environ.get("rbac") else []
+    cfg["max_to_create"] = os.environ.get("max_to_create")
+    cfg["alert_email"] = os.environ.get("alert_email")
     return cfg
 
 
@@ -307,7 +309,7 @@ def get_fake_data(path="data/fake_data.json"):
         dict: Dictionary that contains deserialized JSON data
     """
     path = os.path.abspath(path)
-    with open(path) as fake_data:
+    with open(path, encoding="utf-8") as fake_data:
         data = json.load(fake_data)
     return data
 
