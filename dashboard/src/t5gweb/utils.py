@@ -167,8 +167,8 @@ def set_cfg():
     cfg["smtp"] = os.environ.get("smtp_server")
     cfg["from"] = os.environ.get("source_email")
     cfg["to"] = os.environ.get("notification_email")
-    cfg["alert_to"] = os.environ.get("alert_email")
     cfg["subject"] = os.environ.get("email_subject")
+    cfg["alert_email"] = os.environ.get("alert_email")
     # slack
     cfg["slack_token"] = os.environ.get("slack_token")
     cfg["slack_channel"] = os.environ.get("slack_channel")
@@ -191,7 +191,6 @@ def set_cfg():
     # sso
     cfg["rbac"] = os.environ.get("rbac").split(",") if os.environ.get("rbac") else []
     cfg["max_to_create"] = os.environ.get("max_to_create")
-    cfg["alert_email"] = os.environ.get("alert_email")
     return cfg
 
 
@@ -201,7 +200,7 @@ def set_defaults():
     defaults["smtp"] = "localhost"
     defaults["from"] = "dashboard@example.com"
     defaults["to"] = ""
-    defaults["alert_to"] = "root@localhost"
+    defaults["alert_email"] = "root@localhost"
     defaults["subject"] = "New Card(s) Have Been Created to Track Issues"
     defaults["sprintname"] = ""
     defaults["server"] = ""

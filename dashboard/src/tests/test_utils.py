@@ -53,7 +53,7 @@ def test_set_default():
     assert defaults["smtp"] == "localhost"
     assert defaults["from"] == "dashboard@example.com"
     assert defaults["to"] == ""
-    assert defaults["alert_to"] == "root@localhost"
+    assert defaults["alert_email"] == "root@localhost"
     assert defaults["subject"] == "New Card(s) Have Been Created to Track Issues"
     assert defaults["sprintname"] == ""
     assert defaults["server"] == ""
