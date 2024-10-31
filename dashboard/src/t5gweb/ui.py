@@ -144,7 +144,7 @@ def login():
                     error_reason=error_reason,
                     not_auth_warn=not_auth_warn,
                     wrong_permissions=wrong_permissions,
-                    alert_email=cfg["alert_to"],
+                    alert_email=cfg["alert_email"],
                 )
         # JIT Provisioning
         if attributes["rhatUUID"][0] not in users:
