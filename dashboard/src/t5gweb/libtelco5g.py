@@ -238,9 +238,17 @@ def create_cards(cfg, new_cases, action="none"):
     if cfg["sprintname"] and cfg["sprintname"] != "":
         sprint = get_latest_sprint(jira_conn, board.id, cfg["sprintname"])
 
+    created_cards = get_issues_in_sprint(cfg, sprint, jira_conn)
+
+    # Parse case numbers from JIRA titles
+    created_cases = [card["fields"]["summary"].split(":")[0] for card in created_cards]
+
     cases = redis_get("cases")
 
     for case in new_cases:
+        if case in created_cases:
+            logging.warning(f"Card already exists for {case}, moving on.")
+            continue
         assignee = None
 
         if cfg["team"]:
@@ -736,6 +744,28 @@ def sync_priority(cfg):
         oos_issue = jira_conn.issue(card)
         oos_issue.update(fields={"priority": {"name": new_priority}})
     return out_of_sync
+
+
+def get_issues_in_sprint(cfg, sprint, jira_conn, max_results=1000):
+    """Get all issues in a specified sprint with specified labels
+
+    Args:
+        cfg (dict): Pre-configured settings
+        sprint (jira.resources.Sprint): JIRA sprint
+        jira_conn (jira.client.JIRA): JIRA connection object. Contains auth info
+        max_results (int, optional): Max # of issues to pull from sprint.
+            Defaults to 1000.
+
+    Returns:
+       dict: All cards in sprint with associated info
+    """
+    jira_query = (
+        "sprint=" + str(sprint.id) + ' AND labels = "' + cfg["jira_query"] + '"'
+    )
+    cards = jira_conn.search_issues(
+        jql_str=jira_query, json_result=True, maxResults=max_results
+    )
+    return cards["issues"]
 
 
 def sync_portal_to_jira():
