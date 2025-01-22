@@ -22,13 +22,13 @@ import redis
 import requests
 from jira import JIRA
 from t5gweb.utils import (
+    email_notify,
     exists_or_zero,
     format_date,
     get_random_member,
     get_token,
     make_headers,
     set_cfg,
-    email_notify,
     slack_notify,
 )
 
@@ -56,7 +56,7 @@ status_map = {
 
 
 def jira_connection(cfg):
-    """ initiate a connection to the JIRA server"""
+    """initiate a connection to the JIRA server"""
     jira = JIRA(server=cfg["server"], token_auth=cfg["password"])
 
     return jira
@@ -244,11 +244,13 @@ def create_cards(cfg, new_cases, action="none"):
     created_cases = [card["fields"]["summary"].split(":")[0] for card in created_cards]
 
     cases = redis_get("cases")
-
+    novel_cases = []
     for case in new_cases:
         if case in created_cases:
             logging.warning(f"Card already exists for {case}, moving on.")
             continue
+        else:
+            novel_cases.append(case)
         assignee = None
 
         if cfg["team"]:
@@ -395,7 +397,7 @@ def create_cards(cfg, new_cases, action="none"):
                 "crit_sit": False,
             }
 
-    return email_content, new_cards
+    return email_content, new_cards, novel_cases
 
 
 def redis_set(key, value):
@@ -769,7 +771,6 @@ def get_issues_in_sprint(cfg, sprint, jira_conn, max_results=1000):
 
 
 def sync_portal_to_jira():
-
     cfg = set_cfg()
 
     start = time.time()
@@ -803,10 +804,12 @@ def sync_portal_to_jira():
         email_notify(cfg, email_content)
     elif len(new_cases) > 0:
         logging.warning("need to create {} cases".format(len(new_cases)))
-        message_content, new_cards = create_cards(cfg, new_cases, action="create")
+        message_content, new_cards, novel_cases = create_cards(
+            cfg, new_cases, action="create"
+        )
         if message_content:
             logging.warning("notifying team about new JIRA cards")
-            cfg["subject"] += ": {}".format(", ".join(new_cases))
+            cfg["subject"] += ": {}".format(", ".join(novel_cases))
             email_notify(cfg, message_content)
             if cfg["slack_token"] and cfg["slack_channel"]:
                 slack_notify(cfg, message_content)
