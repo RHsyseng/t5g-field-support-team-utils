@@ -27,6 +27,9 @@ from t5gweb.utils import (
     get_random_member,
     get_token,
     make_headers,
+    set_cfg,
+    email_notify,
+    slack_notify,
 )
 
 # for portal to jira mapping
@@ -53,6 +56,7 @@ status_map = {
 
 
 def jira_connection(cfg):
+    """ initiate a connection to the JIRA server"""
     jira = JIRA(server=cfg["server"], token_auth=cfg["password"])
 
     return jira
@@ -234,9 +238,17 @@ def create_cards(cfg, new_cases, action="none"):
     if cfg["sprintname"] and cfg["sprintname"] != "":
         sprint = get_latest_sprint(jira_conn, board.id, cfg["sprintname"])
 
+    created_cards = get_issues_in_sprint(cfg, sprint, jira_conn)
+
+    # Parse case numbers from JIRA titles
+    created_cases = [card["fields"]["summary"].split(":")[0] for card in created_cards]
+
     cases = redis_get("cases")
 
     for case in new_cases:
+        if case in created_cases:
+            logging.warning(f"Card already exists for {case}, moving on.")
+            continue
         assignee = None
 
         if cfg["team"]:
@@ -732,6 +744,83 @@ def sync_priority(cfg):
         oos_issue = jira_conn.issue(card)
         oos_issue.update(fields={"priority": {"name": new_priority}})
     return out_of_sync
+
+
+def get_issues_in_sprint(cfg, sprint, jira_conn, max_results=1000):
+    """Get all issues in a specified sprint with specified labels
+
+    Args:
+        cfg (dict): Pre-configured settings
+        sprint (jira.resources.Sprint): JIRA sprint
+        jira_conn (jira.client.JIRA): JIRA connection object. Contains auth info
+        max_results (int, optional): Max # of issues to pull from sprint.
+            Defaults to 1000.
+
+    Returns:
+       dict: All cards in sprint with associated info
+    """
+    jira_query = (
+        "sprint=" + str(sprint.id) + ' AND labels = "' + cfg["jira_query"] + '"'
+    )
+    cards = jira_conn.search_issues(
+        jql_str=jira_query, json_result=True, maxResults=max_results
+    )
+    return cards["issues"]
+
+
+def sync_portal_to_jira():
+
+    cfg = set_cfg()
+
+    start = time.time()
+    cases = redis_get("cases")
+    cards = redis_get("cards")
+
+    open_cases = [case for case in cases if cases[case]["status"] != "Closed"]
+    card_cases = [cards[card]["case_number"] for card in cards]
+    logging.warning("found {} cases in JIRA".format(len(card_cases)))
+    new_cases = [case for case in open_cases if case not in card_cases]
+    logging.warning("new cases: {}".format(new_cases))
+
+    response = {"cards_created": 0}
+
+    if len(new_cases) > int(cfg["max_to_create"]):
+        logging.warning(
+            (
+                f"Warning: more than {cfg['max_to_create']} cases ({len(new_cases)}) "
+                f"will be created, so refusing to proceed. Please check log output\n"
+            )
+        )
+        email_content = [
+            (
+                f"Warning: more than {cfg['max_to_create']} cases ({len(new_cases)})"
+                f"will be created, so refusing to proceed. Please check log output\n"
+            )
+        ]
+        email_content += ['New cases: {}\n"'.format(new_cases)]
+        cfg["to"] = cfg["alert_email"]
+        cfg["subject"] = "High New Case Count Detected"
+        email_notify(cfg, email_content)
+    elif len(new_cases) > 0:
+        logging.warning("need to create {} cases".format(len(new_cases)))
+        message_content, new_cards = create_cards(cfg, new_cases, action="create")
+        if message_content:
+            logging.warning("notifying team about new JIRA cards")
+            cfg["subject"] += ": {}".format(", ".join(new_cases))
+            email_notify(cfg, message_content)
+            if cfg["slack_token"] and cfg["slack_channel"]:
+                slack_notify(cfg, message_content)
+            else:
+                logging.warning("no slack token or channel specified")
+            cards.update(new_cards)
+            redis_set("cards", json.dumps(cards))
+        response = {"cards_created": len(new_cases)}
+    else:
+        logging.warning("no new cards required")
+
+    end = time.time()
+    logging.warning("synced to jira in {} seconds".format(end - start))
+    return response
 
 
 def main():
