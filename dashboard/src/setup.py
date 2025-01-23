@@ -20,6 +20,5 @@ setup(
         "flask-login",
         "prometheus-flask-exporter",
         "Werkzeug",
-        "xmlsec",
     ],
 )
