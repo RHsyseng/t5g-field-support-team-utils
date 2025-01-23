@@ -107,6 +107,9 @@ def login():
         logging.warning(session)
         auth.process_response(request_id=request_id)
         errors = auth.get_errors()
+        logging.warning("errors")
+        logging.warning(errors)
+        logging.warning(auth.get_settings().is_debug_active())
         not_auth_warn = not auth.is_authenticated()
         if len(errors) == 0:
             if "AuthNRequestID" in session:
