@@ -364,7 +364,6 @@ def generate_fake_card(fake, engineers, bugs, issues, case_number, case_details)
             "severity": re.search(r"[a-zA-Z]+", case_details["severity"]).group(),
             "summary": case_details["problem"],
             "tags": case_details.get("tags", []),
-            "watched": fake.boolean(),
         }
     }
     return card

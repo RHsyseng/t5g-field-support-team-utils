@@ -778,7 +778,6 @@
       "severity": "Normal",
       "summary": "Aliquam aut voluptates dicta facere quasi saepe.",
       "tags": [],
-      "watched": true
     },
     "CEBO-8132": {
       "account": "合同会社小川情報",
@@ -902,7 +901,6 @@
       "severity": "Urgent",
       "summary": "Quibusdam repudiandae aspernatur nisi praesentium cum.",
       "tags": [],
-      "watched": false
     },
     "ZQMY-6207": {
       "account": "김차박",
@@ -964,7 +962,6 @@
       "severity": "Urgent",
       "summary": "タワー持っていましたアクセルペダル錯覚。",
       "tags": [],
-      "watched": true
     },
     "ZAXQ-9451": {
       "account": "Tecnologías del Norte S.L.N.E",
@@ -1016,7 +1013,6 @@
       "severity": "Normal",
       "summary": "Conference mission audience idea foreign.",
       "tags": ["花嫁"],
-      "watched": false
     },
     "BPQE-8673": {
       "account": "김차박",
@@ -1130,7 +1126,6 @@
       "severity": "Urgent",
       "summary": "Quod inventore facere aperiam sint praesentium temporibus iste.",
       "tags": ["pick"],
-      "watched": true
     },
     "OBRS-5243": {
       "account": "Tecnologías del Norte S.L.N.E",
@@ -1225,7 +1220,6 @@
       "severity": "Low",
       "summary": "Magnam tempore magnam nemo perspiciatis rem.",
       "tags": ["quae"],
-      "watched": false
     },
     "FSZP-7052": {
       "account": "Familia Bueno S.L.",
@@ -1341,7 +1335,6 @@
       "severity": "Low",
       "summary": "コーラス尊敬するアクセルペダル。",
       "tags": [],
-      "watched": true
     },
     "DEFM-3023": {
       "account": "Familia Bueno S.L.",
@@ -1494,7 +1487,6 @@
       "severity": "Low",
       "summary": "International not type very.",
       "tags": [],
-      "watched": false
     },
     "AXIP-5935": {
       "account": "Tecnologías del Norte S.L.N.E",
@@ -1545,7 +1537,6 @@
       "severity": "Urgent",
       "summary": "Ok choose today watch source firm drug.",
       "tags": [],
-      "watched": false
     },
     "BZMK-4040": {
       "account": "유한회사 류이서",
@@ -1697,7 +1688,6 @@
       "severity": "Low",
       "summary": "Eos rerum ipsum iure dolor.",
       "tags": [],
-      "watched": true
     }
   }
 }
