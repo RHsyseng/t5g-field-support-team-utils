@@ -64,7 +64,7 @@
                 <th scope="col" rowspan="2"></th>
                 <th scope="col" rowspan="2" class="text-center">Case#</th>
                 <th scope="col" rowspan="2" class="text-center">Severity</th>
-                <th scope="col" colspan="3" class="text-center">Escalations</th>
+                <th scope="col" colspan="2" class="text-center">Escalations</th>
                 <th scope="col" rowspan="2" class="text-center">Summary</th>
                 <th scope="col" rowspan="2" class="text-center">Product</th>
                 <th scope="col" rowspan="2" class="text-center">Account</th>
@@ -79,7 +79,6 @@
             </tr>
             <tr>
                 <th scope="col" class="text-center">On Prio-list?</th>
-                <th scope="col" class="text-center">On Watchlist?</th>
                 <th scope="col" class="text-center">Crit Sit?</th>
             </tr>
         </thead>
@@ -117,11 +116,6 @@
                                 {% endif %}
                             {% elif new_comments[account][status][card]['potential_escalation'] %}
                                 <td class="align-middle text-center fw-bold">Potentially</td>
-                            {% else %}
-                                <td class="align-middle text-center">No</td>
-                            {% endif %}
-                            {% if new_comments[account][status][card]['watched'] %}
-                                <td class="align-middle text-center fw-bold">Yes</td>
                             {% else %}
                                 <td class="align-middle text-center">No</td>
                             {% endif %}

@@ -104,7 +104,6 @@ def get_cards(cfg, self=None, background=False):
     bugs = libtelco5g.redis_get("bugs")
     issues = libtelco5g.redis_get("issues")
     escalations = libtelco5g.redis_get("escalations")
-    watchlist = libtelco5g.redis_get("watchlist")
     details = libtelco5g.redis_get("details")
     logging.warning("attempting to connect to jira...")
     jira_conn = libtelco5g.jira_connection(cfg)
@@ -228,10 +227,6 @@ def get_cards(cfg, self=None, background=False):
             daily_telco = True
         else:
             daily_telco = False
-        if watchlist and case_number in watchlist:
-            watched = True
-        else:
-            watched = False
         if case_number in details.keys():
             crit_sit = details[case_number]["crit_sit"]
             group_name = details[case_number]["group_name"]
@@ -265,7 +260,6 @@ def get_cards(cfg, self=None, background=False):
             "escalated": escalated,
             "escalated_link": escalated_link,
             "potential_escalation": potential_escalation,
-            "watched": watched,
             "product": cases[case_number]["product"],
             "case_status": cases[case_number]["status"],
             "crit_sit": crit_sit,
@@ -292,30 +286,6 @@ def get_cards(cfg, self=None, background=False):
         "timestamp", json.dumps(str(datetime.datetime.now(datetime.timezone.utc)))
     )
 
-
-def get_watchlist(cfg):
-    cases = libtelco5g.redis_get("cases")
-    if cases is None or cfg["watchlist_url"] is None or cfg["watchlist_url"] == "":
-        libtelco5g.redis_set("watchlist", json.dumps(None))
-        return
-
-    token = libtelco5g.get_token(cfg["offline_token"])
-    num_cases = cfg["max_portal_results"]
-    payload = {"rows": num_cases}
-    headers = make_headers(token)
-    url = f"{cfg['redhat_api']}/eh/escalations?highlight=true"
-
-    r = requests.get(url, headers=headers, params=payload)
-
-    watchlist = []
-    for watched in r.json():
-        watched_cases = watched["cases"]
-        for case in watched_cases:
-            case_number = case["caseNumber"]
-            if case_number in cases:
-                watchlist.append(case_number)
-
-    libtelco5g.redis_set("watchlist", json.dumps(watchlist))
 
 
 def get_case_details(cfg):

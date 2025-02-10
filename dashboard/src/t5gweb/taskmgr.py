@@ -105,14 +105,6 @@ def setup_scheduled_tasks(sender, **kwargs):
             name="escalations_sync",
         )
 
-    # update watchlist cache
-    if cfg["watchlist_url"] is not None and cfg["watchlist_url"] != "":
-        sender.add_periodic_task(
-            crontab(hour="*/12", minute="7"),  # twice a day + 7 mins
-            cache_data.s("watchlist"),
-            name="watchlist_sync",
-        )
-
 
 @mgr.task
 def portal_jira_sync():
@@ -162,8 +154,6 @@ def cache_data(data_type):
         cases = libtelco5g.redis_get("cases")
         escalations = cache.get_escalations(cfg, cases)
         libtelco5g.redis_set("escalations", json.dumps(escalations))
-    elif data_type == "watchlist":
-        cache.get_watchlist(cfg)
     else:
         logging.warning("unknown data type")
 

@@ -136,7 +136,6 @@ def init_cache():
         issues = libtelco5g.redis_get("issues")
         details = libtelco5g.redis_get("details")
         escalations = libtelco5g.redis_get("escalations")
-        watchlist = libtelco5g.redis_get("watchlist")
         stats = libtelco5g.redis_get("stats")
         if cases == {}:
             logging.warning("no cases found in cache. refreshing...")
@@ -155,9 +154,6 @@ def init_cache():
             cases = libtelco5g.redis_get("cases")
             escalations = cache.get_escalations(cfg, cases)
             libtelco5g.redis_set("escalations", json.dumps(escalations))
-        if watchlist == {}:
-            logging.warning("no watchlist found in cache. refreshing...")
-            cache.get_watchlist(cfg)
         if cards == {}:
             logging.warning("no cards found in cache. refreshing...")
             cache.get_cards(cfg)
