@@ -160,7 +160,6 @@ def set_cfg():
     cfg["max_portal_results"] = os.environ.get("max_portal_results")
     cfg["bz_key"] = os.environ.get("bz_key")
     cfg["sheet_id"] = os.environ.get("sheet_id")
-    cfg["watchlist_url"] = os.environ.get("watchlist_url")
     cfg["jira_escalations_project"] = os.environ.get("jira_escalations_project")
     cfg["jira_escalations_label"] = os.environ.get("jira_escalations_label")
     # email

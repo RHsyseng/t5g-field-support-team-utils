@@ -11,7 +11,6 @@ from t5gweb.cache import (
     get_escalations,
     get_issue_details,
     get_stats,
-    get_watchlist,
 )
 from t5gweb.libtelco5g import generate_stats, redis_get, redis_set
 from t5gweb.utils import set_cfg
@@ -30,7 +29,6 @@ def index():
             "{}refresh/bugs".format(request.base_url),
             "{}refresh/details".format(request.base_url),
             "{}refresh/escalations".format(request.base_url),
-            "{}refresh/watchlist".format(request.base_url),
             "{}refresh/issues".format(request.base_url),
             "{}refresh/stats".format(request.base_url),
             "{}cards".format(request.base_url),
@@ -66,9 +64,6 @@ def refresh(data_type):
         escalations = get_escalations(cfg, cases)
         redis_set("escalations", json.dumps(escalations))
         return jsonify({"caching escalations": "ok"})
-    elif data_type == "watchlist":
-        get_watchlist(cfg)
-        return jsonify({"caching watchlist": "ok"})
     elif data_type == "issues":
         get_issue_details(cfg)
         return jsonify({"caching issues": "ok"})
@@ -109,14 +104,6 @@ def show_escalations():
     """Retrieves all escalations"""
     escalations = redis_get("escalations")
     return jsonify(escalations)
-
-
-@BP.route("/watchlist")
-@login_required
-def show_watched():
-    """Retrieves all cases on the watchlist"""
-    watchlist = redis_get("watchlist")
-    return jsonify(watchlist)
 
 
 @BP.route("/details")

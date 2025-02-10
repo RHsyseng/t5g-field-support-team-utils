@@ -120,7 +120,6 @@ $(document).ready(function () {
       [2, "desc"],
       [3, "desc"],
       [4, "desc"],
-      [5, "desc"],
     ],
     dom: "<'row'<'col-sm-12 col-md-6'l><'col-sm-12 col-md-6'f>><'row'<'col-sm-12 col-md-5'i><'col-sm-12 col-md-7'p>><'row'<'col-sm-12'tr>><'row'<'col-sm-12 col-md-5'i><'col-sm-12 col-md-7'p>>",
     lengthMenu: [
@@ -134,11 +133,10 @@ $(document).ready(function () {
         "Severity",
         "On Prio-list?",
         "Product",
-        "Escalated?",
         "Account",
         "Internal Status",
       ],
-      columns: [2, 3, 7, 8, 10],
+      columns: [2, 3, 6, 7, 9],
       initCollapsed: true,
 
       // Define Custom Search Pane
@@ -148,19 +146,18 @@ $(document).ready(function () {
           header: "Escalated?",
           options: [
             {
-              label: "Cases on Prio-list or Watchlist or Crit Sit",
+              label: "Cases on Prio-list or Crit Sit",
               value: function (rowData, rowIdx) {
                 return (
                   rowData[3].includes("Yes") ||
-                  rowData[4] === "Yes" ||
-                  rowData[5] === "Yes"
+                  rowData[4] === "Yes"
                 );
               },
             },
             {
               label: "Cases on Daily Telco List",
               value: function (rowData, rowIdx) {
-                return rowData[16] === "True";
+                return rowData[15] === "True";
               },
             },
           ],
@@ -182,7 +179,7 @@ $(document).ready(function () {
         searchPanes: {
           show: true,
         },
-        targets: [2, 8, 10],
+        targets: [2, 7, 9],
       },
 
       // Include cards marked as 'Potentially' in 'No' category
@@ -214,7 +211,7 @@ $(document).ready(function () {
       },
       // Hide Daily Telco List Column
       {
-        targets: [16],
+        targets: [14],
         visible: false,
       },
     ],

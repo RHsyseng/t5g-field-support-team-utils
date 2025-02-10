@@ -393,7 +393,6 @@ def create_cards(cfg, new_cases, action="none"):
                 "priority": new_card.fields.priority.name,
                 "case_status": cases[case]["status"],
                 "escalated": False,
-                "watched": False,
                 "crit_sit": False,
             }
 
@@ -482,7 +481,6 @@ def generate_stats(account=None, engineer=None):
         "by_status": {s: 0 for s in statuses},
         "high_prio": 0,
         "escalated": 0,
-        "watched": 0,
         "open_cases": 0,
         "weekly_closed_cases": 0,
         "weekly_opened_cases": 0,
@@ -511,13 +509,10 @@ def generate_stats(account=None, engineer=None):
                 stats["high_prio"] += 1
             if cards[card]["escalated"]:
                 stats["escalated"] += 1
-            if cards[card]["watched"]:
-                stats["watched"] += 1
             if cards[card]["crit_sit"]:
                 stats["crit_sit"] += 1
             if (
                 cards[card]["escalated"]
-                or cards[card]["watched"]
                 or cards[card]["crit_sit"]
             ):
                 stats["total_escalations"] += 1
@@ -589,7 +584,6 @@ def plot_stats():
     x_values = [day for day in historical_stats]
     y_values = {
         "escalated": [],
-        "watched": [],
         "open_cases": [],
         "new_cases": [],
         "closed_cases": [],
@@ -603,7 +597,6 @@ def plot_stats():
     }
     for day, stat in historical_stats.items():
         y_values["escalated"].append(exists_or_zero(stat, "escalated"))
-        y_values["watched"].append(exists_or_zero(stat, "watched"))
         y_values["open_cases"].append(exists_or_zero(stat, "open_cases"))
         y_values["new_cases"].append(exists_or_zero(stat, "daily_opened_cases"))
         y_values["closed_cases"].append(exists_or_zero(stat, "daily_closed_cases"))
