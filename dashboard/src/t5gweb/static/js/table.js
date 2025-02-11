@@ -133,6 +133,7 @@ $(document).ready(function () {
         "Severity",
         "On Prio-list?",
         "Product",
+        "Escalated?",
         "Account",
         "Internal Status",
       ],
@@ -211,7 +212,7 @@ $(document).ready(function () {
       },
       // Hide Daily Telco List Column
       {
-        targets: [14],
+        targets: [15],
         visible: false,
       },
     ],
