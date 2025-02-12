@@ -8,4 +8,5 @@ RUN npm ci --prefix t5gweb/static --ignore-scripts
 RUN groupadd dashboard
 RUN useradd -g dashboard dashboard
 USER dashboard
+HEALTHCHECK CMD curl --fail http://localhost:8080 || exit 1
 EXPOSE 8080
