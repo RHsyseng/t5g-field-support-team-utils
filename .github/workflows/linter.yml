@@ -36,6 +36,10 @@ jobs:
           DEFAULT_BRANCH: main
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
           KUBERNETES_KUBECONFORM_OPTIONS: -ignore-missing-schemas
+          # plugins.js contains different datatables plugins that we are self-hosting
+          # rather than using CDN/NPM, as described here: 
+          # https://datatables.net/plug-ins/sorting/natural#Browser
+          FILTER_REGEX_EXCLUDE: plugins\.js
   test:
     name: Test Code Base
     runs-on: ubuntu-latest
