@@ -252,7 +252,10 @@ def slack_notify(ini, blist):
     msgs = re.split(
         r"A JIRA issue \(" + ini["server"] + r"\/browse\/|Description: ", body
     )
-
+    logging.warning("Notifying team on slack")
+    logging.warning(blist)
+    logging.warning(body)
+    logging.warning(msgs)
     # Adding the text removed by re.split() and adding ping to assignee
     for i in range(1, len(msgs)):
         if i % 2 == 1:
