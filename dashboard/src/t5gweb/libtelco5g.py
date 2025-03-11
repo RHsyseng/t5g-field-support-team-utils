@@ -252,12 +252,31 @@ def create_cards(cfg, new_cases, action="none"):
         else:
             novel_cases.append(case)
         assignee = None
+        previous_issues_query = (
+            f"project = {cfg['project']} AND "
+            f"summary ~ '{case}'"
+        )
+        previous_issues = jira_conn.search_issues(previous_issues_query)
+        #defining preivous_owner
+        previous_owner = None
+        if(len(previous_issues) > 0):
+            #getting first previous issue found and assigning previous owner
+            for issue in previous_issues:
+                previous_owner = issue.get_field("assignee").raw["name"]
+                break
+            logging.warning(f"previous_owner {previous_owner}")
 
         if cfg["team"]:
             for member in cfg["team"]:
-                for account in member["accounts"]:
-                    if account.lower() in cases[case]["account"].lower():
+                if previous_owner != None:
+                    if member['jira_user'] == previous_owner:
                         assignee = member
+                        logging.warning(f"new card will be assign to {assignee['jira_user']} as previous owner was found")
+                        break
+                else:
+                    for account in member["accounts"]:
+                        if account.lower() in cases[case]["account"].lower():
+                            assignee = member
             if assignee is None:
                 last_choice = redis_get("last_choice")
                 assignee = get_random_member(cfg["team"], last_choice)
