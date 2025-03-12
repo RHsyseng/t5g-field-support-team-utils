@@ -67,9 +67,9 @@ def refresh(data_type):
     elif data_type == "issues":
         get_issue_details(cfg)
         return jsonify({"caching issues": "ok"})
-    elif data_type == "newcases":
+    elif data_type == "create_jira_cards":
         sync_portal_to_jira()
-        return jsonify({"newcases": "ok"})
+        return jsonify({"create_jira_cards": "ok"})
     elif data_type == "stats":
         get_stats()
         return jsonify({"caching stats": "ok"})
