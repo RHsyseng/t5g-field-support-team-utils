@@ -170,7 +170,9 @@ def set_cfg():
     cfg["alert_email"] = os.environ.get("alert_email")
     # slack
     cfg["slack_token"] = os.environ.get("slack_token")
-    cfg["slack_channel"] = os.environ.get("slack_channel")
+    cfg["high_severity_slack_channel"] = os.environ.get("high_severity_slack_channel")
+    cfg["low_severity_slack_channel"] = os.environ.get("low_severity_slack_channel")
+
     # jira
     cfg["sprintname"] = os.environ.get("jira_sprint")
     cfg["server"] = os.environ.get("jira_server")
@@ -232,7 +234,8 @@ def set_defaults():
         "case_closedDate",
     ]
     defaults["slack_token"] = ""
-    defaults["slack_channel"] = ""
+    defaults["high_severity_slack_channel"] = ""
+    defaults["low_severity_slack_channel"] = ""
     defaults["max_jira_results"] = 1000
     defaults["max_portal_results"] = 5000
     defaults["sla_settings"] = {
@@ -272,12 +275,15 @@ def slack_notify(ini, blist):
 
     # Posting Summaries + reply with Description
     for k in range(1, len(msgs) - 1, 2):
+        severity = re.search(r"Severity:\s*(\d+)", msgs[k])  # Get severity number
+        if severity and int(severity.group(1)) < 3:
+            channel = ini["high_severity_slack_channel"]
+        else:
+            channel = ini["low_severity_slack_channel"]
         try:
-            message = client.chat_postMessage(
-                channel=ini["slack_channel"], text=msgs[k]
-            )
+            message = client.chat_postMessage(channel=channel, text=msgs[k])
             client.chat_postMessage(
-                channel=ini["slack_channel"], text=msgs[k + 1], thread_ts=message["ts"]
+                channel=channel, text=msgs[k + 1], thread_ts=message["ts"]
             )
         except SlackApiError as slack_error:
             logging.warning("failed to post to slack: %s", slack_error)
