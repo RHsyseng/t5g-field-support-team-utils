@@ -511,10 +511,7 @@ def generate_stats(account=None, engineer=None):
                 stats["escalated"] += 1
             if cards[card]["crit_sit"]:
                 stats["crit_sit"] += 1
-            if (
-                cards[card]["escalated"]
-                or cards[card]["crit_sit"]
-            ):
+            if cards[card]["escalated"] or cards[card]["crit_sit"]:
                 stats["total_escalations"] += 1
             if cards[card]["bugzilla"] is None and cards[card]["issues"] is None:
                 stats["no_bzs"] += 1
@@ -804,7 +801,9 @@ def sync_portal_to_jira():
             logging.warning("notifying team about new JIRA cards")
             cfg["subject"] += ": {}".format(", ".join(novel_cases))
             email_notify(cfg, message_content)
-            if cfg["slack_token"] and cfg["slack_channel"]:
+            if cfg["slack_token"] and (
+                cfg["high_severity_slack_channel"] or cfg["low_severity_slack_channel"]
+            ):
                 slack_notify(cfg, message_content)
             else:
                 logging.warning("no slack token or channel specified")
