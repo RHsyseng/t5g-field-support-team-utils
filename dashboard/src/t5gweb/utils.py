@@ -247,6 +247,8 @@ def set_defaults():
 
 def slack_notify(ini, notification_content):
     """notify the team of new cases via slack"""
+    logging.warning("Notifying team on slack")
+    logging.warning(notification_content)
 
     client = WebClient(token=ini["slack_token"])
 
