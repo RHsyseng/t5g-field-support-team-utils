@@ -98,6 +98,25 @@ def get_board_id(conn, name):
     boards = conn.boards(name=name)
     return boards[0]
 
+def get_previous_owner(conn, cfg, case):
+    """Take a case number and return all cards that are related to it
+    conn    - Jira connection object
+    Return previous owner jira username
+    """
+    previous_issues_query = (
+        f"project = {cfg['project']} AND "
+        f"summary ~ '{case}'"
+    )
+    previous_issues = conn.search_issues(previous_issues_query)
+    #defining previous
+    previous_owner = None
+    if(len(previous_issues) > 0):
+        #getting first previous issue found and assigning previous owner
+        for issue in previous_issues:
+            previous_owner = issue.get_field("assignee").raw["name"]
+            break
+        logging.warning(f"previous_owner {previous_owner}")
+    return previous_owner
 
 def get_latest_sprint(conn, bid, sprintname):
     """Take a board id and return the current sprint
@@ -251,12 +270,23 @@ def create_cards(cfg, new_cases, action="none"):
         else:
             novel_cases.append(case)
         assignee = None
-
+        previous_owner = None
+        case_creation_date = datetime.datetime.strptime(cases[case]["createdate"], "%Y-%m-%dT%H:%M:%SZ")
+        date_now = datetime.datetime.now(datetime.timezone.utc).replace(tzinfo=None)
+        if(case_creation_date < date_now - datetime.timedelta(days=15)):
+            logging.warning("Case creatiion date anterior to 15 days ago, checking if it has previous owner of a jira card")
+            previous_owner = get_previous_owner(jira_conn, cfg, case)
         if cfg["team"]:
             for member in cfg["team"]:
-                for account in member["accounts"]:
-                    if account.lower() in cases[case]["account"].lower():
+                if previous_owner != None:
+                    if member['jira_user'] == previous_owner:
                         assignee = member
+                        logging.warning(f"new card will be assign to {assignee['jira_user']} as previous owner was found")
+                        break
+                else:
+                    for account in member["accounts"]:
+                        if account.lower() in cases[case]["account"].lower():
+                            assignee = member
             if assignee is None:
                 last_choice = redis_get("last_choice")
                 assignee = get_random_member(cfg["team"], last_choice)
