@@ -271,7 +271,12 @@ def create_cards(cfg, new_cases, action="none"):
         else:
             novel_cases.append(case)
         assignee = None
-        previous_owner = get_previous_owner(jira_conn, cfg, case)
+        previous_owner = None
+        case_creation_date = datetime.datetime.strptime(cases[case]["createdate"], "%Y-%m-%dT%H:%M:%SZ")
+        date_now = datetime.datetime.now(datetime.timezone.utc).replace(tzinfo=None)
+        if(case_creation_date < date_now - datetime.timedelta(days=15)):
+            logging.warning("Case creatiion date anterior to 15 days ago, checking if it has previous owner of a jira card")
+            previous_owner = get_previous_owner(jira_conn, cfg, case)
         if cfg["team"]:
             for member in cfg["team"]:
                 if previous_owner != None:
