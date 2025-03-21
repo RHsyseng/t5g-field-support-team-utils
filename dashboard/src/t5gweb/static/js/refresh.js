@@ -1,8 +1,11 @@
+// Declare JQuery, browser globals for StandardJS linter
+/* global $, alert */
+
 /**
  * The following code, along with refresh() and refresh_status() in t5gweb/ui.py
- * was derived from https://blog.miguelgrinberg.com/post/using-celery-with-flask 
+ * was derived from https://blog.miguelgrinberg.com/post/using-celery-with-flask
  * under the following license:
-    
+
  *   The MIT License (MIT)
 
  *   Copyright (c) 2014 Miguel Grinberg
@@ -33,87 +36,87 @@
  */
 $(document).ready(function () {
   $.ajax({
-    type: "POST",
-    url: "/progress/status",
+    type: 'POST',
+    url: '/progress/status',
     success: function (data, status, request) {
-      status_url = request.getResponseHeader("Location");
-      $.getJSON(status_url, function (data) {
-        if (data["state"] == "PROGRESS") {
-          $("#progressbar").empty();
-          div = $(
-            '<div class="text-center text-white">Refresh in progress...</div> <div class="text-white progress"><div class="progress-bar bg-danger" role="progressbar" style="width: 0%;" aria-valuenow="0" aria-valuemin="0" aria-valuemax="100">0%</div></div>',
-          );
-          $("#progressbar").append(div);
-          updatePercentage(status_url, $("#progressbar"));
+      const statusUrl = request.getResponseHeader('Location')
+      $.getJSON(statusUrl, function (data) {
+        if (data.state === 'PROGRESS') {
+          $('#progressbar').empty()
+          const div = $(
+            '<div class="text-center text-white">Refresh in progress...</div> <div class="text-white progress"><div class="progress-bar bg-danger" role="progressbar" style="width: 0%;" aria-valuenow="0" aria-valuemin="0" aria-valuemax="100">0%</div></div>'
+          )
+          $('#progressbar').append(div)
+          updatePercentage(statusUrl, $('#progressbar'))
         }
-      });
+      })
     },
     error: function () {
-      alert("Unexpected error");
-    },
-  });
-});
+      alert('Unexpected error')
+    }
+  })
+})
 
 /**
  * getBackground() displays the progress bar when the refresh button is clicked
  * and gets progress information from the task. Also calls updatePercentage()
  * to continuously update the progress bar.
  */
-function getBackground() {
-  $("#progressbar").empty();
-  div = $(
-    '<div class="text-center text-white">Refresh in progress...</div> <div class="text-white progress"><div class="progress-bar bg-danger" role="progressbar" style="width: 0%;" aria-valuenow="0" aria-valuemin="0" aria-valuemax="100">0%</div></div>',
-  );
-  $("#progressbar").append(div);
+function getBackground () {
+  $('#progressbar').empty()
+  const div = $(
+    '<div class="text-center text-white">Refresh in progress...</div> <div class="text-white progress"><div class="progress-bar bg-danger" role="progressbar" style="width: 0%;" aria-valuenow="0" aria-valuemin="0" aria-valuemax="100">0%</div></div>'
+  )
+  $('#progressbar').append(div)
   $.ajax({
-    type: "POST",
-    url: "/refresh",
+    type: 'POST',
+    url: '/refresh',
     success: function (data, status, request) {
-      status_url = request.getResponseHeader("Location");
-      updatePercentage(status_url, $("#progressbar"));
+      const statusUrl = request.getResponseHeader('Location')
+      updatePercentage(statusUrl, $('#progressbar'))
     },
     error: function () {
-      alert("Unexpected error");
-    },
-  });
+      alert('Unexpected error')
+    }
+  })
 }
 
 /**
  * updatePercentage() gets the progress of the refresh and updates the progress bar
  * every two seconds. Also displays the final result of the task.
  */
-function updatePercentage(status_url, div) {
-  $.getJSON(status_url, function (data) {
-    percent = parseInt((data["current"] * 100) / data["total"]);
+function updatePercentage (statusUrl, div) {
+  $.getJSON(statusUrl, function (data) {
+    const percent = parseInt((data.current * 100) / data.total)
     div
-      .find(".progress-bar")
-      .css("width", percent + "%")
-      .attr("aria-valuenow", percent)
-      .text(percent + "%");
-    if (!("locked" in data)) {
-      if (data["state"] != "PENDING" && data["state"] != "PROGRESS") {
-        if ("result" in data) {
+      .find('.progress-bar')
+      .css('width', percent + '%')
+      .attr('aria-valuenow', percent)
+      .text(percent + '%')
+    if (!('locked' in data)) {
+      if (data.state !== 'PENDING' && data.state !== 'PROGRESS') {
+        if ('result' in data) {
           // show result
-          $(div).text(data["result"]).css("color", "white");
+          $(div).text(data.result).css('color', 'white')
         } else {
           // something unexpected happened
           $(div)
-            .text(data["state"] + ", please try again.")
-            .css("color", "white");
+            .text(data.state + ', please try again.')
+            .css('color', 'white')
         }
       } else {
         // rerun in 2 seconds
         setTimeout(function () {
-          updatePercentage(status_url, div);
-        }, 2000);
+          updatePercentage(statusUrl, div)
+        }, 2000)
       }
     }
-  });
+  })
 }
 
 /**
  * Start background refresh on button click
  */
 $(function () {
-  $("#refresh").click(getBackground);
-});
+  $('#refresh').click(getBackground)
+})
