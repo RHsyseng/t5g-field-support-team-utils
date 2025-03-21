@@ -28,16 +28,16 @@ jobs:
       # Run Linter against code base #
       ################################
       - name: Lint Code Base
-        uses: super-linter/super-linter/slim@v6
+        uses: super-linter/super-linter/slim@v7
         env:
           VALIDATE_ALL_CODEBASE: false
           VALIDATE_HTML: false
-          JAVASCRIPT_DEFAULT_STYLE: prettier
+          VALIDATE_JAVASCRIPT_PRETTIER: false
           DEFAULT_BRANCH: main
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
           KUBERNETES_KUBECONFORM_OPTIONS: -ignore-missing-schemas
           # plugins.js contains different datatables plugins that we are self-hosting
-          # rather than using CDN/NPM, as described here: 
+          # rather than using CDN/NPM, as described here:
           # https://datatables.net/plug-ins/sorting/natural#Browser
           FILTER_REGEX_EXCLUDE: plugins\.js
   test:
