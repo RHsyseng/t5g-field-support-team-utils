@@ -238,7 +238,6 @@ def create_cards(cfg, new_cases, action="none"):
     needed - list of cases that need a card created
     """
 
-    email_content = []
     new_cards = {}
 
     logging.warning("attempting to connect to jira...")
@@ -341,23 +340,9 @@ def create_cards(cfg, new_cases, action="none"):
             # Updating the card with the Release_Note_Text field.
             new_card.update(fields={"customfield_12317313": "TRACK"})
             logging.warning("created {}".format(new_card.key))
-
-            email_content.append(
-                (
-                    f"A JIRA issue ({cfg['server']}/browse/{new_card}) has been created"
-                    f" for a new case:\n"
-                    f"Case #: {case} (https://access.redhat.com/support/cases/{case})\n"
-                    f"Account: {cases[case]['account']}\n"
-                    f"Summary: {cases[case]['problem']}\n"
-                    f"Severity: {cases[case]['severity']}\n"
-                    f"Description: {cases[case]['description']}\n"
-                )
+            notification_content = generate_notification_content(
+                cfg, assignee, new_card, case, cases
             )
-            if assignee:
-                email_content.append(
-                    f"It is initially being tracked by {assignee['name']}.\n"
-                )
-            email_content.append("\n===========================================\n\n")
 
             # Add newly create card to the sprint
             if cfg["sprintname"] and cfg["sprintname"] != "":
@@ -419,7 +404,48 @@ def create_cards(cfg, new_cases, action="none"):
                 "crit_sit": False,
             }
 
-    return email_content, new_cards, novel_cases
+    return notification_content, new_cards, novel_cases
+
+
+def generate_notification_content(cfg, assignee, new_card, case, cases):
+    """Generate notification message for email's and Slack
+
+    Args:
+        assignee (dict): Information about the card's assignee
+        new_card (str): Name of created JIRA card
+        case (str): ID of relevant case
+        cases (dict): Contains further information about cases
+
+    Returns:
+        dict: Notification message and extra information to construct slack message.
+    """
+    notification_content = {}
+    if assignee:
+        assignee_section = f"It is initially being tracked by {assignee['name']}."
+    else:
+        assignee_section = "It is not assigned to anyone."
+    notification_content[new_card] = {}
+    notification_content[new_card]["body"] = (
+        f"A JIRA issue ({cfg['server']}/browse/{new_card}) has been created"
+        f" for a new case:\n"
+        f"Case #: {case} (https://access.redhat.com/support/cases/{case})\n"
+        f"Account: {cases[case]['account']}\n"
+        f"Summary: {cases[case]['problem']}\n"
+        f"Severity: {cases[case]['severity']}\n"
+        f"{assignee_section}\n"
+    )
+    notification_content[new_card]["severity"] = cases[case]["severity"]
+    notification_content[new_card][
+        "description"
+    ] = f"Description: {cases[case]['description']}\n"
+    notification_content[new_card]["assignee"] = assignee["name"] if assignee else None
+    notification_content[new_card]["full_message"] = (
+        notification_content[new_card]["body"]
+        + "\n"
+        + notification_content[new_card]["description"]
+        + "\n===========================================\n\n"
+    )
+    return notification_content
 
 
 def redis_set(key, value):
@@ -534,10 +560,7 @@ def generate_stats(account=None, engineer=None):
                 stats["escalated"] += 1
             if cards[card]["crit_sit"]:
                 stats["crit_sit"] += 1
-            if (
-                cards[card]["escalated"]
-                or cards[card]["crit_sit"]
-            ):
+            if cards[card]["escalated"] or cards[card]["crit_sit"]:
                 stats["total_escalations"] += 1
             if cards[card]["bugzilla"] is None and cards[card]["issues"] is None:
                 stats["no_bzs"] += 1
@@ -802,33 +825,32 @@ def sync_portal_to_jira():
     response = {"cards_created": 0}
 
     if len(new_cases) > int(cfg["max_to_create"]):
-        logging.warning(
-            (
-                f"Warning: more than {cfg['max_to_create']} cases ({len(new_cases)}) "
-                f"will be created, so refusing to proceed. Please check log output\n"
-            )
+        max_warning_message = (
+            f"Warning: more than {cfg['max_to_create']} cases ({len(new_cases)}) "
+            f"will be created, so refusing to proceed. Please check log output\n"
         )
-        email_content = [
-            (
-                f"Warning: more than {cfg['max_to_create']} cases ({len(new_cases)})"
-                f"will be created, so refusing to proceed. Please check log output\n"
-            )
-        ]
-        email_content += ['New cases: {}\n"'.format(new_cases)]
+        logging.warning(max_warning_message)
+        notification_content = {
+            "High New Case Count Detected": {
+                "full_message": (f"{max_warning_message}\nNew cases: {new_cases}\n")
+            }
+        }
         cfg["to"] = cfg["alert_email"]
         cfg["subject"] = "High New Case Count Detected"
-        email_notify(cfg, email_content)
+        email_notify(cfg, notification_content)
     elif len(new_cases) > 0:
         logging.warning("need to create {} cases".format(len(new_cases)))
-        message_content, new_cards, novel_cases = create_cards(
+        notification_content, new_cards, novel_cases = create_cards(
             cfg, new_cases, action="create"
         )
-        if message_content:
+        if notification_content:
             logging.warning("notifying team about new JIRA cards")
             cfg["subject"] += ": {}".format(", ".join(novel_cases))
-            email_notify(cfg, message_content)
-            if cfg["slack_token"] and cfg["slack_channel"]:
-                slack_notify(cfg, message_content)
+            email_notify(cfg, notification_content)
+            if cfg["slack_token"] and (
+                cfg["high_severity_slack_channel"] or cfg["low_severity_slack_channel"]
+            ):
+                slack_notify(cfg, notification_content)
             else:
                 logging.warning("no slack token or channel specified")
             cards.update(new_cards)

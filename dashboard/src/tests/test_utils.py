@@ -86,6 +86,7 @@ def test_set_default():
         "case_closedDate",
     ]
     assert defaults["slack_token"] == ""
-    assert defaults["slack_channel"] == ""
+    assert defaults["high_severity_slack_channel"] == ""
+    assert defaults["low_severity_slack_channel"] == ""
     assert defaults["max_jira_results"] == 1000
     assert defaults["max_portal_results"] == 5000

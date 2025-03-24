@@ -14,12 +14,12 @@ from slack_sdk import WebClient
 from slack_sdk.errors import SlackApiError
 
 
-def email_notify(ini, blist, recipient=None, subject=None):
+def email_notify(ini, message_content, recipient=None, subject=None):
     """send an email to notify the team of a new case"""
 
     body = ""
-    for line in blist:
-        body += f"{line}\n"
+    for card in message_content:
+        body += message_content[card]["full_message"]
 
     msg = EmailMessage()
     msg.set_content(body)
@@ -170,7 +170,9 @@ def set_cfg():
     cfg["alert_email"] = os.environ.get("alert_email")
     # slack
     cfg["slack_token"] = os.environ.get("slack_token")
-    cfg["slack_channel"] = os.environ.get("slack_channel")
+    cfg["high_severity_slack_channel"] = os.environ.get("high_severity_slack_channel")
+    cfg["low_severity_slack_channel"] = os.environ.get("low_severity_slack_channel")
+
     # jira
     cfg["sprintname"] = os.environ.get("jira_sprint")
     cfg["server"] = os.environ.get("jira_server")
@@ -232,7 +234,8 @@ def set_defaults():
         "case_closedDate",
     ]
     defaults["slack_token"] = ""
-    defaults["slack_channel"] = ""
+    defaults["high_severity_slack_channel"] = ""
+    defaults["low_severity_slack_channel"] = ""
     defaults["max_jira_results"] = 1000
     defaults["max_portal_results"] = 5000
     defaults["sla_settings"] = {
@@ -242,45 +245,44 @@ def set_defaults():
     return defaults
 
 
-def slack_notify(ini, blist):
+def slack_notify(ini, notification_content):
     """notify the team of new cases via slack"""
-    body = ""
-    for line in blist:
-        body += f"{line}\n"
+    logging.warning("Notifying team on slack")
+    logging.warning(notification_content)
 
     client = WebClient(token=ini["slack_token"])
-    msgs = re.split(
-        r"A JIRA issue \(" + ini["server"] + r"\/browse\/|Description: ", body
-    )
-    logging.warning("Notifying team on slack")
-    logging.warning(blist)
-    logging.warning(body)
-    logging.warning(msgs)
-    # Adding the text removed by re.split() and adding ping to assignee
-    for i in range(1, len(msgs)):
-        if i % 2 == 1:
-            msgs[i] = "A JIRA issue (" + ini["server"] + "/browse/" + msgs[i]
-        if i % 2 == 0:
-            msgs[i] = "Description: " + msgs[i]
-            assign = re.findall(
-                r"(?<=\nIt is initially being tracked by )[\w ]*", msgs[i]
-            )
-            for j in ini["team"]:
-                if j["name"] == assign[0]:
-                    userid = j["slack_user"]
-            msgs[i] = re.sub(r"\nIt is initially being tracked by.*", "", msgs[i])
-            msgs[i - 1] = (
-                msgs[i - 1] + f"\nIt is initially being tracked by <@{userid}>"
+
+    for card in notification_content:
+        body = notification_content[card]["body"]
+
+        user_id = None
+        if notification_content[card]["assignee"]:
+            for member in ini["team"]:
+                if member["name"] == notification_content[card]["assignee"]:
+                    user_id = member["slack_user"]
+
+        # Add ping
+        if user_id:
+            body = re.sub(
+                r"It is initially being tracked by.*",
+                f"It is initially being tracked by <@{user_id}>",
+                body,
+                1,
             )
 
-    # Posting Summaries + reply with Description
-    for k in range(1, len(msgs) - 1, 2):
+        # Get severity #. Ex: "3 (Normal)" => "3"
+        severity = re.search(r"\d+", notification_content[card]["severity"])
+        description = notification_content[card]["description"]
+
+        # Posting Summaries + reply with Description
+        if severity and int(severity.group()) < 3:
+            channel = ini["high_severity_slack_channel"]
+        else:
+            channel = ini["low_severity_slack_channel"]
         try:
-            message = client.chat_postMessage(
-                channel=ini["slack_channel"], text=msgs[k]
-            )
+            message = client.chat_postMessage(channel=channel, text=body)
             client.chat_postMessage(
-                channel=ini["slack_channel"], text=msgs[k + 1], thread_ts=message["ts"]
+                channel=channel, text=description, thread_ts=message["ts"]
             )
         except SlackApiError as slack_error:
             logging.warning("failed to post to slack: %s", slack_error)
