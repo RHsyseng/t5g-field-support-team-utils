@@ -268,7 +268,7 @@ def create_cards(cfg, new_cases, action="none"):
         case_creation_date = datetime.datetime.strptime(cases[case]["createdate"], "%Y-%m-%dT%H:%M:%SZ")
         date_now = datetime.datetime.now(datetime.timezone.utc).replace(tzinfo=None)
         if(case_creation_date < date_now - datetime.timedelta(days=15)):
-            logging.warning("Case creatiion date anterior to 15 days ago, checking if it has previous owner of a jira card")
+            logging.warning("Case creation date more than 15 days ago, checking if it has previous owner of a jira card")
             previous_issue = get_previous_card(jira_conn, cfg, case)
             # Prepare the bulk edit payload
             logging.warning(f"Updating : {previous_issue.key} rather than creating a new card.")
