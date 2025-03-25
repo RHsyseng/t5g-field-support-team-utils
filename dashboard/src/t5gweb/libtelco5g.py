@@ -248,7 +248,8 @@ def create_cards(cfg, new_cases, action="none"):
 
     if cfg["sprintname"] and cfg["sprintname"] != "":
         sprint = get_latest_sprint(jira_conn, board.id, cfg["sprintname"])
-
+    else:
+        raise ValueError("No sprintname is defined.")
     created_cards = get_issues_in_sprint(cfg, sprint, jira_conn)
 
     # Parse case numbers from JIRA titles
@@ -348,7 +349,7 @@ def create_cards(cfg, new_cases, action="none"):
 
         logging.warning("A card needs created for case {}".format(case))
         logging.warning(card_info)
-
+        notification_content = ""
         if action == "create":
             logging.warning("creating card for case {}".format(case))
             new_card = jira_conn.create_issue(fields=card_info)
