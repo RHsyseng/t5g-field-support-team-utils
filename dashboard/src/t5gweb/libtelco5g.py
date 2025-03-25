@@ -269,12 +269,13 @@ def create_cards(cfg, new_cases, action="none"):
         if(case_creation_date < date_now - datetime.timedelta(days=15)):
             logging.warning("Case creation date more than 15 days ago, checking if it has previous owner of a jira card")
             previous_issue = get_previous_card(jira_conn, cfg, case)
-            # Prepare the bulk edit payload
-            logging.warning(f"Updating : {previous_issue.key} rather than creating a new card.")
-            jira_conn.add_issues_to_sprint(sprint.id, [previous_issue.key])
-            jira_conn.transition_issue(previous_issue, '11')
-            jira_conn.add_comment(previous_issue, f"Case {case} seems to have been reopened. The dashboard found this card linked to the case and reopened it automatically.")
-            continue
+            if(previous_issue is not None):
+                # Prepare the bulk edit payload
+                logging.warning(f"Updating : {previous_issue.key} rather than creating a new card.")
+                jira_conn.add_issues_to_sprint(sprint.id, [previous_issue.key])
+                jira_conn.transition_issue(previous_issue, '11')
+                jira_conn.add_comment(previous_issue, f"Case {case} seems to have been reopened. The dashboard found this card linked to the case and reopened it automatically.")
+                continue
         if cfg["team"]:
             for member in cfg["team"]:
                 for account in member["accounts"]:
