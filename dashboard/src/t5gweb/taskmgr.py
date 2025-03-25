@@ -143,6 +143,8 @@ def cache_data(data_type):
         finally:
             if have_lock:
                 refresh_lock.release()
+        except redis.exceptions.LockNotOwnedError:
+            logging.warning("Tried to release a stale lock.")
     elif data_type == "details":
         cache.get_case_details(cfg)
     elif data_type == "bugs":
@@ -347,6 +349,8 @@ def refresh_background(self):
     finally:
         if have_lock:
             refresh_lock.release()
+    except:
+
     return response
 
 
