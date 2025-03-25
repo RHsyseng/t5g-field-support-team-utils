@@ -135,7 +135,7 @@ def cache_data(data_type):
         # Use redis locks to prevent concurrent refreshes
 
         have_lock = False
-        refresh_lock = redis.Redis(host="redis").lock("refresh_lock", timeout=60 * 5)
+        refresh_lock = redis.Redis(host="redis").lock("refresh_lock", timeout=60 * 60 * 2)
         try:
             have_lock = refresh_lock.acquire(blocking=False)
             if have_lock:
@@ -143,8 +143,6 @@ def cache_data(data_type):
         finally:
             if have_lock:
                 refresh_lock.release()
-        except redis.exceptions.LockNotOwnedError:
-            logging.warning("Tried to release a stale lock.")
     elif data_type == "details":
         cache.get_case_details(cfg)
     elif data_type == "bugs":
@@ -331,7 +329,7 @@ def refresh_background(self):
     """
 
     have_lock = False
-    refresh_lock = redis.Redis(host="redis").lock("refresh_lock", timeout=60 * 5)
+    refresh_lock = redis.Redis(host="redis").lock("refresh_lock", timeout=60 * 60 * 2)
     try:
         have_lock = refresh_lock.acquire(blocking=False)
         if have_lock:
