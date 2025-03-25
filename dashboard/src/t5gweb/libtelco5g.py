@@ -98,6 +98,19 @@ def get_board_id(conn, name):
     boards = conn.boards(name=name)
     return boards[0]
 
+def get_previous_card(conn, cfg, case):
+    """Take a case number and return first card that has the case number in the summary
+    conn    - Jira connection object
+    Return previous owner jira username
+    """
+    previous_issues_query = (
+        f"project = {cfg['project']} AND "
+        f"summary ~ '{case}'"
+    )
+    previous_issues = conn.search_issues(previous_issues_query)
+    if (len(previous_issues)>0):
+        return previous_issues[0]
+    return None
 
 def get_latest_sprint(conn, bid, sprintname):
     """Take a board id and return the current sprint
@@ -251,7 +264,18 @@ def create_cards(cfg, new_cases, action="none"):
         else:
             novel_cases.append(case)
         assignee = None
-
+        case_creation_date = datetime.datetime.strptime(cases[case]["createdate"], "%Y-%m-%dT%H:%M:%SZ")
+        date_now = datetime.datetime.now(datetime.timezone.utc).replace(tzinfo=None)
+        if(case_creation_date < date_now - datetime.timedelta(days=15)):
+            logging.warning("Case creation date more than 15 days ago, checking if it has previous owner of a jira card")
+            previous_issue = get_previous_card(jira_conn, cfg, case)
+            if(previous_issue is not None):
+                # Prepare the bulk edit payload
+                logging.warning(f"Updating : {previous_issue.key} rather than creating a new card.")
+                jira_conn.add_issues_to_sprint(sprint.id, [previous_issue.key])
+                jira_conn.transition_issue(previous_issue, '11')
+                jira_conn.add_comment(previous_issue, f"Case {case} seems to have been reopened. The dashboard found this card linked to the case and reopened it automatically.")
+                continue
         if cfg["team"]:
             for member in cfg["team"]:
                 for account in member["accounts"]:
