@@ -125,7 +125,13 @@ def get_cards(cfg, self=None, background=False):
         )
 
     logging.warning("pulling cards from jira")
-    card_list = jira_conn.search_issues(jira_query, 0, max_cards).iterable
+    try:
+        card_list = jira_conn.search_issues(jira_query, 0, max_cards).iterable
+    except JIRAError:
+        logging.warning("JIRA Exception. Possible 401. Logging in again")
+        jira_conn = libtelco5g.jira_connection(cfg)
+        card_list = jira_conn.search_issues(jira_query, 0, max_cards).iterable
+
     time_now = datetime.datetime.now(datetime.timezone.utc)
 
     jira_cards = {}
@@ -140,7 +146,13 @@ def get_cards(cfg, self=None, background=False):
                     "status": "Refreshing Cards in Background...",
                 },
             )
-        issue = jira_conn.issue(card)
+        try:
+            issue = jira_conn.issue(card)
+        except JIRAError:
+            logging.warning("JIRA Exception. Possible 401. Logging in again")
+            jira_conn = libtelco5g.jira_connection(cfg)
+            issue = jira_conn.issue(card)
+        
         comments = issue.fields.comment.comments
         card_comments = []
         for comment in comments:
