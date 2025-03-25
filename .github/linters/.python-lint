@@ -1,0 +1,3 @@
+[tool.pylint.main]
+errors-only=True
+
