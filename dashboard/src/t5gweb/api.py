@@ -1,4 +1,5 @@
 """API endpoints for t5gweb"""
+
 import json
 
 from flask import Blueprint, jsonify, request

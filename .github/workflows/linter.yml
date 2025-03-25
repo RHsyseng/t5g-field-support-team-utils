@@ -33,6 +33,7 @@ jobs:
           VALIDATE_ALL_CODEBASE: false
           VALIDATE_HTML: false
           VALIDATE_JAVASCRIPT_PRETTIER: false
+          VALIDATE_PYTHON_PYINK: false
           DEFAULT_BRANCH: main
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
           KUBERNETES_KUBECONFORM_OPTIONS: -ignore-missing-schemas

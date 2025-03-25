@@ -287,7 +287,6 @@ def get_cards(cfg, self=None, background=False):
     )
 
 
-
 def get_case_details(cfg):
     """Caches CritSit and CaseGroup from open cases"""
     cases = libtelco5g.redis_get("cases")

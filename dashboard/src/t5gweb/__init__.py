@@ -1,4 +1,5 @@
 """initialize t5gweb application"""
+
 import os
 
 from flask import Flask
