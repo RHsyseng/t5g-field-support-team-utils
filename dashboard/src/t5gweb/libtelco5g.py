@@ -99,7 +99,7 @@ def get_board_id(conn, name):
     """
 
     boards = conn.boards(name=name)
-    logging.warning("board: %s", board)
+    logging.warning("board: %s", boards[0])
     return boards[0]
 
 

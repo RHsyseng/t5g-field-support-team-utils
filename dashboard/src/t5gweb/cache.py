@@ -162,7 +162,7 @@ def get_cards(cfg, self=None, background=False):
             tstamp = comment.updated
             card_comments.append((body, tstamp))
         
-        case_number = card["fields"]["summary"].split(":")[0]
+        case_number = issue.fields.summary.split(":")[0]
         if not case_number or case_number not in cases.keys():
             logging.warning("card isn't associated with a case. discarding (%s)", card)
             continue
