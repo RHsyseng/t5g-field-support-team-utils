@@ -12,7 +12,7 @@ from t5gweb.cache import (
     get_issue_details,
     get_stats,
 )
-from t5gweb.libtelco5g import generate_stats, redis_get, redis_set
+from t5gweb.libtelco5g import generate_stats, redis_get, redis_set, sync_portal_to_jira
 from t5gweb.utils import set_cfg
 
 BP = Blueprint("api", __name__, url_prefix="/api")
@@ -67,6 +67,9 @@ def refresh(data_type):
     elif data_type == "issues":
         get_issue_details(cfg)
         return jsonify({"caching issues": "ok"})
+    elif data_type == "create_jira_cards":
+        sync_portal_to_jira()
+        return jsonify({"create_jira_cards": "ok"})
     elif data_type == "stats":
         get_stats()
         return jsonify({"caching stats": "ok"})
