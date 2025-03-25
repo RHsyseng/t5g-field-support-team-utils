@@ -349,8 +349,6 @@ def refresh_background(self):
     finally:
         if have_lock:
             refresh_lock.release()
-    except:
-
     return response
 
 
