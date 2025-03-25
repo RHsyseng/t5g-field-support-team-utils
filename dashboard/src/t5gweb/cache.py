@@ -100,6 +100,8 @@ def get_escalations(cfg, cases):
 
 
 def get_cards(cfg, self=None, background=False):
+    """Pull the latest information from the JIRA cards"""
+    
     cases = libtelco5g.redis_get("cases")
     bugs = libtelco5g.redis_get("bugs")
     issues = libtelco5g.redis_get("issues")
@@ -128,7 +130,7 @@ def get_cards(cfg, self=None, background=False):
     try:
         card_list = jira_conn.search_issues(jira_query, 0, max_cards).iterable
     except JIRAError:
-        logging.warning("JIRA Exception. Possible 401. Logging in again")
+        logging.warning("JIRA Exception. Possible 401. Reconnecting.....")
         jira_conn = libtelco5g.jira_connection(cfg)
         card_list = jira_conn.search_issues(jira_query, 0, max_cards).iterable
 
@@ -149,7 +151,7 @@ def get_cards(cfg, self=None, background=False):
         try:
             issue = jira_conn.issue(card)
         except JIRAError:
-            logging.warning("JIRA Exception. Possible 401. Logging in again")
+            logging.warning("JIRA Exception. Possible 401. Reconnecting.....")
             jira_conn = libtelco5g.jira_connection(cfg)
             issue = jira_conn.issue(card)
         
@@ -176,7 +178,6 @@ def get_cards(cfg, self=None, background=False):
             )
             tstamp = comment.updated
             card_comments.append((body, tstamp))
-        #case_number = libtelco5g.get_case_from_link(jira_conn, card)
         case_number = card["fields"]["summary"].split(":")[0]
         if not case_number or case_number not in cases.keys():
             logging.warning("card isn't associated with a case. discarding (%s)", card)

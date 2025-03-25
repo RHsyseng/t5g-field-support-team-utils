@@ -135,7 +135,7 @@ def cache_data(data_type):
         # Use redis locks to prevent concurrent refreshes
 
         have_lock = False
-        refresh_lock = redis.Redis(host="redis").lock("refresh_lock", timeout=60 * 60 * 2)
+        refresh_lock = redis.Redis(host="redis").lock("refresh_lock", timeout=60 * 30)
         try:
             have_lock = refresh_lock.acquire(blocking=False)
             if have_lock:
@@ -329,7 +329,7 @@ def refresh_background(self):
     """
 
     have_lock = False
-    refresh_lock = redis.Redis(host="redis").lock("refresh_lock", timeout=60 * 60 * 2)
+    refresh_lock = redis.Redis(host="redis").lock("refresh_lock", timeout=60 * 30)
     try:
         have_lock = refresh_lock.acquire(blocking=False)
         if have_lock:
