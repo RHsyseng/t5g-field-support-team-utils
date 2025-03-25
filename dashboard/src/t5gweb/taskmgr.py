@@ -114,13 +114,13 @@ def portal_jira_sync():
     try:
         have_lock = sync_lock.acquire(blocking=False)
         if have_lock:
-            response = libtelco5g.sync_portal_to_jira()
+            result = libtelco5g.sync_portal_to_jira()
         else:
-            response = {"locked": "Task is Locked"}
+            result = {"locked": "Task is Locked"}
     finally:
         if have_lock:
             sync_lock.release()
-    return response
+    return result
 
 
 @mgr.task(autoretry_for=(Exception,), max_retries=5, retry_backoff=30)
@@ -128,6 +128,8 @@ def cache_data(data_type):
     logging.warning("job: sync {}".format(data_type))
 
     cfg = set_cfg()
+
+    result = None
 
     if data_type == "cases":
         cache.get_cases(cfg)
@@ -139,7 +141,9 @@ def cache_data(data_type):
         try:
             have_lock = refresh_lock.acquire(blocking=False)
             if have_lock:
-                cache.get_cards(cfg)
+                result = cache.get_cards(cfg)
+            else:
+                logging.warning("lock found. bailing...")
         finally:
             if have_lock:
                 refresh_lock.release()
@@ -155,6 +159,8 @@ def cache_data(data_type):
         libtelco5g.redis_set("escalations", json.dumps(escalations))
     else:
         logging.warning("unknown data type")
+    
+    return result
 
 
 @mgr.task(autoretry_for=(Exception,), max_retries=3, retry_backoff=30)

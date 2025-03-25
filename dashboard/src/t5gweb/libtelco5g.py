@@ -57,6 +57,8 @@ status_map = {
 
 def jira_connection(cfg):
     """initiate a connection to the JIRA server"""
+
+    logging.warning("attempting to connect to jira...")
     jira = JIRA(server=cfg["server"], token_auth=cfg["password"])
 
     return jira
@@ -80,6 +82,7 @@ def get_project_id(conn, name):
     """
 
     project = conn.project(name)
+    logging.warning("project: %s", project)
     return project
 
 
@@ -96,6 +99,7 @@ def get_board_id(conn, name):
     """
 
     boards = conn.boards(name=name)
+    logging.warning("board: %s", board)
     return boards[0]
 
 

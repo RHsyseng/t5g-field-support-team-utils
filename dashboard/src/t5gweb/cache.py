@@ -11,7 +11,7 @@ import bugzilla
 import requests
 from jira.exceptions import JIRAError
 from t5gweb import libtelco5g
-from t5gweb.utils import format_date, make_headers
+from t5gweb.utils import format_date, format_comment, make_headers
 
 
 def get_cases(cfg):
@@ -101,20 +101,19 @@ def get_escalations(cfg, cases):
 
 def get_cards(cfg, self=None, background=False):
     """Pull the latest information from the JIRA cards"""
-    
+
     cases = libtelco5g.redis_get("cases")
     bugs = libtelco5g.redis_get("bugs")
     issues = libtelco5g.redis_get("issues")
     escalations = libtelco5g.redis_get("escalations")
     details = libtelco5g.redis_get("details")
-    logging.warning("attempting to connect to jira...")
+    
     jira_conn = libtelco5g.jira_connection(cfg)
+    
     max_cards = cfg["max_jira_results"]
-    start = time.time()
     project = libtelco5g.get_project_id(jira_conn, cfg["project"])
-    logging.warning("project: %s", project)
     board = libtelco5g.get_board_id(jira_conn, cfg["board"])
-    logging.warning("board: %s", board)
+
     if cfg["sprintname"] and cfg["sprintname"] != "":
         sprint = libtelco5g.get_latest_sprint(jira_conn, board.id, cfg["sprintname"])
         jira_query = (
@@ -148,6 +147,7 @@ def get_cards(cfg, self=None, background=False):
                     "status": "Refreshing Cards in Background...",
                 },
             )
+        
         try:
             issue = jira_conn.issue(card)
         except JIRAError:
@@ -158,30 +158,15 @@ def get_cards(cfg, self=None, background=False):
         comments = issue.fields.comment.comments
         card_comments = []
         for comment in comments:
-            body = comment.body
-            body = re.sub(
-                (
-                    r"(?<!\||\s)\s*?((http|ftp|https):\/\/([\w_-]+(?:(?:\.[\w_-]+)+))"
-                    r"([\w.,@?^=%&:\/~+#-]*[\w@?^=%&\/~+#-])?)"
-                ),
-                '<a href="' + r"\g<0>" + "\" target='_blank'>" + r"\g<0>" "</a>",
-                body,
-            )
-            body = re.sub(
-                (
-                    r'\[([\s\w!"#$%&\'()*+,-.\/:;<=>?@[^_`{|}~]*?\s*?)\|\s*?'
-                    r"((http|ftp|https):\/\/([\w_-]+(?:(?:\.[\w_-]+)+))"
-                    r"([\w.,@?^=%&:\/~+#-]*[\w@?^=%&\/~+#-])?[\s]*)\]"
-                ),
-                '<a href="' + r"\2" + "\" target='_blank'>" + r"\1" + "</a>",
-                body,
-            )
+            body = format_comment(comment)
             tstamp = comment.updated
             card_comments.append((body, tstamp))
+        
         case_number = card["fields"]["summary"].split(":")[0]
         if not case_number or case_number not in cases.keys():
             logging.warning("card isn't associated with a case. discarding (%s)", card)
             continue
+        
         assignee = {"displayName": None, "key": None, "name": None}
         if issue.fields.assignee:
             assignee = {
@@ -247,7 +232,6 @@ def get_cards(cfg, self=None, background=False):
             notified_users = details[case_number]["notified_users"]
             relief_at = details[case_number]["relief_at"]
             resolved_at = details[case_number]["resolved_at"]
-
         else:
             crit_sit = False
             group_name = None
@@ -293,12 +277,11 @@ def get_cards(cfg, self=None, background=False):
             "daily_telco": daily_telco,
         }
 
-    end = time.time()
-    logging.warning("got %s cards in %s seconds", len(jira_cards), (end - start))
     libtelco5g.redis_set("cards", json.dumps(jira_cards))
     libtelco5g.redis_set(
         "timestamp", json.dumps(str(datetime.datetime.now(datetime.timezone.utc)))
     )
+    return {"cards cached": len(jira_cards)}
 
 
 def get_case_details(cfg):
