@@ -39,35 +39,6 @@ def exists_or_zero(data, key):
     return 0
 
 
-def get_previous_quarter(day=None):
-    """Creates JIRA query to get cards from previous quarter from day
-    Day should be of type datetime.date
-    """
-    if day is None:
-        day = datetime.date.today()
-    if 1 <= day.month <= 3:
-        query_range = (
-            f'((updated >= "{day.year-1}-10-01" AND updated <= "{day.year-1}-12-31")'
-            f'OR (created >= "{day.year-1}-10-01" AND created <= "{day.year-1}-12-31"))'
-        )
-    elif 4 <= day.month <= 6:
-        query_range = (
-            f'((updated >= "{day.year}-1-01" AND updated <= "{day.year}-3-30") '
-            f'OR (created >= "{day.year}-1-01" AND created <= "{day.year}-3-30"))'
-        )
-    elif 7 <= day.month <= 9:
-        query_range = (
-            f'((updated >= "{day.year}-4-01" AND updated <= "{day.year}-6-30") '
-            f'OR (created >= "{day.year}-4-01" AND created <= "{day.year}-6-30"))'
-        )
-    elif 10 <= day.month <= 12:
-        query_range = (
-            f'((updated >= "{day.year}-7-01" AND updated <= "{day.year}-9-30") '
-            f'OR (created >= "{day.year}-7-01" AND created <= "{day.year}-9-30"))'
-        )
-    return query_range
-
-
 def get_random_member(team, last_choice=None):
     """Randomly pick a team member and avoid picking the same person twice in a row"""
 

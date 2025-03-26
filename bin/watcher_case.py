@@ -178,6 +178,8 @@ class WatcherCase:
                 for user_id in user_ids:
                     user_url = f"{url}/{user_id}"
                     response = self.session.delete(user_url)
+            else:
+                return False
             response.raise_for_status()
 
         return True

@@ -1,0 +1,12 @@
+# From https://github.com/super-linter/super-linter/blob/main/TEMPLATES/.python-lint
+[MASTER]
+
+# Use multiple processes to speed up Pylint.
+jobs=0
+errors-only=True
+
+[MESSAGES CONTROL]
+
+# Ignoring Import Errors is desired as super-linter
+# does not support installing dependencies as it runs
+disable=import-error
