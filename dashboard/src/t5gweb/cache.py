@@ -155,6 +155,11 @@ def get_cards(cfg, self=None, background=False):
             jira_conn = libtelco5g.jira_connection(cfg)
             issue = jira_conn.issue(card)
 
+        case_number = issue.fields.summary.split(":")[0]
+        if not re.match('[0-9]{8}', case_number):
+            logging.warning("error parsing case number for (%s)", card)
+            continue
+
         comments = issue.fields.comment.comments
         card_comments = []
         for comment in comments:
