@@ -107,9 +107,9 @@ def get_cards(cfg, self=None, background=False):
     issues = libtelco5g.redis_get("issues")
     escalations = libtelco5g.redis_get("escalations")
     details = libtelco5g.redis_get("details")
-    
+
     jira_conn = libtelco5g.jira_connection(cfg)
-    
+
     max_cards = cfg["max_jira_results"]
     project = libtelco5g.get_project_id(jira_conn, cfg["project"])
     board = libtelco5g.get_board_id(jira_conn, cfg["board"])
@@ -147,26 +147,26 @@ def get_cards(cfg, self=None, background=False):
                     "status": "Refreshing Cards in Background...",
                 },
             )
-        
+
         try:
             issue = jira_conn.issue(card)
         except JIRAError:
             logging.warning("JIRA Exception. Possible 401. Reconnecting.....")
             jira_conn = libtelco5g.jira_connection(cfg)
             issue = jira_conn.issue(card)
-        
+
         comments = issue.fields.comment.comments
         card_comments = []
         for comment in comments:
             body = format_comment(comment)
             tstamp = comment.updated
             card_comments.append((body, tstamp))
-        
+
         case_number = issue.fields.summary.split(":")[0]
         if not case_number or case_number not in cases.keys():
             logging.warning("card isn't associated with a case. discarding (%s)", card)
             continue
-        
+
         assignee = {"displayName": None, "key": None, "name": None}
         if issue.fields.assignee:
             assignee = {

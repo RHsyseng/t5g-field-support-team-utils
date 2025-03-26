@@ -342,6 +342,7 @@ def format_date(the_date):
     formatted_date = datetime.datetime.strptime(the_date, "%Y-%m-%dT%H:%M:%SZ")
     return formatted_date
 
+
 def format_comment(comment):
     """Format a JIRA comment for display"""
     body = comment.body

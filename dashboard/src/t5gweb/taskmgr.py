@@ -159,7 +159,7 @@ def cache_data(data_type):
         libtelco5g.redis_set("escalations", json.dumps(escalations))
     else:
         logging.warning("unknown data type")
-    
+
     return result
 
 
