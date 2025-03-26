@@ -312,3 +312,26 @@ def format_date(the_date):
     """
     formatted_date = datetime.datetime.strptime(the_date, "%Y-%m-%dT%H:%M:%SZ")
     return formatted_date
+
+
+def format_comment(comment):
+    """Format a JIRA comment for display"""
+    body = comment.body
+    body = re.sub(
+        (
+            r"(?<!\||\s)\s*?((http|ftp|https):\/\/([\w_-]+(?:(?:\.[\w_-]+)+))"
+            r"([\w.,@?^=%&:\/~+#-]*[\w@?^=%&\/~+#-])?)"
+        ),
+        '<a href="' + r"\g<0>" + "\" target='_blank'>" + r"\g<0>" "</a>",
+        body,
+    )
+    body = re.sub(
+        (
+            r'\[([\s\w!"#$%&\'()*+,-.\/:;<=>?@[^_`{|}~]*?\s*?)\|\s*?'
+            r"((http|ftp|https):\/\/([\w_-]+(?:(?:\.[\w_-]+)+))"
+            r"([\w.,@?^=%&:\/~+#-]*[\w@?^=%&\/~+#-])?[\s]*)\]"
+        ),
+        '<a href="' + r"\2" + "\" target='_blank'>" + r"\1" + "</a>",
+        body,
+    )
+    return body
