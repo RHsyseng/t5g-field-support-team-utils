@@ -3,9 +3,26 @@ version: '3.9'
 services:
   redis:
     image: redis:alpine
+    healthcheck:
+      test: ["CMD-SHELL", "redis-cli ping | grep PONG"]
+      interval: 5s
+      timeout: 30s
+      retries: 10
     # Persist redis data so that you don't have to regather data
     volumes:
       - redis_data:/data
+  ### PostgresQL
+  postgresql:
+    image: docker.io/postgres:latest
+    environment:
+      - POSTGRES_USER=postgres
+      - POSTGRES_PASSWORD=secret
+      - POSTGRES_DB=dashboard
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U postgres"]
+      interval: 5s
+      timeout: 5s
+      retries: 5
 
   ### Frontend
   dashboard-ui:
@@ -20,7 +37,10 @@ services:
       - FLASK_LOGIN_DISABLED=true  # Disable SSO Login for dev environments
       - FLASK_DEBUG=true
     depends_on:
-      - redis
+      redis:
+        condition: service_healthy
+      postgresql:
+        condition: service_healthy
     volumes:
       # Reflect local changes immediately inside of container
       - ./src:/srv:Z
@@ -37,7 +57,10 @@ services:
     env_file:
       - ../cfg/sample.env
     depends_on:
-      - redis
+      redis:
+        condition: service_healthy
+      postgresql:
+        condition: service_healthy
 
   # Gathers data on timed basis
   celery-worker:
@@ -46,8 +69,10 @@ services:
     env_file:
       - ../cfg/sample.env
     depends_on:
-      - redis
-
+      redis:
+        condition: service_healthy
+      postgresql:
+        condition: service_healthy
   # Schedules celery-worker
   celery-beat:
     image: localhost/dashboard
@@ -55,7 +80,10 @@ services:
     env_file:
       - ../cfg/sample.env
     depends_on:
-      - redis
+      redis:
+        condition: service_healthy
+      postgresql:
+        condition: service_healthy
 
   # Frontend for celery tasks
   flower:
@@ -66,7 +94,9 @@ services:
     env_file:
       - ../cfg/sample.env
     depends_on:
-      - redis
-
+      redis:
+        condition: service_healthy
+      postgresql:
+        condition: service_healthy
 volumes:
   redis_data:
