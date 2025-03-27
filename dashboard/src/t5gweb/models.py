@@ -5,7 +5,7 @@ from sqlalchemy.dialects.postgresql import JSONB
 from pydantic import BaseModel
 
 class Case(Base):
-    __tablename__ = "items"
+    __tablename__ = "cases"
 
     id = Column(Integer, primary_key=True, index=True)
     case_number = Column(String, index=True)
