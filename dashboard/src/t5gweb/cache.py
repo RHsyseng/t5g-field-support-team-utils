@@ -13,6 +13,10 @@ from jira.exceptions import JIRAError
 from t5gweb import libtelco5g
 from t5gweb.utils import format_date, format_comment, make_headers
 
+from sqlalchemy.orm import Session, scoped_session
+from t5gweb.db import engine, Base, SessionLocal
+from t5gweb.models import Case, CaseCreate
+from t5gweb.dependencies import get_db
 
 def get_cases(cfg):
     # https://source.redhat.com/groups/public/hydra/hydra_integration_platform_cee_integration_wiki/hydras_api_layer
@@ -58,6 +62,15 @@ def get_cases(cfg):
             cases[case["case_number"]]["tags"] = tags
         if "case_closedDate" in case:
             cases[case["case_number"]]["closeddate"] = case["case_closedDate"]
+    for case in cases:
+        logging.warning(cases[case])
+        db = scoped_session(SessionLocal)
+        pg_case = Case(case_number=case)
+        db.add(pg_case)
+        db.commit()
+        db.refresh(pg_case)
+        db.close()
+        
 
     libtelco5g.redis_set("cases", json.dumps(cases))
 
