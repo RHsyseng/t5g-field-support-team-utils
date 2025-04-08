@@ -56,6 +56,5 @@ setup(
         "Werkzeug==3.1.3",
         "sqlalchemy",
         "psycopg2-binary",
-        "pydantic"
     ],
 )
