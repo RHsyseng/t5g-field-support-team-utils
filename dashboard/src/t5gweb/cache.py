@@ -13,6 +13,10 @@ from jira.exceptions import JIRAError
 from t5gweb import libtelco5g
 from t5gweb.utils import format_date, format_comment, make_headers
 
+from sqlalchemy.orm import Session, scoped_session
+from t5gweb.db import engine, Base, SessionLocal
+from t5gweb.models import Case
+from t5gweb.dependencies import get_db
 
 def get_cases(cfg):
     # https://source.redhat.com/groups/public/hydra/hydra_integration_platform_cee_integration_wiki/hydras_api_layer
@@ -44,6 +48,7 @@ def get_cases(cfg):
             "last_update": case["case_lastModifiedDate"],
             "description": case["case_description"],
             "product": case["case_product"][0] + " " + case["case_version"],
+            "product_version": case["case_version"],
         }
         # Sometimes there is no BZ attached to the case
         if "case_bugzillaNumber" in case:
@@ -58,6 +63,32 @@ def get_cases(cfg):
             cases[case["case_number"]]["tags"] = tags
         if "case_closedDate" in case:
             cases[case["case_number"]]["closeddate"] = case["case_closedDate"]
+    db = scoped_session(SessionLocal)
+    for case in cases:
+        logging.warning(cases[case])
+        pg_case = Case(
+            case_number=case,
+            owner = cases[case]["owner"],
+            severity = cases[case]["severity"][0],
+            account = cases[case]["account"],
+            summary = cases[case]["problem"],
+            status = cases[case]["status"], 
+            created_date = cases[case]["createdate"],
+            last_update = cases[case]["last_update"],
+            description = "testadrien",
+            product = cases[case]["product"],
+            product_version = cases[case]["product_version"],
+            fe_jira_card = ""
+            )
+        qry_object = db.query(Case).where((Case.case_number == case) & (Case.created_date == cases[case]["createdate"]))
+        if qry_object.first() is None:
+            db.add(pg_case)
+        else:
+            pg_case = db.merge(pg_case)
+        db.commit()
+        db.refresh(pg_case)
+    db.close()
+        
 
     libtelco5g.redis_set("cases", json.dumps(cases))
 
