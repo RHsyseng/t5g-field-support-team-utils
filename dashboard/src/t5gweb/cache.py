@@ -11,7 +11,7 @@ import bugzilla
 import requests
 from jira.exceptions import JIRAError
 from t5gweb import libtelco5g
-from t5gweb.utils import format_date, format_comment, make_headers
+from t5gweb.utils import format_comment, format_date, make_headers
 
 
 def get_cases(cfg):
@@ -156,7 +156,7 @@ def get_cards(cfg, self=None, background=False):
             issue = jira_conn.issue(card)
 
         case_number = issue.fields.summary.split(":")[0]
-        if not re.match('[0-9]{8}', case_number):
+        if not re.match("[0-9]{8}", case_number):
             logging.warning("error parsing case number for (%s)", card)
             continue
 
