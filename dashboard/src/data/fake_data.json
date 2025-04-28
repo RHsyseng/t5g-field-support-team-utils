@@ -777,7 +777,7 @@
       "resolved_at": null,
       "severity": "Normal",
       "summary": "Aliquam aut voluptates dicta facere quasi saepe.",
-      "tags": [],
+      "tags": []
     },
     "CEBO-8132": {
       "account": "合同会社小川情報",
@@ -900,7 +900,7 @@
       "resolved_at": null,
       "severity": "Urgent",
       "summary": "Quibusdam repudiandae aspernatur nisi praesentium cum.",
-      "tags": [],
+      "tags": []
     },
     "ZQMY-6207": {
       "account": "김차박",
@@ -961,7 +961,7 @@
       "resolved_at": "2022-05-05T08:37:19Z",
       "severity": "Urgent",
       "summary": "タワー持っていましたアクセルペダル錯覚。",
-      "tags": [],
+      "tags": []
     },
     "ZAXQ-9451": {
       "account": "Tecnologías del Norte S.L.N.E",
@@ -1012,7 +1012,7 @@
       "resolved_at": null,
       "severity": "Normal",
       "summary": "Conference mission audience idea foreign.",
-      "tags": ["花嫁"],
+      "tags": ["花嫁"]
     },
     "BPQE-8673": {
       "account": "김차박",
@@ -1125,7 +1125,7 @@
       "resolved_at": "2022-04-07T10:14:58Z",
       "severity": "Urgent",
       "summary": "Quod inventore facere aperiam sint praesentium temporibus iste.",
-      "tags": ["pick"],
+      "tags": ["pick"]
     },
     "OBRS-5243": {
       "account": "Tecnologías del Norte S.L.N.E",
@@ -1219,7 +1219,7 @@
       "resolved_at": "2022-07-31T05:10:03Z",
       "severity": "Low",
       "summary": "Magnam tempore magnam nemo perspiciatis rem.",
-      "tags": ["quae"],
+      "tags": ["quae"]
     },
     "FSZP-7052": {
       "account": "Familia Bueno S.L.",
@@ -1334,7 +1334,7 @@
       "resolved_at": null,
       "severity": "Low",
       "summary": "コーラス尊敬するアクセルペダル。",
-      "tags": [],
+      "tags": []
     },
     "DEFM-3023": {
       "account": "Familia Bueno S.L.",
@@ -1486,7 +1486,7 @@
       "resolved_at": "2024-04-20T17:53:49Z",
       "severity": "Low",
       "summary": "International not type very.",
-      "tags": [],
+      "tags": []
     },
     "AXIP-5935": {
       "account": "Tecnologías del Norte S.L.N.E",
@@ -1536,7 +1536,7 @@
       "resolved_at": "2024-02-14T08:14:41Z",
       "severity": "Urgent",
       "summary": "Ok choose today watch source firm drug.",
-      "tags": [],
+      "tags": []
     },
     "BZMK-4040": {
       "account": "유한회사 류이서",
@@ -1687,7 +1687,7 @@
       "resolved_at": null,
       "severity": "Low",
       "summary": "Eos rerum ipsum iure dolor.",
-      "tags": [],
+      "tags": []
     }
   }
 }
