@@ -24,7 +24,7 @@ See the sample.cfg file for the default settings in the script.
 
 #### Jira Personal Access Token (PAT)
 
-The jira PAT can be specified multiple ways.
+The Jira PAT can be specified multiple ways.
 
 - password key in the configuration file
 - t5g_password environment variable
