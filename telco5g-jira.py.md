@@ -1,13 +1,6 @@
 
 # telco5g-jira
 
-This script parses an email that contains a Saleforce Telco5G Open case report.
-After the script parses the email, it then parses a Jira board for existing
-cases and reports on any new cases that need Jira cards created based upon the
-case priority (Normal, High, and Urgent).
-
-If desired, the script will also create the Jira cards for the new cases.
-
 ## Requisites
 
 You better use a virtualenv to avoid messing with the python modules as:
