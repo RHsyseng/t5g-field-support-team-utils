@@ -20,61 +20,7 @@
             src="{{ url_for('static', filename='node_modules/plotly.js-cartesian-dist-min/plotly-cartesian.min.js') }}"></script>
     <div class="container-fluid copy mt-5">
         <h2>Overall Stats:</h2>
-        <table class="table table-bordered table-hover table-responsive mt-5 w-100"
-               id="overall">
-            <thead>
-                <tr>
-                    <th class="text-center">Metric</th>
-                    <th class="text-center">Count</th>
-                </tr>
-            </thead>
-            <tbody class="list">
-                <tr>
-                    <td class="align-middle">Open Cases</td>
-                    <td class="align-middle text-center">{{ stats['open_cases'] }}</td>
-                </tr>
-                <tr>
-                    <td class="align-middle">Cases On Prio-list</td>
-                    <td class="align-middle text-center">{{ stats['escalated'] }}</td>
-                </tr>
-                <tr>
-                    <td class="align-middle">Crit Sit Cases</td>
-                    <td class="align-middle text-center">{{ stats['crit_sit'] }}</td>
-                </tr>
-                <tr>
-                    <td class="align-middle">Total Escalations</td>
-                    <td class="align-middle text-center">{{ stats['total_escalations'] }}</td>
-                </tr>
-                <tr>
-                    <td class="align-middle">High Priority Cases</td>
-                    <td class="align-middle text-center">{{ stats['high_prio'] }}</td>
-                </tr>
-                <tr>
-                    <td class="align-middle">Cases Opened in the Last Day / Week</td>
-                    <td class="align-middle text-center">{{ stats['daily_opened_cases'] }} / {{ stats['weekly_opened_cases'] }}</td>
-                </tr>
-                <tr>
-                    <td class="align-middle">Cases Closed in the Last Day / Week</td>
-                    <td class="align-middle text-center">{{ stats['daily_closed_cases'] }} / {{ stats['weekly_closed_cases'] }}</td>
-                </tr>
-                <tr>
-                    <td class="align-middle">Cases With No Updates In The Last Week</td>
-                    <td class="align-middle text-center">{{ stats['no_updates'] }}</td>
-                </tr>
-                <tr>
-                    <td class="align-middle">Cases With No Bugs Associated</td>
-                    <td class="align-middle text-center">{{ stats['no_bzs'] }}</td>
-                </tr>
-                <tr>
-                    <td class="align-middle">Unique Bugs</td>
-                    <td class="align-middle text-center">{{ stats['bugs']['unique'] }}</td>
-                </tr>
-                <tr>
-                    <td class="align-middle">Bugs With No Target</td>
-                    <td class="align-middle text-center">{{ stats['bugs']['no_target'] }}</td>
-                </tr>
-            </tbody>
-        </table>
+        {{ macros.display_statistics_table(stats) }}
         <div class="chart-container pt-3">
             <button class="btn btn-outline-dark" id="hide-stats">Hide All</button>
             <button class="btn btn-outline-dark" id="show-stats">Show All</button>
