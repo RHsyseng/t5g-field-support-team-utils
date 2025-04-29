@@ -2,10 +2,7 @@
 {% import 'macros/macros.html' as macros %}
 {% block title %}{{ page_title }}{% endblock %}
 {% block content %}
-    <!-- Include jQuery + DataTables -->
-    <script type="text/javascript"
-            charset="utf8"
-            src="{{ url_for('static', filename='node_modules/jquery/dist/jquery.min.js') }}"></script>
+    <!-- Include DataTables -->
     <script type="text/javascript"
             charset="utf8"
             src="{{ url_for('static', filename='node_modules/datatables.net/js/jquery.dataTables.js') }}"></script>

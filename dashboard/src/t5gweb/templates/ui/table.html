@@ -5,10 +5,7 @@
     <div class="container-fluid copy mt-5">
         {{ macros.cases_table(new_comments, jira_server, sla_settings) }}
     </div>
-    <!-- Include jQuery + DataTables -->
-    <script type="text/javascript"
-            charset="utf8"
-            src="{{ url_for('static', filename='node_modules/jquery/dist/jquery.min.js') }}"></script>
+    <!-- Include DataTables -->
     <script type="text/javascript"
             charset="utf8"
             src="{{ url_for('static', filename='node_modules/datatables.net/js/jquery.dataTables.js') }}"></script>
