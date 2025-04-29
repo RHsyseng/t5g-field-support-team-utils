@@ -319,3 +319,11 @@
         </tbody>
     </table>
 {%- endmacro %}
+
+<!-- Allows Linking to Accounts with No Updates from Sidebar -->
+{% macro substitute_no_update(account, new_comments) -%}
+    <span class="anchor" id="{{ account | replace(' ', '-') }}-no-update"></span>
+    <ul class="highlight">
+        <li id="{{ account | replace(' ', '-') }}-no-update">{{ new_comments[account] }}</li>
+    </ul>
+{%- endmacro %}
