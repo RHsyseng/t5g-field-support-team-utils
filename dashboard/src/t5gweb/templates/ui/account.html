@@ -6,12 +6,8 @@
     {{ macros.include_datatables_js_css() }}
     {{ macros.include_datatables_plugins_js_css() }}
     {{ macros.include_chartjs() }}
-    <script type="text/javascript"
-            charset="utf8"
-            src="{{ url_for('static', filename='js/plugins.js') }}"></script>
-    <script type="text/javascript"
-            charset="utf8"
-            src="{{ url_for('static', filename='js/table.js') }}"></script>
+    <script type="text/javascript" charset="utf8" src="{{ url_for('static', filename='js/plugins.js') }}"></script>
+    <script type="text/javascript" charset="utf8" src="{{ url_for('static', filename='js/table.js') }}"></script>
     {{ macros.include_plotlyjs() }}
     <div class="container-fluid copy mt-5">
         {% if engineer_view == True %}

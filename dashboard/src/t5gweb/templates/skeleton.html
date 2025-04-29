@@ -3,18 +3,14 @@
     <head>
         {% block head %}
             <!-- Include Bootstrap -->
-            <link href="{{ url_for('static', filename='node_modules/bootstrap/dist/css/bootstrap.min.css') }}"
-                  rel="stylesheet">
+            <link href="{{ url_for('static', filename='node_modules/bootstrap/dist/css/bootstrap.min.css') }}" rel="stylesheet">
             <!-- Include CSS -->
-            <link rel="stylesheet"
-                  type="text/css"
-                  href="{{ url_for('static', filename='style.css') }}">
+            <link rel="stylesheet" type="text/css" href="{{ url_for('static', filename='style.css') }}">
             <!-- Include ClipboardJS-->
             <script src="{{ url_for('static', filename='node_modules/clipboard/dist/clipboard.min.js') }}"></script>
             <!-- Include JQuery -->
-            <script type="text/javascript"
-                    charset="utf8"
-                    src="{{ url_for('static', filename='node_modules/jquery/dist/jquery.min.js') }}"></script>
+            <script type="text/javascript" charset="utf8"
+                src="{{ url_for('static', filename='node_modules/jquery/dist/jquery.min.js') }}"></script>
             <title>dashboard://
                 {% block title %}{% endblock %}
             </title>
