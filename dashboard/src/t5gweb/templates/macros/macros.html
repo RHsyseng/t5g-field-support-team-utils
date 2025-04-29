@@ -327,3 +327,35 @@
         <li id="{{ account | replace(' ', '-') }}-no-update">{{ new_comments[account] }}</li>
     </ul>
 {%- endmacro %}
+
+{% macro include_datatables_js_css() -%}
+    <script type="text/javascript" charset="utf8"
+        src="{{ url_for('static', filename='node_modules/datatables.net/js/jquery.dataTables.js') }}"></script>
+    <script type="text/javascript" charset="utf8"
+        src="{{ url_for('static', filename='node_modules/datatables.net-bs5/js/dataTables.bootstrap5.min.js') }}"></script>
+    <link rel="stylesheet"
+        href="{{ url_for('static', filename='node_modules/datatables.net-bs5/css/dataTables.bootstrap5.min.css') }}" />
+{%- endmacro %}
+
+{% macro include_datatables_plugins_js_css() -%}
+    <script type="text/javascript" charset="utf8"
+        src="{{ url_for('static', filename='node_modules/datatables.net-searchpanes/js/dataTables.searchPanes.min.js') }}"></script>
+    <script type="text/javascript" charset="utf8"
+        src="{{ url_for('static', filename='node_modules/datatables.net-searchpanes-bs5/js/searchPanes.bootstrap5.min.js') }}"></script>
+    <script type="text/javascript" charset="utf8"
+        src="{{ url_for('static', filename='node_modules/datatables.net-select/js/dataTables.select.min.js') }}"></script>
+    <link rel="stylesheet"
+        href="{{ url_for('static', filename='node_modules/datatables.net-searchpanes-bs5/css/searchPanes.bootstrap5.min.css') }}" />
+    <link rel="stylesheet"
+        href="{{ url_for('static', filename='node_modules/datatables.net-select-bs5/css/select.bootstrap5.min.css') }}" />
+{%- endmacro %}
+
+{% macro include_chartjs() -%}
+    <script src="{{ url_for('static', filename='node_modules/chart.js/dist/chart.js') }}"></script>
+{%- endmacro %}
+
+{% macro include_plotlyjs() -%}
+<script type="text/javascript"
+charset="utf8"
+src="{{ url_for('static', filename='node_modules/plotly.js-cartesian-dist-min/plotly-cartesian.min.js') }}"></script>
+{%- endmacro %}

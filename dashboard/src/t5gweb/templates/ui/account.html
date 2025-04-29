@@ -3,30 +3,16 @@
 {% block title %}{{ page_title }}{% endblock %}
 {% block content %}
     <!-- Include DataTables -->
-    <script type="text/javascript"
-            charset="utf8"
-            src="{{ url_for('static', filename='node_modules/datatables.net/js/jquery.dataTables.js') }}"></script>
-    <script type="text/javascript"
-            charset="utf8"
-            src="{{ url_for('static', filename='node_modules/datatables.net-bs5/js/dataTables.bootstrap5.min.js') }}"></script>
+    {{ macros.include_datatables_js_css() }}
+    {{ macros.include_datatables_plugins_js_css() }}
+    {{ macros.include_chartjs() }}
     <script type="text/javascript"
             charset="utf8"
             src="{{ url_for('static', filename='js/plugins.js') }}"></script>
     <script type="text/javascript"
             charset="utf8"
-            src="{{ url_for('static', filename='node_modules/datatables.net-searchpanes/js/dataTables.searchPanes.min.js') }}"></script>
-    <script type="text/javascript"
-            charset="utf8"
-            src="{{ url_for('static', filename='node_modules/datatables.net-searchpanes-bs5/js/searchPanes.bootstrap5.min.js') }}"></script>
-    <script type="text/javascript"
-            charset="utf8"
-            src="{{ url_for('static', filename='node_modules/datatables.net-select/js/dataTables.select.min.js') }}"></script>
-    <script type="text/javascript"
-            charset="utf8"
             src="{{ url_for('static', filename='js/table.js') }}"></script>
-    <script type="text/javascript"
-            charset="utf8"
-            src="{{ url_for('static', filename='node_modules/plotly.js-cartesian-dist-min/plotly-cartesian.min.js') }}"></script>
+    {{ macros.include_plotlyjs() }}
     <div class="container-fluid copy mt-5">
         {% if engineer_view == True %}
         <h2>Engineer Stats: {{ account }}</h2>
