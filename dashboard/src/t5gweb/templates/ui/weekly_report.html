@@ -1,4 +1,5 @@
 {% extends "skeleton.html" %}
+{% import 'macros/macros.html' as macros %}
 {% block title %}{{ page_title }}{% endblock %}
 {% block content %}
     <a id="top"></a>
@@ -45,10 +46,7 @@
                                     {% endif %}
                                 {% endfor %}
                             {% else %}
-                                <span class="anchor" id="{{ account | replace(' ', '-') }}-no-update"></span>
-                                <ul class="highlight">
-                                    <li id="{{ account | replace(' ', '-') }}-no-update">{{ new_comments[account] }}</li>
-                                </ul>
+                                {{ macros.substitute_no_update(account, new_comments) }}
                             {% endif %}
                         </ul>
                     {% endfor %}
