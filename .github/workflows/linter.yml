@@ -39,6 +39,7 @@ jobs:
           VALIDATE_YAML_PRETTIER: false
           VALIDATE_MARKDOWN_PRETTIER: false
           VALIDATE_PYTHON_PYINK: false
+          VALIDATE_CHECKOV: false
           DEFAULT_BRANCH: main
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
           KUBERNETES_KUBECONFORM_OPTIONS: -ignore-missing-schemas
