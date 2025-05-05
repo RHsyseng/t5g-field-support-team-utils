@@ -1,5 +1,5 @@
 ---
-version: '3.9'
+version: "3.9"
 services:
   redis:
     image: redis:alpine
@@ -25,7 +25,7 @@ services:
       # Reflect local changes immediately inside of container
       - ./src:/srv:Z
 
-       # Prevent container from using local node_modules folder:
+      # Prevent container from using local node_modules folder:
       - /srv/t5gweb/static/node_modules/
 
   ### Backend (can remove if only developing front end)

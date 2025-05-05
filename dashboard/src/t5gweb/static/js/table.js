@@ -1,5 +1,5 @@
 // Declare JQuery and browser globals for StandardJS linting
-/* globals $, history */
+/* globals $, history */ // eslint-disable-line no-redeclare
 
 // Insert Bugzilla Info and Comments into Child Rows
 function format (data) {
@@ -151,13 +151,13 @@ $(document).ready(function () {
           options: [
             {
               label: 'Cases on Prio-list or Crit Sit',
-              value: function (rowData, rowIdx) {
+              value: function (rowData) {
                 return rowData[3].includes('Yes') || rowData[4] === 'Yes'
               }
             },
             {
               label: 'Cases on Daily Telco List',
-              value: function (rowData, rowIdx) {
+              value: function (rowData) {
                 return rowData[15] === 'True'
               }
             }
@@ -167,7 +167,7 @@ $(document).ready(function () {
     },
 
     // When table is loaded, remove "Loading Table..." message and display table
-    initComplete: function (settings, json) {
+    initComplete: function (settings, json) { // eslint-disable-line no-unused-vars
       $('div.loading').remove()
       $('.case-table').show()
       $($.fn.dataTable.tables(true)).DataTable().columns.adjust()
@@ -190,19 +190,19 @@ $(document).ready(function () {
           options: [
             {
               label: 'No',
-              value: function (rowData, rowIdx) {
+              value: function (rowData) {
                 return rowData[3] === 'No' || rowData[3] === 'Potentially'
               }
             },
             {
               label: 'Yes',
-              value: function (rowData, rowIdx) {
+              value: function (rowData) {
                 return rowData[3].includes('Yes')
               }
             },
             {
               label: 'Potentially',
-              value: function (rowData, rowIdx) {
+              value: function (rowData) {
                 return rowData[3] === 'Potentially'
               }
             }
