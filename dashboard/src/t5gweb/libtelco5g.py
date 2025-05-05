@@ -242,6 +242,7 @@ def create_cards(cfg, new_cases, action="none"):
     """
 
     new_cards = {}
+    notification_content = {}
 
     logging.warning("attempting to connect to jira...")
     jira_conn = jira_connection(cfg)
@@ -353,7 +354,6 @@ def create_cards(cfg, new_cases, action="none"):
 
         logging.warning("A card needs created for case {}".format(case))
         logging.warning(card_info)
-        notification_content = ""
         if action == "create":
             logging.warning("creating card for case {}".format(case))
             new_card = jira_conn.create_issue(fields=card_info)
@@ -361,7 +361,7 @@ def create_cards(cfg, new_cases, action="none"):
             new_card.update(fields={"customfield_12317313": "TRACK"})
             logging.warning("created {}".format(new_card.key))
             notification_content = generate_notification_content(
-                cfg, assignee, new_card, case, cases
+                cfg, notification_content, assignee, new_card, case, cases
             )
 
             # Add newly create card to the sprint
@@ -427,10 +427,14 @@ def create_cards(cfg, new_cases, action="none"):
     return notification_content, new_cards, novel_cases
 
 
-def generate_notification_content(cfg, assignee, new_card, case, cases):
+def generate_notification_content(
+    cfg, notification_content, assignee, new_card, case, cases
+):
     """Generate notification message for email's and Slack
 
     Args:
+        cfg (dict): Pre-configured settings
+        notification_content (dict): All pending notifications
         assignee (dict): Information about the card's assignee
         new_card (str): Name of created JIRA card
         case (str): ID of relevant case
@@ -439,7 +443,6 @@ def generate_notification_content(cfg, assignee, new_card, case, cases):
     Returns:
         dict: Notification message and extra information to construct slack message.
     """
-    notification_content = {}
     if assignee:
         assignee_section = f"It is initially being tracked by {assignee['name']}."
     else:
@@ -865,6 +868,8 @@ def sync_portal_to_jira():
         )
         if notification_content:
             logging.warning("notifying team about new JIRA cards")
+            if len(new_cards) != len(notification_content):
+                logging.warning("# of notifications does not match number of new cards")
             cfg["subject"] += ": {}".format(", ".join(novel_cases))
             email_notify(cfg, notification_content)
             if cfg["slack_token"] and (
