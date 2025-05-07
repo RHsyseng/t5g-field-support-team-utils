@@ -20,5 +20,9 @@ setup(
         "requests==2.32.3",
         "slack_sdk==3.34.0",
         "Werkzeug==3.1.3",
+        # Version incompatibility, so need to explicitly pin xml libraries:
+        # https://github.com/xmlsec/python-xmlsec/issues/320
+        "xmlsec==1.3.14",
+        "lxml==5.2.1",
     ],
 )
