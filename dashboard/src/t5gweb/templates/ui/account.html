@@ -2,34 +2,13 @@
 {% import 'macros/macros.html' as macros %}
 {% block title %}{{ page_title }}{% endblock %}
 {% block content %}
-    <!-- Include jQuery + DataTables -->
-    <script type="text/javascript"
-            charset="utf8"
-            src="{{ url_for('static', filename='node_modules/jquery/dist/jquery.min.js') }}"></script>
-    <script type="text/javascript"
-            charset="utf8"
-            src="{{ url_for('static', filename='node_modules/datatables.net/js/jquery.dataTables.js') }}"></script>
-    <script type="text/javascript"
-            charset="utf8"
-            src="{{ url_for('static', filename='node_modules/datatables.net-bs5/js/dataTables.bootstrap5.min.js') }}"></script>
-    <script type="text/javascript"
-            charset="utf8"
-            src="{{ url_for('static', filename='js/plugins.js') }}"></script>
-    <script type="text/javascript"
-            charset="utf8"
-            src="{{ url_for('static', filename='node_modules/datatables.net-searchpanes/js/dataTables.searchPanes.min.js') }}"></script>
-    <script type="text/javascript"
-            charset="utf8"
-            src="{{ url_for('static', filename='node_modules/datatables.net-searchpanes-bs5/js/searchPanes.bootstrap5.min.js') }}"></script>
-    <script type="text/javascript"
-            charset="utf8"
-            src="{{ url_for('static', filename='node_modules/datatables.net-select/js/dataTables.select.min.js') }}"></script>
-    <script type="text/javascript"
-            charset="utf8"
-            src="{{ url_for('static', filename='js/table.js') }}"></script>
-    <script type="text/javascript"
-            charset="utf8"
-            src="{{ url_for('static', filename='node_modules/plotly.js-cartesian-dist-min/plotly-cartesian.min.js') }}"></script>
+    <!-- Include DataTables -->
+    {{ macros.include_datatables_js_css() }}
+    {{ macros.include_datatables_plugins_js_css() }}
+    {{ macros.include_chartjs() }}
+    <script type="text/javascript" charset="utf8" src="{{ url_for('static', filename='js/plugins.js') }}"></script>
+    <script type="text/javascript" charset="utf8" src="{{ url_for('static', filename='js/table.js') }}"></script>
+    {{ macros.include_plotlyjs() }}
     <div class="container-fluid copy mt-5">
         {% if engineer_view == True %}
         <h2>Engineer Stats: {{ account }}</h2>
@@ -38,61 +17,7 @@
         {% endif %}
         <div class="row">
             <div class="col-sm-6">
-                <table class="table table-bordered table-hover table-responsive w-100"
-                       id="overall">
-                    <thead>
-                        <tr>
-                            <th class="text-center">Metric</th>
-                            <th class="text-center">Count</th>
-                        </tr>
-                    </thead>
-                    <tbody class="list">
-                        <tr>
-                            <td class="align-middle">Open Cases</td>
-                            <td class="align-middle text-center">{{ stats['open_cases'] }}</td>
-                        </tr>
-                        <tr>
-                            <td class="align-middle">Cases On Prio-list</td>
-                            <td class="align-middle text-center">{{ stats['escalated'] }}</td>
-                        </tr>
-                        <tr>
-                            <td class="align-middle">Crit Sit Cases</td>
-                            <td class="align-middle text-center">{{ stats['crit_sit'] }}</td>
-                        </tr>
-                        <tr>
-                            <td class="align-middle">Total Escalations</td>
-                            <td class="align-middle text-center">{{ stats['total_escalations'] }}</td>
-                        </tr>
-                        <tr>
-                            <td class="align-middle">High Priority Cases</td>
-                            <td class="align-middle text-center">{{ stats['high_prio'] }}</td>
-                        </tr>
-                        <tr>
-                            <td class="align-middle">Cases Opened in the Last Day / Week</td>
-                            <td class="align-middle text-center">{{ stats['daily_opened_cases'] }} / {{ stats['weekly_opened_cases'] }}</td>
-                        </tr>
-                        <tr>
-                            <td class="align-middle">Cases Closed in the Last Day / Week</td>
-                            <td class="align-middle text-center">{{ stats['daily_closed_cases'] }} / {{ stats['weekly_closed_cases'] }}</td>
-                        </tr>
-                        <tr>
-                            <td class="align-middle">Cases With No Updates In The Last Week</td>
-                            <td class="align-middle text-center">{{ stats['no_updates'] }}</td>
-                        </tr>
-                        <tr>
-                            <td class="align-middle">Cases With No Bugs Associated</td>
-                            <td class="align-middle text-center">{{ stats['no_bzs'] }}</td>
-                        </tr>
-                        <tr>
-                            <td class="align-middle">Unique Bugs</td>
-                            <td class="align-middle text-center">{{ stats['bugs']['unique'] }}</td>
-                        </tr>
-                        <tr>
-                            <td class="align-middle">Bugs With No Target</td>
-                            <td class="align-middle text-center">{{ stats['bugs']['no_target'] }}</td>
-                        </tr>
-                    </tbody>
-                </table>
+                {{ macros.display_statistics_table(stats) }}
                 <div class="row">{{ macros.outcomes_table(histogram_stats) }}</div>
             </div>
             <div class="col-12 col-sm-6">
@@ -242,83 +167,5 @@
     <br>
     <h2>Cases:</h2>
     {{ macros.cases_table(new_comments, jira_server, sla_settings) }}
-    <script>
-    // Create the histograms
-    var reliefUrgent = {
-        x: {{ histogram_stats["Relief"]["Urgent"]["data"] | safe }},
-        type: 'histogram',
-        opacity: 0.5,
-        name: 'Urgent'
-    };
-
-    var reliefHigh = {
-        x: {{ histogram_stats["Relief"]["High"]["data"] | safe}},
-        type: 'histogram',
-        opacity: 0.5,
-        name: 'High'
-    };
-
-    var reliefNormal = {
-        x: {{ histogram_stats["Relief"]["Normal"]["data"] | safe}},
-        type: 'histogram',
-        opacity: 0.5,
-        name: 'Normal'
-    };
-
-    var reliefLow = {
-        x: {{ histogram_stats["Relief"]["Low"]["data"] | safe}},
-        type: 'histogram',
-        opacity: 0.5,
-        name: 'Low'
-    };
-
-
-    var reliefLayout = {
-        barmode: 'overlay',
-        title: 'Time to Relief',
-        xaxis: { title: 'Days From Case Creation Until Relief' },
-        yaxis: { title: 'Frequency' }
-    };
-
-    var reliefData = [reliefUrgent, reliefHigh, reliefNormal, reliefLow];
-    Plotly.newPlot('reliefHistogram', reliefData, reliefLayout, { responsive: true });
-
-    var resolvedUrgent = {
-        x: {{ histogram_stats["Resolved"]["Urgent"]["data"] | safe }},
-        type: 'histogram',
-        opacity: 0.5,
-        name: 'Urgent'
-    };
-
-    var resolvedHigh = {
-        x: {{ histogram_stats["Resolved"]["High"]["data"] | safe}},
-        type: 'histogram',
-        opacity: 0.5,
-        name: 'High'
-    };
-
-    var resolvedNormal = {
-        x: {{ histogram_stats["Resolved"]["Normal"]["data"] | safe }},
-        type: 'histogram',
-        opacity: 0.5,
-        name: 'Normal'
-    };
-
-    var resolvedLow = {
-        x: {{ histogram_stats["Resolved"]["Low"]["data"] | safe}},
-        type: 'histogram',
-        opacity: 0.5,
-        name: 'Low'
-    };
-    
-    var resolvedLayout = {
-        barmode: 'overlay',
-        title: 'Time to Resolution',
-        xaxis: { title: 'Days From Case Creation Until Resolution' },
-        yaxis: { title: 'Frequency' }
-    };
-
-    var resolvedData = [resolvedUrgent, resolvedHigh, resolvedNormal, resolvedLow];
-    Plotly.newPlot('resolvedHistogram', resolvedData, resolvedLayout, { responsive: true });
-    </script>
+    {{ macros.generate_relief_resolution_histograms(histogram_stats) }}
 {% endblock %}

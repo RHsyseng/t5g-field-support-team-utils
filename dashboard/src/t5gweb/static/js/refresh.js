@@ -1,5 +1,5 @@
 // Declare JQuery, browser globals for StandardJS linter
-/* global $, alert */
+/* global $, alert */ // eslint-disable-line no-redeclare
 
 /**
  * The following code, along with refresh() and refresh_status() in t5gweb/ui.py

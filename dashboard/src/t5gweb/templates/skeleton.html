@@ -3,27 +3,14 @@
     <head>
         {% block head %}
             <!-- Include Bootstrap -->
-            <link href="{{ url_for('static', filename='node_modules/bootstrap/dist/css/bootstrap.min.css') }}"
-                  rel="stylesheet">
+            <link href="{{ url_for('static', filename='node_modules/bootstrap/dist/css/bootstrap.min.css') }}" rel="stylesheet">
             <!-- Include CSS -->
-            <link rel="stylesheet"
-                  type="text/css"
-                  href="{{ url_for('static', filename='style.css') }}">
+            <link rel="stylesheet" type="text/css" href="{{ url_for('static', filename='style.css') }}">
             <!-- Include ClipboardJS-->
             <script src="{{ url_for('static', filename='node_modules/clipboard/dist/clipboard.min.js') }}"></script>
-            <!-- Include ChartJS -->
-            <script src="{{ url_for('static', filename='node_modules/chart.js/dist/chart.js') }}"></script>
             <!-- Include JQuery -->
-            <script type="text/javascript"
-                    charset="utf8"
-                    src="{{ url_for('static', filename='node_modules/jquery/dist/jquery.min.js') }}"></script>
-            <!-- Include Datatables CSS -->
-            <link rel="stylesheet"
-                  href="{{ url_for('static', filename='node_modules/datatables.net-bs5/css/dataTables.bootstrap5.min.css') }}" />
-            <link rel="stylesheet"
-                  href="{{ url_for('static', filename='node_modules/datatables.net-searchpanes-bs5/css/searchPanes.bootstrap5.min.css') }}" />
-            <link rel="stylesheet"
-                  href="{{ url_for('static', filename='node_modules/datatables.net-select-bs5/css/select.bootstrap5.min.css') }}" />
+            <script type="text/javascript" charset="utf8"
+                src="{{ url_for('static', filename='node_modules/jquery/dist/jquery.min.js') }}"></script>
             <title>dashboard://
                 {% block title %}{% endblock %}
             </title>
@@ -42,7 +29,7 @@
                     <div class="collapse navbar-collapse" id="navbarCollapse">
                         <ul class="navbar-nav  mb-2 mb-md-0">
                             <li class="nav-item ms-2">
-                                <a role="button" class="btn btn-dark" href="{{ url_for("ui.index") }}">
+                                <a role="button" class="btn btn-dark" href="{{ url_for('ui.index') }}">
                                     <svg alt="Home"
                                          xmlns="http://www.w3.org/2000/svg"
                                          width="28"
@@ -67,10 +54,10 @@
                                 <ul class="dropdown-menu dropdown-menu-dark"
                                     aria-labelledby="navbarDropdownTables">
                                     <li>
-                                        <a class="dropdown-item" href="{{ url_for("ui.table_view") }}">Recent Updates</a>
+                                        <a class="dropdown-item" href="{{ url_for('ui.table_view') }}">Recent Updates</a>
                                     </li>
                                     <li>
-                                        <a class="dropdown-item" href="{{ url_for("ui.table_view_all") }}">All Cards</a>
+                                        <a class="dropdown-item" href="{{ url_for('ui.table_view_all') }}">All Cards</a>
                                     </li>
                                 </ul>
                             </li>
@@ -84,21 +71,21 @@
                                 <ul class="dropdown-menu dropdown-menu-dark"
                                     aria-labelledby="navbarDropdownReports">
                                     <li>
-                                        <a class="dropdown-item" href="{{ url_for("ui.report_view") }}">Recent Updates</a>
+                                        <a class="dropdown-item" href="{{ url_for('ui.report_view') }}">Recent Updates</a>
                                     </li>
                                     <li>
-                                        <a class="dropdown-item" href="{{ url_for("ui.report_view_all") }}">All Cards</a>
+                                        <a class="dropdown-item" href="{{ url_for('ui.report_view_all') }}">All Cards</a>
                                     </li>
                                     <li>
-                                        <a class="dropdown-item" href="{{ url_for("ui.weekly_updates") }}">Weekly Report</a>
+                                        <a class="dropdown-item" href="{{ url_for('ui.weekly_updates') }}">Weekly Report</a>
                                     </li>
                                 </ul>
                             </li>
                             <li class="nav-item ms-2">
-                                <a class="nav-link active" href="{{ url_for("ui.get_stats") }}">Stats</a>
+                                <a class="nav-link active" href="{{ url_for('ui.get_stats') }}">Stats</a>
                             </li>
                             <li class="nav-item ms-2">
-                                <a role="button" class="btn btn-dark" href="{{ url_for("ui.trends") }}">
+                                <a role="button" class="btn btn-dark" href="{{ url_for('ui.trends') }}">
                                     <svg xmlns="http://www.w3.org/2000/svg"
                                          width="25"
                                          height="25"
