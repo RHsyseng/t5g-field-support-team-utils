@@ -41,3 +41,25 @@ class Comment(Base):
 
     case = relationship("Case", backref="comments")
 
+class JiraComment(Base):
+    __tablename__ = "jira_comments"
+
+    jira_comment_id = Column(String, primary_key=True)  # Assuming Jira provides a unique ID per comment
+
+    case_number = Column(String, nullable=False)
+    created_date = Column(Date, nullable=False)  # Must match the Case's created_date
+
+    author = Column(String, nullable=False)
+    body = Column(Text, nullable=False)
+    created_at = Column(DateTime, nullable=False)
+
+    __table_args__ = (
+        ForeignKeyConstraint(
+            ['case_number', 'created_date'],
+            ['cases.case_number', 'cases.created_date'],
+            ondelete='CASCADE'
+        ),
+    )
+
+    case = relationship("Case", backref="jira_comments")
+
