@@ -1,17 +1,25 @@
 """cache.py: caching functions for the t5gweb"""
 
 import datetime
+from dateutil import parser
 import json
 import logging
 import re
 import time
 import xmlrpc
 
+from sqlalchemy import except_
+
 import bugzilla
 import requests
 from jira.exceptions import JIRAError
 from t5gweb import libtelco5g
 from t5gweb.utils import format_comment, format_date, make_headers
+
+from sqlalchemy.orm import Session, scoped_session
+from t5gweb.db import engine, Base, SessionLocal
+from t5gweb.models import Case, JiraComment
+from t5gweb.dependencies import get_db
 
 
 def get_cases(cfg):
@@ -44,6 +52,7 @@ def get_cases(cfg):
             "last_update": case["case_lastModifiedDate"],
             "description": case["case_description"],
             "product": case["case_product"][0] + " " + case["case_version"],
+            "product_version": case["case_version"],
         }
         # Sometimes there is no BZ attached to the case
         if "case_bugzillaNumber" in case:
@@ -58,6 +67,32 @@ def get_cases(cfg):
             cases[case["case_number"]]["tags"] = tags
         if "case_closedDate" in case:
             cases[case["case_number"]]["closeddate"] = case["case_closedDate"]
+    db = scoped_session(SessionLocal)
+    try:
+        for case in cases:
+            pg_case = Case(
+                case_number=case,
+                owner = cases[case]["owner"],
+                severity = cases[case]["severity"][0],
+                account = cases[case]["account"],
+                summary = cases[case]["problem"],
+                status = cases[case]["status"], 
+                created_date = cases[case]["createdate"],
+                last_update = cases[case]["last_update"],
+                description = "testadrien",
+                product = cases[case]["product"],
+                product_version = cases[case]["product_version"],
+                )
+            qry_object = db.query(Case).where((Case.case_number == case) & (Case.created_date == cases[case]["createdate"]))
+            if qry_object.first() is None:
+                db.add(pg_case)
+            else:
+                pg_case = db.merge(pg_case)
+            db.commit()
+            db.refresh(pg_case)
+    finally:
+        db.close()
+        
 
     libtelco5g.redis_set("cases", json.dumps(cases))
 
@@ -166,7 +201,43 @@ def get_cards(cfg, self=None, background=False):
             body = format_comment(comment)
             tstamp = comment.updated
             card_comments.append((body, tstamp))
+            # Checking for the comment on the postgresql database before adding it 
+            db = scoped_session(SessionLocal)
+            try:
+                existing_comment = db.query(JiraComment).filter_by(jira_comment_id=comment.id).first()
+                case_creation_date = datetime.datetime.strptime(
+                        cases[case_number]["createdate"], "%Y-%m-%dT%H:%M:%SZ"
+                    )
+                # Checking if case does exist on the postgresql database
+                
+                existing_case = db.query(Case).filter_by(case_number=case_number, created_date=case_creation_date).first()
+                if (existing_case != None):
+                    last_comment_update = datetime.datetime.strptime(comment.updated, "%Y-%m-%dT%H:%M:%S.%f%z")
 
+                    # Adding the comment to postgresql
+                    jira_comment = JiraComment(
+                        jira_comment_id=comment.id,
+                        case_number = case_number,
+                        created_date = case_creation_date,
+                        last_update_date = last_comment_update,
+                        author=comment.author.key,
+                        body=body,
+                    )
+                    
+                    if existing_comment is None:
+                        db.add(jira_comment)
+                    else:
+                        pg_case = db.merge(jira_comment)
+                        db.commit()
+                        db.refresh(pg_case)
+
+                    db.commit()
+                else:
+                    logging.warning("No able to add the jira comment, case does not exist yet on pgsql: ", case_number)
+            except Exception as e:
+                logging.warn("Issue to store comment into database: ", e)
+            finally:
+                db.close()
         if not case_number or case_number not in cases.keys():
             logging.warning("card isn't associated with a case. discarding (%s)", card)
             continue
