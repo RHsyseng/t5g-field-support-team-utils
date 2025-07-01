@@ -136,9 +136,10 @@ $(document).ready(function () {
         'Severity',
         'On Prio-list?',
         'Product',
-        'Escalated?',
         'Account',
-        'Internal Status'
+        'Internal Status',
+        'Escalated?',
+        'Case Status Closed, but Internal Status not Done'
       ],
       columns: [2, 3, 6, 7, 9],
       initCollapsed: true,
@@ -159,6 +160,18 @@ $(document).ready(function () {
               label: 'Cases on Daily Telco List',
               value: function (rowData) {
                 return rowData[15] === 'True'
+              }
+            }
+          ]
+        },
+        {
+          name: 'Case Status Closed, but Internal Status not Done',
+          header: 'Case Status Closed, but Internal Status not Done',
+          options: [
+            {
+              label: 'Case Status Closed, but Internal Status not Done',
+              value: function (rowData) {
+                return rowData[8] === 'Closed' && rowData[9] !== 'Done'
               }
             }
           ]
