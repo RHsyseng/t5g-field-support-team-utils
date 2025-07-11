@@ -18,7 +18,7 @@ from t5gweb.utils import format_comment, format_date, make_headers
 
 from sqlalchemy.orm import Session, scoped_session
 from t5gweb.db import engine, Base, SessionLocal
-from t5gweb.models import Case, JiraComment
+from t5gweb.models import Case, JiraComment, JiraCard
 from t5gweb.dependencies import get_db
 
 
@@ -194,54 +194,91 @@ def get_cards(cfg, self=None, background=False):
         if not re.match("[0-9]{8}", case_number):
             logging.warning("error parsing case number for (%s)", card)
             continue
-
-        comments = issue.fields.comment.comments
-        card_comments = []
-        for comment in comments:
-            body = format_comment(comment)
-            tstamp = comment.updated
-            card_comments.append((body, tstamp))
-            # Checking for the comment on the postgresql database before adding it 
-            db = scoped_session(SessionLocal)
-            try:
-                existing_comment = db.query(JiraComment).filter_by(jira_comment_id=comment.id).first()
-                case_creation_date = datetime.datetime.strptime(
-                        cases[case_number]["createdate"], "%Y-%m-%dT%H:%M:%SZ"
-                    )
-                # Checking if case does exist on the postgresql database
-                
-                existing_case = db.query(Case).filter_by(case_number=case_number, created_date=case_creation_date).first()
-                if (existing_case != None):
-                    last_comment_update = datetime.datetime.strptime(comment.updated, "%Y-%m-%dT%H:%M:%S.%f%z")
-
-                    # Adding the comment to postgresql
-                    jira_comment = JiraComment(
-                        jira_comment_id=comment.id,
-                        case_number = case_number,
-                        created_date = case_creation_date,
-                        last_update_date = last_comment_update,
-                        author=comment.author.key,
-                        body=body,
-                    )
-                    
-                    if existing_comment is None:
-                        db.add(jira_comment)
-                    else:
-                        pg_case = db.merge(jira_comment)
-                        db.commit()
-                        db.refresh(pg_case)
-
-                    db.commit()
-                else:
-                    logging.warning("No able to add the jira comment, case does not exist yet on pgsql: ", case_number)
-            except Exception as e:
-                logging.warn("Issue to store comment into database: ", e)
-            finally:
-                db.close()
         if not case_number or case_number not in cases.keys():
             logging.warning("card isn't associated with a case. discarding (%s)", card)
             continue
 
+        # Process each card with its own database connection
+        db = scoped_session(SessionLocal)
+        try:
+            # Ensure JiraCard exists or create it
+            jira_card = db.query(JiraCard).filter_by(
+                jira_card_id=issue.key
+            ).first()
+
+            if jira_card is None:
+                # Extract severity as integer from cases data
+                severity_int = None
+                if case_number in cases and "severity" in cases[case_number]:
+                    severity_match = re.search(r"\d+", cases[case_number]["severity"])
+                    if severity_match:
+                        severity_int = int(severity_match.group())
+                
+                # Use the case's creation date for the foreign key relationship
+                case_created_date = parser.parse(cases[case_number]["createdate"])
+                # jira_issue_created_date = parser.parse(issue.fields.created)  # Temporarily disabled
+                
+                jira_card = JiraCard(
+                    jira_card_id=issue.key,
+                    case_number=case_number,
+                    created_date=case_created_date,  # Use case creation date for FK
+                    # jira_created_date=jira_issue_created_date,  # Store Jira issue creation date separately - temporarily disabled
+                    last_update_date=time_now,
+                    summary=issue.fields.summary,
+                    priority=issue.fields.priority.name if issue.fields.priority else None,
+                    status=issue.fields.status.name,
+                    assignee=issue.fields.assignee.key if issue.fields.assignee else None,
+                    sprint=str(issue.fields.customfield_10007[0]) if hasattr(issue.fields, 'customfield_10007') and issue.fields.customfield_10007 else None,
+                    severity=severity_int,
+                )
+                db.add(jira_card)
+                db.commit()
+                db.refresh(jira_card)
+
+            # Process comments in batches to avoid holding transaction too long
+            comments = issue.fields.comment.comments
+            card_comments = []
+            
+            for comment in comments:
+                body = format_comment(comment)
+                tstamp = comment.updated
+                card_comments.append((body, tstamp))
+                
+                # Store comment in PostgreSQL database
+                try:
+                    existing_comment = db.query(JiraComment).filter_by(jira_comment_id=comment.id).first()
+                    
+                    if existing_comment is None:
+                        # Parse the comment timestamp
+                        last_comment_update = parser.parse(comment.updated)
+                        
+                        jira_comment = JiraComment(
+                            jira_comment_id=comment.id,
+                            jira_card_id=issue.key,
+                            author=comment.author.key,
+                            body=body,
+                            last_update_date=last_comment_update,
+                        )
+                        db.add(jira_comment)
+                    else:
+                        # Update existing comment - create a new object and merge it
+                        updated_comment = JiraComment(
+                            jira_comment_id=comment.id,
+                            jira_card_id=issue.key,
+                            author=comment.author.key,
+                            body=body,
+                            last_update_date=parser.parse(comment.updated),
+                        )
+                        db.merge(updated_comment)
+                    
+                    db.commit()
+                except Exception as e:
+                    logging.warning("Issue storing comment into database: %s", e)
+                    db.rollback()
+        
+        finally:
+            # Always close the database connection for this card
+            db.close()
         assignee = {"displayName": None, "key": None, "name": None}
         if issue.fields.assignee:
             assignee = {
@@ -328,7 +365,7 @@ def get_cards(cfg, self=None, background=False):
             "labels": issue.fields.labels,
             "bugzilla": bugzilla,
             "issues": case_issues,
-            "severity": re.search(r"[a-zA-Z]+", cases[case_number]["severity"]).group(),
+            "severity": re.search(r"[a-zA-Z]+", cases[case_number]["severity"]).group() if re.search(r"[a-zA-Z]+", cases[case_number]["severity"]) else "Unknown",
             "priority": issue.fields.priority.name,
             "escalated": escalated,
             "escalated_link": escalated_link,
