@@ -17,7 +17,16 @@ from t5gweb import libtelco5g
 from t5gweb.utils import format_comment, format_date, make_headers
 
 from sqlalchemy.orm import Session, scoped_session
-from t5gweb.postgres_db import engine, Base, SessionLocal, Case, JiraComment, JiraCard, get_db
+from t5gweb.postgres_db import (
+    engine, 
+    Base, 
+    SessionLocal, 
+    Case, 
+    JiraComment, 
+    JiraCard, 
+    get_db,
+    populate_postgres_data
+    )
 
 
 def get_cases(cfg):
@@ -65,35 +74,8 @@ def get_cases(cfg):
             cases[case["case_number"]]["tags"] = tags
         if "case_closedDate" in case:
             cases[case["case_number"]]["closeddate"] = case["case_closedDate"]
-    db = scoped_session(SessionLocal)
-    try:
-        for case in cases:
-            # Parse the creation date to ensure consistent datetime format
-            case_created_date = parser.parse(cases[case]["createdate"])
-
-            pg_case = Case(
-                case_number=case,
-                owner = cases[case]["owner"],
-                severity = cases[case]["severity"][0],
-                account = cases[case]["account"],
-                summary = cases[case]["problem"],
-                status = cases[case]["status"],
-                created_date = case_created_date,  # Use parsed datetime
-                last_update = parser.parse(cases[case]["last_update"]),  # Parse this too
-                description = "testadrien",
-                product = cases[case]["product"],
-                product_version = cases[case]["product_version"],
-                )
-            qry_object = db.query(Case).where((Case.case_number == case) & (Case.created_date == case_created_date))
-            if qry_object.first() is None:
-                db.add(pg_case)
-            else:
-                pg_case = db.merge(pg_case)
-            db.commit()
-            db.refresh(pg_case)
-    finally:
-        db.close()
-
+    
+    populate_postgres_data(cases)
 
     libtelco5g.redis_set("cases", json.dumps(cases))
 

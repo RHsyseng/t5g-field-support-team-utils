@@ -1,9 +1,10 @@
 import os
 from typing import Optional, List
 from datetime import datetime, date
+from dateutil import parser
 # from t5gweb.db import Base
 from sqlalchemy import Integer, String, Date, ForeignKey, ForeignKeyConstraint, Text, DateTime, create_engine
-from sqlalchemy.orm import relationship, Mapped, mapped_column, sessionmaker, DeclarativeBase
+from sqlalchemy.orm import relationship, Mapped, mapped_column, sessionmaker, DeclarativeBase, scoped_session
 
 # Database setup
 
@@ -19,7 +20,39 @@ class Base(DeclarativeBase):
 def create_tables():
     Base.metadata.create_all(bind=engine)
 
-# dependencies.py - Dependency injection
+
+# populate postgres data
+def populate_postgres_data(cases):
+    db = scoped_session(SessionLocal)
+    try:
+        for case in cases:
+            # Parse the creation date to ensure consistent datetime format
+            case_created_date = parser.parse(cases[case]["createdate"])
+
+            pg_case = Case(
+                case_number=case,
+                owner = cases[case]["owner"],
+                severity = cases[case]["severity"][0],
+                account = cases[case]["account"],
+                summary = cases[case]["problem"],
+                status = cases[case]["status"],
+                created_date = case_created_date,  # Use parsed datetime
+                last_update = parser.parse(cases[case]["last_update"]),  # Parse this too
+                description = "testadrien",
+                product = cases[case]["product"],
+                product_version = cases[case]["product_version"],
+                )
+            qry_object = db.query(Case).where((Case.case_number == case) & (Case.created_date == case_created_date))
+            if qry_object.first() is None:
+                db.add(pg_case)
+            else:
+                pg_case = db.merge(pg_case)
+            db.commit()
+            db.refresh(pg_case)
+    finally:
+        db.close()
+
+# Dependency injection
 
 def get_db():
     db = SessionLocal()
