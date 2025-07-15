@@ -1,9 +1,34 @@
-# models.py - Define database models
+import os
 from typing import Optional, List
 from datetime import datetime, date
-from t5gweb.db import Base
-from sqlalchemy import Integer, String, Date, ForeignKey, ForeignKeyConstraint, Text, DateTime
-from sqlalchemy.orm import relationship, Mapped, mapped_column
+# from t5gweb.db import Base
+from sqlalchemy import Integer, String, Date, ForeignKey, ForeignKeyConstraint, Text, DateTime, create_engine
+from sqlalchemy.orm import relationship, Mapped, mapped_column, sessionmaker, DeclarativeBase
+
+# Database setup
+
+DATABASE_URL = os.getenv("DATABASE_URL", "postgresql://postgres:secret@postgresql/dashboard")
+
+engine = create_engine(DATABASE_URL)
+SessionLocal = sessionmaker(autocommit=False, autoflush=False, bind=engine)
+
+class Base(DeclarativeBase):
+    pass
+
+# Create tables - this will be called after models are imported
+def create_tables():
+    Base.metadata.create_all(bind=engine)
+
+# dependencies.py - Dependency injection
+
+def get_db():
+    db = SessionLocal()
+    try:
+        yield db
+    finally:
+        db.close()
+
+# Define database models
 
 class Case(Base):
     __tablename__ = "cases"

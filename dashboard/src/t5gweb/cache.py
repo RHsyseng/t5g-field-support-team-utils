@@ -17,8 +17,7 @@ from t5gweb import libtelco5g
 from t5gweb.utils import format_comment, format_date, make_headers
 
 from sqlalchemy.orm import Session, scoped_session
-from t5gweb.db import engine, Base, SessionLocal
-from t5gweb.models import Case, JiraComment, JiraCard
+from t5gweb.postgres_db import engine, Base, SessionLocal, Case, JiraComment, JiraCard
 from t5gweb.dependencies import get_db
 
 
@@ -72,14 +71,14 @@ def get_cases(cfg):
         for case in cases:
             # Parse the creation date to ensure consistent datetime format
             case_created_date = parser.parse(cases[case]["createdate"])
-            
+
             pg_case = Case(
                 case_number=case,
                 owner = cases[case]["owner"],
                 severity = cases[case]["severity"][0],
                 account = cases[case]["account"],
                 summary = cases[case]["problem"],
-                status = cases[case]["status"], 
+                status = cases[case]["status"],
                 created_date = case_created_date,  # Use parsed datetime
                 last_update = parser.parse(cases[case]["last_update"]),  # Parse this too
                 description = "testadrien",
@@ -95,7 +94,7 @@ def get_cases(cfg):
             db.refresh(pg_case)
     finally:
         db.close()
-        
+
 
     libtelco5g.redis_set("cases", json.dumps(cases))
 
@@ -217,16 +216,16 @@ def get_cards(cfg, self=None, background=False):
                     severity_match = re.search(r"\d+", cases[case_number]["severity"])
                     if severity_match:
                         severity_int = int(severity_match.group())
-                
+
                 # Use the case's creation date for the foreign key relationship
                 case_created_date = parser.parse(cases[case_number]["createdate"])
-                
+
                 # Verify that the corresponding case exists in the database
                 existing_case = db.query(Case).filter_by(
                     case_number=case_number,
                     created_date=case_created_date
                 ).first()
-                
+
                 if existing_case is None:
                     logging.warning("Cannot create JiraCard for %s - corresponding Case not found in database", case_number)
                     # Skip this card - will be handled in finally block
@@ -234,7 +233,7 @@ def get_cards(cfg, self=None, background=False):
                 else:
                     card_processed = True
                     # jira_issue_created_date = parser.parse(issue.fields.created)  # Temporarily disabled
-                    
+
                     jira_card = JiraCard(
                         jira_card_id=issue.key,
                         case_number=case_number,
@@ -259,20 +258,20 @@ def get_cards(cfg, self=None, background=False):
                 # Process comments in batches to avoid holding transaction too long
                 comments = issue.fields.comment.comments
                 card_comments = []
-                
+
                 for comment in comments:
                     body = format_comment(comment)
                     tstamp = comment.updated
                     card_comments.append((body, tstamp))
-                    
+
                     # Store comment in PostgreSQL database
                     try:
                         existing_comment = db.query(JiraComment).filter_by(jira_comment_id=comment.id).first()
-                        
+
                         if existing_comment is None:
                             # Parse the comment timestamp
                             last_comment_update = parser.parse(comment.updated)
-                            
+
                             jira_comment = JiraComment(
                                 jira_comment_id=comment.id,
                                 jira_card_id=issue.key,
@@ -291,16 +290,16 @@ def get_cards(cfg, self=None, background=False):
                                 last_update_date=parser.parse(comment.updated),
                             )
                             db.merge(updated_comment)
-                        
+
                         db.commit()
                     except Exception as e:
                         logging.warning("Issue storing comment into database: %s", e)
                         db.rollback()
-        
+
         finally:
             # Always close the database connection for this card
             db.close()
-        
+
         # Skip to next card if this one couldn't be processed
         if not card_processed:
             continue
