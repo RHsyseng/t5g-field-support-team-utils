@@ -44,6 +44,7 @@ def get_cases(cfg):
     logging.warning("searching the portal for cases")
     start = time.time()
     r = requests.get(url, headers=headers, params=payload)
+    r.raise_for_status()
     cases_json = r.json()["response"]["docs"]
     end = time.time()
     logging.warning("found %s cases in %s seconds", len(cases_json), end - start)
