@@ -17,8 +17,7 @@ from t5gweb import libtelco5g
 from t5gweb.utils import format_comment, format_date, make_headers
 
 from sqlalchemy.orm import Session, scoped_session
-from t5gweb.postgres_db import engine, Base, SessionLocal, Case, JiraComment, JiraCard
-from t5gweb.dependencies import get_db
+from t5gweb.postgres_db import engine, Base, SessionLocal, Case, JiraComment, JiraCard, get_db
 
 
 def get_cases(cfg):
