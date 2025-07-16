@@ -54,7 +54,7 @@ setup(
         "vine==5.1.0",
         "wcwidth==0.2.13",
         "Werkzeug==3.1.3",
-        "sqlalchemy",
+        "sqlalchemy==2.0.39",
         "psycopg2-binary",
     ],
 )
