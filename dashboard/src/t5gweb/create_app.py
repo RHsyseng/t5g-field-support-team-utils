@@ -6,7 +6,7 @@ from flask import Flask
 from prometheus_flask_exporter import PrometheusMetrics
 
 from . import api, t5gweb, ui
-from .postgres_db import create_tables
+from .database import create_postgres_tables
 
 
 def create_app(test_config=None):
@@ -30,7 +30,7 @@ def create_app(test_config=None):
         pass
 
     # Create database tables
-    create_tables()
+    create_postgres_tables()
 
     metrics = PrometheusMetrics(app)
     metrics.info("app_info", "App Info", version="1.230428")

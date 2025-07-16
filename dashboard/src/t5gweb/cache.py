@@ -16,15 +16,15 @@ from jira.exceptions import JIRAError
 from t5gweb import libtelco5g
 from t5gweb.utils import format_comment, format_date, make_headers
 
-from sqlalchemy.orm import Session, scoped_session
-from t5gweb.postgres_db import (
+from sqlalchemy.orm import scoped_session  # Session import removed - unused
+from t5gweb.database import (
     engine, 
-    Base, 
+    # Base, 
     SessionLocal, 
-    Case, 
-    JiraComment, 
-    JiraCard, 
-    get_db,
+    # Case, 
+    # JiraComment, 
+    # JiraCard, 
+    # get_db,
     load_cases_postgres,
     load_jira_cards_postgres
     )
