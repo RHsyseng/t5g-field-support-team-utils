@@ -1,12 +1,14 @@
 """Database session and connection management"""
 
 import os
-from sqlalchemy import create_engine
-from sqlalchemy.orm import sessionmaker, DeclarativeBase
 
+from sqlalchemy import create_engine
+from sqlalchemy.orm import DeclarativeBase, sessionmaker
 
 # Database setup
-DATABASE_URL = os.getenv("DATABASE_URL", "postgresql://postgres:secret@postgresql/dashboard")
+DATABASE_URL = os.getenv(
+    "DATABASE_URL", "postgresql://postgres:secret@postgresql/dashboard"
+)
 
 engine = create_engine(DATABASE_URL)
 SessionLocal = sessionmaker(autocommit=False, autoflush=False, bind=engine)
@@ -27,4 +29,4 @@ def get_db():
     try:
         yield db
     finally:
-        db.close() 
+        db.close()

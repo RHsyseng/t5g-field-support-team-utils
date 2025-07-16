@@ -1,33 +1,27 @@
 """cache.py: caching functions for the t5gweb"""
 
 import datetime
-from dateutil import parser
+
+# from dateutil import parser
 import json
 import logging
 import re
 import time
 import xmlrpc
 
-from sqlalchemy import except_
-
 import bugzilla
 import requests
 from jira.exceptions import JIRAError
 from t5gweb import libtelco5g
-from t5gweb.utils import format_comment, format_date, make_headers
 
-from sqlalchemy.orm import scoped_session  # Session import removed - unused
-from t5gweb.database import (
-    engine, 
-    # Base, 
-    SessionLocal, 
-    # Case, 
-    # JiraComment, 
-    # JiraCard, 
-    # get_db,
+# from sqlalchemy.orm import scoped_session  # Session import removed - unused
+from t5gweb.database import (  # engine,; Base,; SessionLocal,; Case,; JiraComment,; JiraCard,; get_db,
     load_cases_postgres,
-    load_jira_cards_postgres
-    )
+    load_jira_cards_postgres,
+)
+from t5gweb.utils import format_date, make_headers
+
+# from sqlalchemy import except_
 
 
 def get_cases(cfg):
@@ -76,7 +70,7 @@ def get_cases(cfg):
             cases[case["case_number"]]["tags"] = tags
         if "case_closedDate" in case:
             cases[case["case_number"]]["closeddate"] = case["case_closedDate"]
-    
+
     load_cases_postgres(cases)
 
     libtelco5g.redis_set("cases", json.dumps(cases))
@@ -183,7 +177,9 @@ def get_cards(cfg, self=None, background=False):
             logging.warning("card isn't associated with a case. discarding (%s)", card)
             continue
 
-        card_processed, card_comments = load_jira_cards_postgres(cases, case_number, issue)
+        card_processed, card_comments = load_jira_cards_postgres(
+            cases, case_number, issue
+        )
 
         # Skip to next card if this one couldn't be processed
         if not card_processed:
