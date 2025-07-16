@@ -32,11 +32,11 @@ services:
     build: .
     command: bash -c "gunicorn --bind 0.0.0.0:8080 --timeout 1200 wsgi:app --reload"
     env_file:
-      - ../cfg/sample.env
+      - ../cfg/local.env
     ports:
       - 8080:8080
     environment:
-      - FLASK_LOGIN_DISABLED=true  # Disable SSO Login for dev environments
+      - FLASK_LOGIN_DISABLED=true # Disable SSO Login for dev environments
       - FLASK_DEBUG=true
     depends_on:
       redis:
@@ -57,7 +57,7 @@ services:
     image: localhost/dashboard
     command: bash -c "flask init-cache"
     env_file:
-      - ../cfg/sample.env
+      - ../cfg/local.env
     depends_on:
       redis:
         condition: service_healthy
@@ -69,7 +69,7 @@ services:
     image: localhost/dashboard
     command: celery -A t5gweb.taskmgr worker --loglevel=info -E
     env_file:
-      - ../cfg/sample.env
+      - ../cfg/local.env
     depends_on:
       redis:
         condition: service_healthy
@@ -80,7 +80,7 @@ services:
     image: localhost/dashboard
     command: celery -A t5gweb.taskmgr beat -s /tmp/schedule
     env_file:
-      - ../cfg/sample.env
+      - ../cfg/local.env
     depends_on:
       redis:
         condition: service_healthy
@@ -94,7 +94,7 @@ services:
     ports:
       - 8000:8080
     env_file:
-      - ../cfg/sample.env
+      - ../cfg/local.env
     depends_on:
       redis:
         condition: service_healthy
