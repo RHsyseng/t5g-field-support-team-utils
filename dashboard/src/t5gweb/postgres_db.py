@@ -59,6 +59,8 @@ def load_jira_cards_postgres(cases, case_number, issue):
         # Process each card with its own database connection
         db = scoped_session(SessionLocal)
         card_processed = False
+        card_comments = []  # Initialize card_comments for all code paths
+        
         try:
             # Ensure JiraCard exists or create it
             jira_card = db.query(JiraCard).filter_by(
@@ -113,7 +115,6 @@ def load_jira_cards_postgres(cases, case_number, issue):
             if card_processed:
                 # Process comments in batches to avoid holding transaction too long
                 comments = issue.fields.comment.comments
-                card_comments = []
 
                 for comment in comments:
                     body = format_comment(comment)
@@ -155,7 +156,8 @@ def load_jira_cards_postgres(cases, case_number, issue):
         finally:
             # Always close the database connection for this card
             db.close()
-        return card_processed
+        
+        return card_processed, card_comments  # Return both values
 
 # Dependency injection
 

@@ -183,7 +183,7 @@ def get_cards(cfg, self=None, background=False):
             logging.warning("card isn't associated with a case. discarding (%s)", card)
             continue
 
-        card_processed = load_jira_cards_postgres(cases, case_number, issue)
+        card_processed, card_comments = load_jira_cards_postgres(cases, case_number, issue)
 
         # Skip to next card if this one couldn't be processed
         if not card_processed:
@@ -260,6 +260,10 @@ def get_cards(cfg, self=None, background=False):
             relief_at = None
             resolved_at = None
 
+        # Extract severity pattern safely to avoid regex issues
+        severity_match = re.search(r"[a-zA-Z]+", cases[case_number]["severity"])
+        severity_text = severity_match.group() if severity_match else "Unknown"
+
         jira_cards[card.key] = {
             "card_status": libtelco5g.status_map[issue.fields.status.name],
             "card_created": issue.fields.created,
@@ -274,7 +278,7 @@ def get_cards(cfg, self=None, background=False):
             "labels": issue.fields.labels,
             "bugzilla": bugzilla,
             "issues": case_issues,
-            "severity": re.search(r"[a-zA-Z]+", cases[case_number]["severity"]).group() if re.search(r"[a-zA-Z]+", cases[case_number]["severity"]) else "Unknown",
+            "severity": severity_text,
             "priority": issue.fields.priority.name,
             "escalated": escalated,
             "escalated_link": escalated_link,
