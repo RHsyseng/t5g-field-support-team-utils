@@ -29,7 +29,7 @@ Prerequisites:
 
 ### Steps
 
-1. If you are interested in setting up the backend services, fill out `cfg/sample.env`
+1. If you are interested in setting up the backend services, copy `cfg/sample.env` into `cfg/local.env`fill out with your details.
 with any relevant details.
 2. Run `cd dashboard` and `podman-compose up -d`
 
