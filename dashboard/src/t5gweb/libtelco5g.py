@@ -324,9 +324,7 @@ def _process_single_case(case, cases, context, cfg):
     _post_process_card(new_card, case, cases, context, cfg)
 
     # Generate notification content
-    notification = generate_notification_content(
-        cfg, {}, assignee, new_card, case, cases
-    )[new_card.key]
+    notification = generate_notification_content(cfg, assignee, new_card, case, cases)
 
     # Build card data for return
     card_data = _build_card_data(new_card, case, cases, cfg, assignee)
@@ -511,14 +509,11 @@ def _build_card_data(new_card, case, cases, cfg, assignee):
     }
 
 
-def generate_notification_content(
-    cfg, notification_content, assignee, new_card, case, cases
-):
+def generate_notification_content(cfg, assignee, new_card, case, cases):
     """Generate notification message for email's and Slack
 
     Args:
         cfg (dict): Pre-configured settings
-        notification_content (dict): All pending notifications
         assignee (dict): Information about the card's assignee
         new_card (str): Name of created JIRA card
         case (str): ID of relevant case
@@ -531,8 +526,8 @@ def generate_notification_content(
         assignee_section = f"It is initially being tracked by {assignee['name']}."
     else:
         assignee_section = "It is not assigned to anyone."
-    notification_content[new_card] = {}
-    notification_content[new_card]["body"] = (
+    notification_content = {}
+    notification_content["body"] = (
         f"A JIRA issue ({cfg['server']}/browse/{new_card}) has been created"
         f" for a new case:\n"
         f"Case #: {case} (https://access.redhat.com/support/cases/{case})\n"
@@ -541,15 +536,13 @@ def generate_notification_content(
         f"Severity: {cases[case]['severity']}\n"
         f"{assignee_section}\n"
     )
-    notification_content[new_card]["severity"] = cases[case]["severity"]
-    notification_content[new_card][
-        "description"
-    ] = f"Description: {cases[case]['description']}\n"
-    notification_content[new_card]["assignee"] = assignee["name"] if assignee else None
-    notification_content[new_card]["full_message"] = (
-        notification_content[new_card]["body"]
+    notification_content["severity"] = cases[case]["severity"]
+    notification_content["description"] = f"Description: {cases[case]['description']}\n"
+    notification_content["assignee"] = assignee["name"] if assignee else None
+    notification_content["full_message"] = (
+        notification_content["body"]
         + "\n"
-        + notification_content[new_card]["description"]
+        + notification_content["description"]
         + "\n===========================================\n\n"
     )
     return notification_content
