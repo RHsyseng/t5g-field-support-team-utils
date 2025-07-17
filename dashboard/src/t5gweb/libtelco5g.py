@@ -213,7 +213,6 @@ def add_watcher_to_case(cfg, case, username, token):
     :return: True if the user was successfully added as a watcher, False otherwise.
     """
 
-
     logging.warning(f"Adding watcher {username} to case {case}")
     # Add the new watcher to the list of notified users
     payload = {"user": [{"ssoUsername": username}]}
