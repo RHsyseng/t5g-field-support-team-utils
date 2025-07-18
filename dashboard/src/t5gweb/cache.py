@@ -1,17 +1,33 @@
 """cache.py: caching functions for the t5gweb"""
 
 import datetime
+from dateutil import parser
 import json
 import logging
 import re
 import time
 import xmlrpc
 
+from sqlalchemy import except_
+
 import bugzilla
 import requests
 from jira.exceptions import JIRAError
 from t5gweb import libtelco5g
 from t5gweb.utils import format_comment, format_date, make_headers
+
+from sqlalchemy.orm import scoped_session  # Session import removed - unused
+from t5gweb.database import (
+    engine, 
+    # Base, 
+    SessionLocal, 
+    # Case, 
+    # JiraComment, 
+    # JiraCard, 
+    # get_db,
+    load_cases_postgres,
+    load_jira_cards_postgres
+    )
 
 
 def get_cases(cfg):
@@ -29,6 +45,7 @@ def get_cases(cfg):
     logging.warning("searching the portal for cases")
     start = time.time()
     r = requests.get(url, headers=headers, params=payload)
+    r.raise_for_status()
     cases_json = r.json()["response"]["docs"]
     end = time.time()
     logging.warning("found %s cases in %s seconds", len(cases_json), end - start)
@@ -44,6 +61,7 @@ def get_cases(cfg):
             "last_update": case["case_lastModifiedDate"],
             "description": case["case_description"],
             "product": case["case_product"][0] + " " + case["case_version"],
+            "product_version": case["case_version"],
         }
         # Sometimes there is no BZ attached to the case
         if "case_bugzillaNumber" in case:
@@ -58,6 +76,8 @@ def get_cases(cfg):
             cases[case["case_number"]]["tags"] = tags
         if "case_closedDate" in case:
             cases[case["case_number"]]["closeddate"] = case["case_closedDate"]
+    
+    load_cases_postgres(cases)
 
     libtelco5g.redis_set("cases", json.dumps(cases))
 
@@ -159,18 +179,15 @@ def get_cards(cfg, self=None, background=False):
         if not re.match("[0-9]{8}", case_number):
             logging.warning("error parsing case number for (%s)", card)
             continue
-
-        comments = issue.fields.comment.comments
-        card_comments = []
-        for comment in comments:
-            body = format_comment(comment)
-            tstamp = comment.updated
-            card_comments.append((body, tstamp))
-
         if not case_number or case_number not in cases.keys():
             logging.warning("card isn't associated with a case. discarding (%s)", card)
             continue
 
+        card_processed, card_comments = load_jira_cards_postgres(cases, case_number, issue)
+
+        # Skip to next card if this one couldn't be processed
+        if not card_processed:
+            continue
         assignee = {"displayName": None, "key": None, "name": None}
         if issue.fields.assignee:
             assignee = {
@@ -243,6 +260,10 @@ def get_cards(cfg, self=None, background=False):
             relief_at = None
             resolved_at = None
 
+        # Extract severity pattern safely to avoid regex issues
+        severity_match = re.search(r"[a-zA-Z]+", cases[case_number]["severity"])
+        severity_text = severity_match.group() if severity_match else "Unknown"
+
         jira_cards[card.key] = {
             "card_status": libtelco5g.status_map[issue.fields.status.name],
             "card_created": issue.fields.created,
@@ -257,7 +278,7 @@ def get_cards(cfg, self=None, background=False):
             "labels": issue.fields.labels,
             "bugzilla": bugzilla,
             "issues": case_issues,
-            "severity": re.search(r"[a-zA-Z]+", cases[case_number]["severity"]).group(),
+            "severity": severity_text,
             "priority": issue.fields.priority.name,
             "escalated": escalated,
             "escalated_link": escalated_link,

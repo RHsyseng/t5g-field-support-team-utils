@@ -3,3 +3,4 @@ requests==2.24.0
 slack_sdk==3.7.0
 # Optional, for generate_fake_data.py
 # Faker
+sqlalchemy==2.0.39
