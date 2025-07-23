@@ -76,7 +76,11 @@ class JiraCard(Base):
     )  # This should match Case.created_date for FK
 
     # Updated to include the missing fields from cache.py
-    # jira_created_date: Mapped[Optional[datetime]] = mapped_column(DateTime, nullable=True)  # Separate field for Jira issue creation date - temporarily disabled
+    # Separate field for Jira issue creation date - temporarily disabled
+    # jira_created_date: Mapped[Optional[datetime]] = mapped_column(
+    #   DateTime, nullable=True
+    # )
+
     last_update_date: Mapped[Optional[datetime]] = mapped_column(
         DateTime, nullable=True
     )

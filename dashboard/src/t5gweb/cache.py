@@ -15,7 +15,7 @@ from jira.exceptions import JIRAError
 from t5gweb import libtelco5g
 
 # from sqlalchemy.orm import scoped_session  # Session import removed - unused
-from t5gweb.database import (  # engine,; Base,; SessionLocal,; Case,; JiraComment,; JiraCard,; get_db,
+from t5gweb.database import (
     load_cases_postgres,
     load_jira_cards_postgres,
 )

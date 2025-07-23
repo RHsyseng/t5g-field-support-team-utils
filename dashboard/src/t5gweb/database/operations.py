@@ -77,20 +77,24 @@ def load_jira_cards_postgres(cases, case_number, issue):
 
             if existing_case is None:
                 logging.warning(
-                    "Cannot create JiraCard for %s - corresponding Case not found in database",
+                    "Cannot create JiraCard for %s - "
+                    "corresponding case not found in database",
                     case_number,
                 )
                 # Skip this card - will be handled in finally block
                 card_processed = False
             else:
                 card_processed = True
-                # jira_issue_created_date = parser.parse(issue.fields.created)  # Temporarily disabled
+                # Temporarily disabled
+                # jira_issue_created_date = parser.parse(issue.fields.created)
                 time_now = datetime.now(timezone.utc)
                 jira_card = JiraCard(
                     jira_card_id=issue.key,
                     case_number=case_number,
-                    created_date=case_created_date,  # Use case creation date for FK
-                    # jira_created_date=jira_issue_created_date,  # Store Jira issue creation date separately - temporarily disabled
+                    # Use case creation date for FK
+                    created_date=case_created_date,
+                    # Store Jira issue creation date separately - temporarily disabled
+                    # jira_created_date=jira_issue_created_date,
                     last_update_date=time_now,
                     summary=issue.fields.summary,
                     priority=(

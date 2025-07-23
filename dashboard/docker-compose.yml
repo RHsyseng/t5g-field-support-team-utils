@@ -24,8 +24,8 @@ services:
       timeout: 5s
       retries: 5
     ports:
-     - "5432:5432"
-  
+      - "5432:5432"
+
   ### Frontend
   dashboard-ui:
     image: localhost/dashboard
