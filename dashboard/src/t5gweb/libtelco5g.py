@@ -213,6 +213,7 @@ def add_watcher_to_case(cfg, case, username, token):
     :return: True if the user was successfully added as a watcher, False otherwise.
     """
 
+    logging.warning(f"Adding watcher {username} to case {case}")
     # Add the new watcher to the list of notified users
     payload = {"user": [{"ssoUsername": username}]}
 
@@ -240,201 +241,279 @@ def create_cards(cfg, new_cases, action="none"):
     cases  - dictionary of all cases
     needed - list of cases that need a card created
     """
+    if action != "create":
+        return {}, {}, []
 
+    # Setup connections and get prerequisites
+    context = _setup_card_creation_context(cfg)
+    cases = redis_get("cases")
+
+    # Filter cases that need cards
+    novel_cases = _filter_novel_cases(new_cases, context["created_cases"])
+
+    # Process each case
     new_cards = {}
     notification_content = {}
 
-    logging.warning("attempting to connect to jira...")
-    jira_conn = jira_connection(cfg)
-    board = get_board_id(jira_conn, cfg["board"])
-
-    # Obtain the authentication token for RedHat Api
-    token = get_token(cfg["offline_token"])
-
-    if cfg["sprintname"] and cfg["sprintname"] != "":
-        sprint = get_latest_sprint(jira_conn, board.id, cfg["sprintname"])
-    else:
-        raise ValueError("No sprintname is defined.")
-    created_cards = get_issues_in_sprint(cfg, sprint, jira_conn)
-
-    # Parse case numbers from JIRA titles
-    created_cases = [card["fields"]["summary"].split(":")[0] for card in created_cards]
-
-    cases = redis_get("cases")
-    novel_cases = []
-    for case in new_cases:
-        if case in created_cases:
-            logging.warning(f"Card already exists for {case}, moving on.")
-            continue
-        else:
-            novel_cases.append(case)
-        assignee = None
-        case_creation_date = datetime.datetime.strptime(
-            cases[case]["createdate"], "%Y-%m-%dT%H:%M:%SZ"
-        )
-        date_now = datetime.datetime.now(datetime.timezone.utc).replace(tzinfo=None)
-        if case_creation_date < date_now - datetime.timedelta(days=15):
-            logging.warning(
-                (
-                    "Case creation date more than 15 days ago,"
-                    "checking if it has previous owner of a jira card"
-                )
-            )
-            previous_issue = get_previous_card(jira_conn, cfg, case)
-            if previous_issue is not None:
-                # Prepare the bulk edit payload
-                logging.warning(
-                    f"Updating : {previous_issue.key} rather than creating a new card."
-                )
-                jira_conn.add_issues_to_sprint(sprint.id, [previous_issue.key])
-                jira_conn.transition_issue(previous_issue, "11")
-                jira_conn.add_comment(
-                    previous_issue,
-                    (
-                        f"Case {case} seems to have been reopened. The dashboard found"
-                        "this card linked to the case and reopened it automatically."
-                    ),
-                )
-                continue
-        if cfg["team"]:
-            for member in cfg["team"]:
-                for account in member["accounts"]:
-                    if account.lower() in cases[case]["account"].lower():
-                        assignee = member
-            if assignee is None:
-                last_choice = redis_get("last_choice")
-                assignee = get_random_member(cfg["team"], last_choice)
-                redis_set("last_choice", json.dumps(assignee))
-            assignee["displayName"] = assignee["name"]
-
-            # Check if the user wants to be notified
-            notifieduser = assignee.get("notifieduser", "true")
-            # Add the user as a watcher only if they want to be notified
-            if notifieduser == "true" and case:
-                logging.warning(
-                    f"Adding watcher {assignee['jira_user']} to case {case}"
-                )
-                add_watcher_to_case(cfg, case, assignee["jira_user"], token)
-            else:
-                logging.warning(
-                    f"Not adding watcher {assignee['jira_user']} to case {case}"
-                )
-
-        priority = portal2jira_sevs[cases[case]["severity"]]
-        full_description = (
-            "This card was automatically created from the Case Dashboard Sync Job.\r\n"
-            + "\r\n"
-            + "This card was created because it had a severity of "
-            + cases[case]["severity"]
-            + "\r\nThe account for the case is "
-            + cases[case]["account"]
-            + "\r\nThe case had an internal status of: "
-            + cases[case]["status"]
-            + "\r\n\r\n*Description:* \r\n\r\n"
-            + cases[case]["description"]
-            + "\r\n"
-        )
-        summary = case + ": " + cases[case]["problem"]
-        card_info = {
-            "project": {"key": cfg["project"]},
-            "issuetype": {"name": cfg["type"]},
-            "components": [{"name": cfg["component"]}],
-            "priority": {"name": priority},
-            "labels": cfg["labels"],
-            "summary": summary[:253] + ".." if len(summary) > 253 else summary,
-            "description": (
-                full_description[:253] + ".."
-                if len(full_description) > 253
-                else full_description
-            ),
-        }
-
-        if assignee:
-            card_info["assignee"] = {"name": assignee["jira_user"]}
-
-        logging.warning("A card needs created for case {}".format(case))
-        logging.warning(card_info)
-        if action == "create":
-            logging.warning("creating card for case {}".format(case))
-            new_card = jira_conn.create_issue(fields=card_info)
-            # Updating the card with the Release_Note_Text field.
-            new_card.update(fields={"customfield_12317313": "TRACK"})
-            logging.warning("created {}".format(new_card.key))
-            notification_content = generate_notification_content(
-                cfg, notification_content, assignee, new_card, case, cases
-            )
-
-            # Add newly create card to the sprint
-            if cfg["sprintname"] and cfg["sprintname"] != "":
-                logging.warning("moving card to sprint {}".format(sprint.id))
-                jira_conn.add_issues_to_sprint(sprint.id, [new_card.key])
-
-            # Move the card from backlog to the To Do column
-            if (
-                new_card.fields.status.name != "New"
-                and new_card.fields.status.name != "To Do"
-            ):
-                logging.warning(new_card.fields.status)
-                logging.warning('moving card from backlog to "To Do" column')
-                jira_conn.transition_issue(new_card.key, "To Do")
-
-            # Add links to case, etc
-            logging.warning("adding link to support case {}".format(case))
-            jira_conn.add_simple_link(
-                new_card.key,
-                {
-                    "url": "https://access.redhat.com/support/cases/" + case,
-                    "title": "Support Case",
-                },
-            )
-
-            bz = []
-            if "bug" in cases[case]:
-                bz = cases[case]["bug"]
-                logging.warning("adding link to BZ {}".format(cases[case]["bug"]))
-                jira_conn.add_simple_link(
-                    new_card.key,
-                    {
-                        "url": "https://bugzilla.redhat.com/show_bug.cgi?id="
-                        + cases[case]["bug"],
-                        "title": "BZ " + cases[case]["bug"],
-                    },
-                )
-
-            tags = []
-            if "tags" in cases[case]:
-                cases[case]["tags"]
-
-            new_cards[new_card.key] = {
-                "card_status": status_map[new_card.fields.status.name],
-                "card_created": new_card.fields.created,
-                "account": cases[case]["account"],
-                "summary": case + ": " + cases[case]["problem"],
-                "description": cases[case]["description"],
-                "comments": None,
-                "assignee": assignee,
-                "case_number": case,
-                "tags": tags,
-                "labels": cfg["labels"],
-                "bugzilla": bz,
-                "severity": re.search(r"[a-zA-Z]+", cases[case]["severity"]).group(),
-                "priority": new_card.fields.priority.name,
-                "case_status": cases[case]["status"],
-                "escalated": False,
-                "crit_sit": False,
-            }
+    for case in novel_cases:
+        result = _process_single_case(case, cases, context, cfg)
+        if result:
+            new_cards[result["card_key"]] = result["card_data"]
+            notification_content[result["card_key"]] = result["notification"]
 
     return notification_content, new_cards, novel_cases
 
 
-def generate_notification_content(
-    cfg, notification_content, assignee, new_card, case, cases
-):
+def _setup_card_creation_context(cfg):
+    """Setup all connections and get required data for card creation"""
+    """Generated by: Cursor"""
+    logging.warning("Setting up card creation context...")
+
+    jira_conn = jira_connection(cfg)
+    board = get_board_id(jira_conn, cfg["board"])
+    token = get_token(cfg["offline_token"])
+
+    if not cfg["sprintname"]:
+        raise ValueError("No sprintname is defined.")
+
+    sprint = get_latest_sprint(jira_conn, board.id, cfg["sprintname"])
+    created_cards = get_issues_in_sprint(cfg, sprint, jira_conn)
+    created_cases = [card["fields"]["summary"].split(":")[0] for card in created_cards]
+
+    return {
+        "jira_conn": jira_conn,
+        "board": board,
+        "token": token,
+        "sprint": sprint,
+        "created_cases": created_cases,
+    }
+
+
+def _filter_novel_cases(new_cases, created_cases):
+    """Filter out cases that already have cards"""
+    """Generated by: Cursor"""
+    novel_cases = []
+    for case in new_cases:
+        if case in created_cases:
+            logging.warning(f"Card already exists for {case}, moving on.")
+        else:
+            novel_cases.append(case)
+    return novel_cases
+
+
+def _process_single_case(case, cases, context, cfg):
+    """Process a single case and create its JIRA card"""
+    """Generated by: Cursor"""
+    # Handle old cases with potential previous cards
+    if _is_old_case(cases[case]):
+        if _handle_old_case(case, context, cfg):
+            return None  # Case was handled by reopening existing card
+
+    # Determine assignee
+    assignee = _determine_assignee(case, cases, cfg)
+
+    # Add watcher if needed
+    if assignee and assignee.get("notifieduser", "true") == "true":
+        add_watcher_to_case(cfg, case, assignee["jira_user"], context["token"])
+
+    # Create the card
+    card_info = _build_card_info(case, cases, cfg, assignee)
+    new_card = _create_jira_card(card_info, context["jira_conn"])
+
+    # Post-process the card
+    _post_process_card(new_card, case, cases, context, cfg)
+
+    # Generate notification content
+    notification = generate_notification_content(cfg, assignee, new_card, case, cases)
+
+    # Build card data for return
+    card_data = _build_card_data(new_card, case, cases, cfg, assignee)
+
+    return {
+        "card_key": new_card.key,
+        "card_data": card_data,
+        "notification": notification,
+    }
+
+
+def _is_old_case(case_data):
+    """Check if case is older than 15 days"""
+    """Generated by: Cursor"""
+    case_creation_date = datetime.datetime.strptime(
+        case_data["createdate"], "%Y-%m-%dT%H:%M:%SZ"
+    )
+    date_now = datetime.datetime.now(datetime.timezone.utc).replace(tzinfo=None)
+    return case_creation_date < date_now - datetime.timedelta(days=15)
+
+
+def _handle_old_case(case, context, cfg):
+    """Handle old cases by checking for and reopening previous cards"""
+    """Generated by: Cursor"""
+    previous_issue = get_previous_card(context["jira_conn"], cfg, case)
+    if previous_issue:
+        logging.warning(
+            f"Updating: {previous_issue.key} rather than creating new card."
+        )
+        context["jira_conn"].add_issues_to_sprint(
+            context["sprint"].id, [previous_issue.key]
+        )
+        context["jira_conn"].transition_issue(previous_issue, "11")
+        context["jira_conn"].add_comment(
+            previous_issue,
+            f"Case {case} seems to have been reopened. The dashboard found "
+            "this card linked to the case and reopened it automatically.",
+        )
+        return True
+    return False
+
+
+def _determine_assignee(case, cases, cfg):
+    """Determine who should be assigned to the case"""
+    """Generated by: Cursor"""
+    if not cfg["team"]:
+        return None
+
+    # Try to match by account
+    for member in cfg["team"]:
+        for account in member["accounts"]:
+            if account.lower() in cases[case]["account"].lower():
+                member["displayName"] = member["name"]
+                return member
+
+    # No match found, assign randomly
+    last_choice = redis_get("last_choice")
+    assignee = get_random_member(cfg["team"], last_choice)
+    redis_set("last_choice", json.dumps(assignee))
+    assignee["displayName"] = assignee["name"]
+    return assignee
+
+
+def _build_card_info(case, cases, cfg, assignee):
+    """Build the card info dictionary for JIRA card creation"""
+    """Generated by: Cursor"""
+    priority = portal2jira_sevs[cases[case]["severity"]]
+
+    severity = cases[case]["severity"]
+    account = cases[case]["account"]
+    status = cases[case]["status"]
+    description = cases[case]["description"]
+
+    full_description = (
+        "This card was automatically created from the Case Dashboard Sync Job.\r\n"
+        "\r\n"
+        f"This card was created because it had a severity of {severity}\r\n"
+        f"The account for the case is {account}\r\n"
+        f"The case had an internal status of: {status}\r\n"
+        "\r\n*Description:* \r\n\r\n"
+        f"{description}\r\n"
+    )
+
+    summary = f"{case}: {cases[case]['problem']}"
+
+    card_info = {
+        "project": {"key": cfg["project"]},
+        "issuetype": {"name": cfg["type"]},
+        "components": [{"name": cfg["component"]}],
+        "priority": {"name": priority},
+        "labels": cfg["labels"],
+        "summary": summary[:253] + ".." if len(summary) > 253 else summary,
+        "description": (
+            full_description[:253] + ".."
+            if len(full_description) > 253
+            else full_description
+        ),
+    }
+
+    if assignee:
+        card_info["assignee"] = {"name": assignee["jira_user"]}
+
+    return card_info
+
+
+def _create_jira_card(card_info, jira_conn):
+    """Create the JIRA card"""
+    """Generated by: Cursor"""
+    logging.warning(f"Creating card for case {card_info['summary'].split(':')[0]}")
+    new_card = jira_conn.create_issue(fields=card_info)
+    new_card.update(fields={"customfield_12317313": "TRACK"})
+    logging.warning(f"Created {new_card.key}")
+    return new_card
+
+
+def _post_process_card(new_card, case, cases, context, cfg):
+    """Handle post-creation card processing: sprint, status, links"""
+    """Generated by: Cursor"""
+    # Add to sprint
+    if cfg["sprintname"]:
+        logging.warning(f"Moving card to sprint {context['sprint'].id}")
+        context["jira_conn"].add_issues_to_sprint(context["sprint"].id, [new_card.key])
+
+    # Update status
+    if new_card.fields.status.name not in ["New", "To Do"]:
+        logging.warning('Moving card from backlog to "To Do" column')
+        context["jira_conn"].transition_issue(new_card.key, "To Do")
+
+    # Add links
+    _add_card_links(new_card, case, cases, context["jira_conn"])
+
+
+def _add_card_links(new_card, case, cases, jira_conn):
+    """Add support case and bugzilla links to the card"""
+    """Generated by: Cursor"""
+    # Support case link
+    logging.warning(f"Adding link to support case {case}")
+    jira_conn.add_simple_link(
+        new_card.key,
+        {
+            "url": f"https://access.redhat.com/support/cases/{case}",
+            "title": "Support Case",
+        },
+    )
+
+    # Bugzilla link if exists
+    if "bug" in cases[case]:
+        bug_id = cases[case]["bug"]
+        logging.warning(f"Adding link to BZ {bug_id}")
+        jira_conn.add_simple_link(
+            new_card.key,
+            {
+                "url": f"https://bugzilla.redhat.com/show_bug.cgi?id={bug_id}",
+                "title": f"BZ {bug_id}",
+            },
+        )
+
+
+def _build_card_data(new_card, case, cases, cfg, assignee):
+    """Build the card data dictionary for return"""
+    """Generated by: Cursor"""
+    tags = cases[case].get("tags", [])
+    bz = cases[case].get("bug", [])
+
+    return {
+        "card_status": status_map[new_card.fields.status.name],
+        "card_created": new_card.fields.created,
+        "account": cases[case]["account"],
+        "summary": f"{case}: {cases[case]['problem']}",
+        "description": cases[case]["description"],
+        "comments": None,
+        "assignee": assignee,
+        "case_number": case,
+        "tags": tags,
+        "labels": cfg["labels"],
+        "bugzilla": bz,
+        "severity": re.search(r"[a-zA-Z]+", cases[case]["severity"]).group(),
+        "priority": new_card.fields.priority.name,
+        "case_status": cases[case]["status"],
+        "escalated": False,
+        "crit_sit": False,
+    }
+
+
+def generate_notification_content(cfg, assignee, new_card, case, cases):
     """Generate notification message for email's and Slack
 
     Args:
         cfg (dict): Pre-configured settings
-        notification_content (dict): All pending notifications
         assignee (dict): Information about the card's assignee
         new_card (str): Name of created JIRA card
         case (str): ID of relevant case
@@ -447,8 +526,8 @@ def generate_notification_content(
         assignee_section = f"It is initially being tracked by {assignee['name']}."
     else:
         assignee_section = "It is not assigned to anyone."
-    notification_content[new_card] = {}
-    notification_content[new_card]["body"] = (
+    notification_content = {}
+    notification_content["body"] = (
         f"A JIRA issue ({cfg['server']}/browse/{new_card}) has been created"
         f" for a new case:\n"
         f"Case #: {case} (https://access.redhat.com/support/cases/{case})\n"
@@ -457,15 +536,13 @@ def generate_notification_content(
         f"Severity: {cases[case]['severity']}\n"
         f"{assignee_section}\n"
     )
-    notification_content[new_card]["severity"] = cases[case]["severity"]
-    notification_content[new_card][
-        "description"
-    ] = f"Description: {cases[case]['description']}\n"
-    notification_content[new_card]["assignee"] = assignee["name"] if assignee else None
-    notification_content[new_card]["full_message"] = (
-        notification_content[new_card]["body"]
+    notification_content["severity"] = cases[case]["severity"]
+    notification_content["description"] = f"Description: {cases[case]['description']}\n"
+    notification_content["assignee"] = assignee["name"] if assignee else None
+    notification_content["full_message"] = (
+        notification_content["body"]
         + "\n"
-        + notification_content[new_card]["description"]
+        + notification_content["description"]
         + "\n===========================================\n\n"
     )
     return notification_content
