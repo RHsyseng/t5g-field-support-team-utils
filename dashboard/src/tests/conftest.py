@@ -2,12 +2,14 @@
 Shared pytest configuration and fixtures for t5gweb tests
 """
 
-import pytest
 import json
 import os
-from datetime import datetime, timezone
+
+import pytest
+
+# from datetime import datetime, timezone
 from sqlalchemy import create_engine
-from sqlalchemy.orm import sessionmaker, scoped_session
+from sqlalchemy.orm import scoped_session, sessionmaker
 
 from t5gweb.database import Base
 
@@ -16,13 +18,10 @@ from t5gweb.database import Base
 def fake_data():
     """Load fake data from JSON file once per test session"""
     fake_data_path = os.path.join(
-        os.path.dirname(__file__), 
-        "..", 
-        "data", 
-        "fake_data.json"
+        os.path.dirname(__file__), "..", "data", "fake_data.json"
     )
-    
-    with open(fake_data_path, 'r') as f:
+
+    with open(fake_data_path, "r") as f:
         return json.load(f)
 
 
@@ -30,9 +29,9 @@ def fake_data():
 def test_db_engine():
     """Create a test database engine using SQLite in-memory database"""
     engine = create_engine(
-        "sqlite:///:memory:", 
+        "sqlite:///:memory:",
         echo=False,  # Set to True for SQL debugging
-        pool_pre_ping=True
+        pool_pre_ping=True,
     )
     Base.metadata.create_all(engine)
     return engine
@@ -42,14 +41,12 @@ def test_db_engine():
 def test_db_session(test_db_engine):
     """Create a test database session"""
     TestSessionLocal = sessionmaker(
-        autocommit=False, 
-        autoflush=False, 
-        bind=test_db_engine
+        autocommit=False, autoflush=False, bind=test_db_engine
     )
     session = scoped_session(TestSessionLocal)
-    
+
     yield session
-    
+
     # Cleanup
     session.close()
 
@@ -68,7 +65,7 @@ def sample_case_data():
             "last_update": "2024-01-01T12:00:00Z",
             "description": "Test case description",
             "product": "Test Product 1.0",
-            "product_version": "1.0"
+            "product_version": "1.0",
         }
     }
 
@@ -88,7 +85,7 @@ def sample_case_with_bug():
             "description": "Bug case description",
             "product": "Bug Product 2.0",
             "product_version": "2.0",
-            "bug": "1234567"
+            "bug": "1234567",
         }
     }
 
@@ -96,15 +93,7 @@ def sample_case_with_bug():
 # Test markers for different test categories
 def pytest_configure(config):
     """Configure custom pytest markers"""
-    config.addinivalue_line(
-        "markers", "unit: mark test as a unit test"
-    )
-    config.addinivalue_line(
-        "markers", "integration: mark test as an integration test"
-    )
-    config.addinivalue_line(
-        "markers", "performance: mark test as a performance test"
-    )
-    config.addinivalue_line(
-        "markers", "database: mark test as requiring database"
-    ) 
+    config.addinivalue_line("markers", "unit: mark test as a unit test")
+    config.addinivalue_line("markers", "integration: mark test as an integration test")
+    config.addinivalue_line("markers", "performance: mark test as a performance test")
+    config.addinivalue_line("markers", "database: mark test as requiring database")
