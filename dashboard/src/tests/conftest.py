@@ -6,8 +6,6 @@ import json
 import os
 
 import pytest
-
-# from datetime import datetime, timezone
 from sqlalchemy import create_engine
 from sqlalchemy.orm import scoped_session, sessionmaker
 
