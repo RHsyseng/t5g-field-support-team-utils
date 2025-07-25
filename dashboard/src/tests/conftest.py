@@ -4,10 +4,12 @@ Shared pytest configuration and fixtures for t5gweb tests
 
 import json
 import os
+
 import pytest
 from sqlalchemy import create_engine
 from sqlalchemy.orm import scoped_session, sessionmaker
 from t5gweb.database import Base
+
 
 @pytest.fixture(scope="session")
 def fake_data():
