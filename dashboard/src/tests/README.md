@@ -145,7 +145,7 @@ The tests cover:
 
 When running the full test suite, you should see:
 
-```
+```shell
 ========================= test session starts =========================
 collected 18 items
 
