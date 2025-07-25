@@ -7,7 +7,7 @@ This directory contains comprehensive tests for the `t5gweb.database` module, in
 ### Test Files
 
 - **`test_database.py`** - Comprehensive database module tests
-- **`test_libtelco5g.py`** - Existing libtelco5g utility tests  
+- **`test_libtelco5g.py`** - Existing libtelco5g utility tests
 - **`test_utils.py`** - Existing utility function tests
 - **`conftest.py`** - Shared pytest fixtures and configuration
 - **`pytest.ini`** - Pytest configuration settings
@@ -17,7 +17,7 @@ This directory contains comprehensive tests for the `t5gweb.database` module, in
 The tests are organized into several categories:
 
 1. **TestDatabaseModels** - Test SQLAlchemy model creation and relationships
-2. **TestDatabaseOperations** - Test database operation functions 
+2. **TestDatabaseOperations** - Test database operation functions
 3. **TestDataIntegrity** - Test data consistency and constraint enforcement
 4. **TestDataValidation** - Test data parsing and validation logic
 5. **TestPerformanceAndScaling** - Test performance characteristics
@@ -27,8 +27,8 @@ The tests are organized into several categories:
 Tests use realistic data from `src/data/fake_data.json` which contains:
 
 - **cases** - Support case data with various statuses and severities
-- **cards** - JIRA card data with relationships to cases
-- **issues** - JIRA issue data linked to cases
+- **cards** - Jira card data with relationships to cases
+- **issues** - Jira issue data linked to cases
 - **bugs** - Bugzilla data associated with cases
 
 ## Database Testing Approach
@@ -43,7 +43,7 @@ Tests use an in-memory SQLite database for:
 
 ### Mock Objects
 
-Tests use mocked JIRA objects to simulate API responses without external dependencies.
+Tests use mocked Jira objects to simulate API responses without external dependencies.
 
 ## Setup and Installation
 
@@ -81,7 +81,7 @@ pytest -m database
 # Unit tests only
 pytest -m unit
 
-# Integration tests only  
+# Integration tests only
 pytest -m integration
 
 # Performance tests only
@@ -126,7 +126,7 @@ The tests cover:
 
 ### Operation Testing
 - ✅ `load_cases_postgres()` with real fake data
-- ✅ `load_jira_cards_postgres()` with mock JIRA issues
+- ✅ `load_jira_cards_postgres()` with mock Jira issues
 - ✅ `load_jira_cards_postgres_optimized()` performance version
 - ✅ Duplicate handling and data merging
 
@@ -150,7 +150,7 @@ When running the full test suite, you should see:
 collected 18 items
 
 tests/test_database.py::TestDatabaseModels::test_case_model_creation PASSED
-tests/test_database.py::TestDatabaseModels::test_jira_card_model_creation PASSED  
+tests/test_database.py::TestDatabaseModels::test_jira_card_model_creation PASSED
 tests/test_database.py::TestDatabaseModels::test_jira_comment_model_creation PASSED
 tests/test_database.py::TestDatabaseOperations::test_load_cases_postgres_with_fake_data PASSED
 tests/test_database.py::TestDatabaseOperations::test_load_jira_cards_postgres_with_mock_issue PASSED
@@ -159,7 +159,7 @@ tests/test_database.py::TestDataIntegrity::test_duplicate_case_handling PASSED
 tests/test_database.py::TestDataIntegrity::test_foreign_key_constraints PASSED
 tests/test_database.py::TestDataIntegrity::test_load_cases_with_missing_fields PASSED
 tests/test_database.py::TestDataValidation::test_severity_parsing PASSED
-tests/test_database.py::TestDataValidation::test_date_parsing_consistency PASSED  
+tests/test_database.py::TestDataValidation::test_date_parsing_consistency PASSED
 tests/test_database.py::TestPerformanceAndScaling::test_bulk_case_loading_performance PASSED
 tests/test_database.py::TestPerformanceAndScaling::test_query_efficiency_with_relationships PASSED
 
@@ -180,7 +180,7 @@ These tests are designed to be CI/CD friendly:
 To add new tests:
 
 1. **Model tests** - Add to `TestDatabaseModels` class
-2. **Operation tests** - Add to `TestDatabaseOperations` class  
+2. **Operation tests** - Add to `TestDatabaseOperations` class
 3. **New test files** - Follow `test_*.py` naming convention
 4. **Fixtures** - Add reusable fixtures to `conftest.py`
 
@@ -205,4 +205,4 @@ When adding new database functionality:
 2. Test both success and failure cases
 3. Include performance considerations for bulk operations
 4. Use realistic test data from `fake_data.json`
-5. Mock external dependencies (JIRA, Redis, etc.) 
+5. Mock external dependencies (Jira, Redis, etc.)
