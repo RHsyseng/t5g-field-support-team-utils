@@ -1,5 +1,4 @@
 import pytest
-
 from t5gweb.libtelco5g import (
     get_case_number,
     is_bug_missing_target,
