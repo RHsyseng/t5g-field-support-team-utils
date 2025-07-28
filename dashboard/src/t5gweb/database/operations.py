@@ -29,7 +29,7 @@ def load_cases_postgres(cases):
                 status=cases[case]["status"],
                 created_date=case_created_date,  # Use parsed datetime
                 last_update=parser.parse(cases[case]["last_update"]),  # Parse this too
-                description="testadrien",
+                description=cases[case]["description"],
                 product=cases[case]["product"],
                 product_version=cases[case]["product_version"],
             )
