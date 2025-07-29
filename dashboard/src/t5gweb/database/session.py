@@ -4,11 +4,12 @@ import os
 
 from sqlalchemy import create_engine
 from sqlalchemy.orm import DeclarativeBase, sessionmaker
-
+from t5gweb.utils import set_cfg
+import logging 
+cfg = set_cfg()
+logging.warning(cfg)
 # Database setup
-DATABASE_URL = os.getenv(
-    "DATABASE_URL", "postgresql://postgres:secret@postgresql/dashboard"
-)
+DATABASE_URL = f"postgresql://{cfg['postgresql_username']}:{cfg['postgresql_password']}@{cfg['postgresql_ip']}:{cfg['postgresql_port']}/{cfg['postgresql_dbname']}"
 
 engine = create_engine(DATABASE_URL)
 SessionLocal = sessionmaker(autocommit=False, autoflush=False, bind=engine)
