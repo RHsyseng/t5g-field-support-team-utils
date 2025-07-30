@@ -21,16 +21,9 @@ from urllib.parse import urlparse
 import redis
 import requests
 from jira import JIRA
-from t5gweb.utils import (
-    email_notify,
-    exists_or_zero,
-    format_date,
-    get_random_member,
-    get_token,
-    make_headers,
-    set_cfg,
-    slack_notify,
-)
+from t5gweb.utils import (email_notify, exists_or_zero, format_date,
+                          get_random_member, get_token, make_headers, set_cfg,
+                          slack_notify)
 
 # for portal to jira mapping
 portal2jira_sevs = {

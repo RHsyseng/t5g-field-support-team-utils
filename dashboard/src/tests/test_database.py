@@ -15,14 +15,8 @@ import pytest
 from dateutil import parser
 from sqlalchemy import create_engine
 from sqlalchemy.orm import scoped_session, sessionmaker
-from t5gweb.database import (
-    Base,
-    Case,
-    JiraCard,
-    JiraComment,
-    load_cases_postgres,
-    load_jira_cards_postgres,
-)
+from t5gweb.database import (Base, Case, JiraCard, JiraComment,
+                             load_cases_postgres, load_jira_cards_postgres)
 
 
 @pytest.fixture(scope="function")

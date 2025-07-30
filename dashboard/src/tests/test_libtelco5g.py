@@ -1,11 +1,6 @@
 import pytest
-from t5gweb.libtelco5g import (
-    get_case_number,
-    is_bug_missing_target,
-    jira_connection,
-    redis_get,
-    redis_set,
-)
+from t5gweb.libtelco5g import (get_case_number, is_bug_missing_target,
+                               jira_connection, redis_get, redis_set)
 
 
 def test_get_jira_connection(mocker):
