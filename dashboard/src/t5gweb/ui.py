@@ -8,15 +8,28 @@ import logging
 import os
 from urllib.parse import urljoin, urlparse
 
-from flask import (Blueprint, abort, jsonify, redirect, render_template,
-                   request, session, url_for)
+from flask import (
+    Blueprint,
+    abort,
+    jsonify,
+    redirect,
+    render_template,
+    request,
+    session,
+    url_for,
+)
 from flask_login import LoginManager, UserMixin, login_required, login_user
 from onelogin.saml2.auth import OneLogin_Saml2_Auth
 from onelogin.saml2.utils import OneLogin_Saml2_Utils
-from t5gweb.libtelco5g import (generate_histogram_stats, generate_stats,
-                               plot_stats, redis_get, redis_set)
-from t5gweb.t5gweb import (get_new_cases, get_new_comments, get_trending_cards,
-                           plots)
+
+from t5gweb.libtelco5g import (
+    generate_histogram_stats,
+    generate_stats,
+    plot_stats,
+    redis_get,
+    redis_set,
+)
+from t5gweb.t5gweb import get_new_cases, get_new_comments, get_trending_cards, plots
 from t5gweb.taskmgr import refresh_background
 from t5gweb.utils import make_pie_dict, set_cfg
 
