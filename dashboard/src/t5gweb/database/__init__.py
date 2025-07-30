@@ -9,21 +9,19 @@ This module provides database functionality including:
 
 # Import database models
 from .models import Case, Comment, JiraCard, JiraComment
-
 # Import database operations
 from .operations import load_cases_postgres, load_jira_cards_postgres
-
 # Import session management components
-from .session import Base, SessionLocal, create_postgres_tables, engine, get_db
+from .session import Base, db_config, create_postgres_tables #, get_db
 
 # Export all components that were previously available from postgres_db.py
 __all__ = [
     # Session management
     "Base",
-    "engine",
-    "SessionLocal",
+    # "engine",
+    "db_config",
     "create_postgres_tables",
-    "get_db",
+    # "get_db",
     # Models
     "Case",
     "Comment",

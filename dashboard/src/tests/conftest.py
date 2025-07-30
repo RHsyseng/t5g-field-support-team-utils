@@ -9,59 +9,7 @@ from unittest.mock import patch
 import pytest
 from sqlalchemy import create_engine
 from sqlalchemy.orm import scoped_session, sessionmaker
-
 from t5gweb.database import Base
-
-# Set up test environment variables immediately, before any other imports
-# This ensures they're available during test collection when modules are imported
-_original_env_values = {}
-_test_env_vars = {
-    "postgresql_username": "test_user",
-    "postgresql_password": "test_pass",
-    "postgresql_ip": "localhost",
-    "postgresql_port": "5432",
-    "postgresql_dbname": "test_db",
-}
-
-# Store original values and set test values
-for key, value in _test_env_vars.items():
-    _original_env_values[key] = os.environ.get(key)
-    os.environ[key] = value
-
-
-@pytest.fixture(scope="session", autouse=True)
-def setup_test_environment():
-    """Manage test environment variables lifecycle"""
-    # Environment variables are already set at module level
-    yield
-
-    # Cleanup - restore original values
-    for key, original_value in _original_env_values.items():
-        if original_value is None:
-            os.environ.pop(key, None)
-        else:
-            os.environ[key] = original_value
-
-
-@pytest.fixture(scope="function")
-def mock_database_session(test_db_session):
-    """Patch the database session functions to use test database"""
-    from t5gweb.database import session
-
-    # Patch the database session functions to use our test session
-    with patch.object(session, "get_session_local") as mock_get_session_local:
-        # Create a mock session class that returns our test session
-        def mock_session_factory():
-            return test_db_session
-
-        mock_get_session_local.return_value = mock_session_factory
-
-        # Also patch get_db to use our test session
-        def mock_get_db():
-            yield test_db_session
-
-        with patch.object(session, "get_db", mock_get_db):
-            yield test_db_session
 
 
 @pytest.fixture(scope="session")
@@ -99,6 +47,20 @@ def test_db_session(test_db_engine):
 
     # Cleanup
     session.close()
+
+
+@pytest.fixture(autouse=True)
+def mock_database_config(test_db_engine):
+    """Patch DatabaseConfig to use test database"""
+    from t5gweb.database.session import db_config
+    
+    # Create a test session maker
+    TestSessionLocal = sessionmaker(autocommit=False, autoflush=False, bind=test_db_engine)
+    
+    # Patch the underlying attributes instead of the properties
+    with patch.object(db_config, '_engine', test_db_engine), \
+         patch.object(db_config, '_session_local', TestSessionLocal):
+        yield
 
 
 @pytest.fixture

@@ -10,12 +10,13 @@ from sqlalchemy.orm import scoped_session
 from t5gweb.utils import format_comment
 
 from .models import Case, JiraCard, JiraComment
-from .session import SessionLocal
+from .session import db_config
+
 
 
 def load_cases_postgres(cases):
     """Load cases data into PostgreSQL database"""
-    db = scoped_session(SessionLocal)
+    db = scoped_session(db_config.SessionLocal)
     try:
         for case in cases:
             # Parse the creation date to ensure consistent datetime format
@@ -50,7 +51,7 @@ def load_cases_postgres(cases):
 def load_jira_cards_postgres(cases, case_number, issue):
     """Load Jira cards and comments into PostgreSQL database"""
     # Process each card with its own database connection
-    db = scoped_session(SessionLocal)
+    db = scoped_session(db_config.SessionLocal)
     card_processed = False
     card_comments = []  # Initialize card_comments for all code paths
 

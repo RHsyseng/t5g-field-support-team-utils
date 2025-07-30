@@ -1,8 +1,6 @@
 """cache.py: caching functions for the t5gweb"""
 
 import datetime
-
-# from dateutil import parser
 import json
 import logging
 import re
@@ -12,10 +10,7 @@ import xmlrpc
 import bugzilla
 import requests
 from jira.exceptions import JIRAError
-
 from t5gweb import libtelco5g
-
-# from sqlalchemy.orm import scoped_session  # Session import removed - unused
 from t5gweb.database import load_cases_postgres, load_jira_cards_postgres
 from t5gweb.utils import format_date, make_headers
 
