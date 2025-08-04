@@ -58,28 +58,8 @@ class DatabaseConfig:
 
 db_config = DatabaseConfig()
 
-
-# check_postgres_config(cfg)
-
-# DATABASE_URL = get_database_url()
-
-# engine = create_engine(DATABASE_URL)
-# SessionLocal = sessionmaker(autocommit=False, autoflush=False, bind=engine)
-
-
 class Base(DeclarativeBase):
     pass
 
-
-# Create tables - this will be called after models are imported
 def create_postgres_tables():
     Base.metadata.create_all(bind=db_config.engine)
-
-
-# Dependency injection
-# def get_db():
-#     db = SessionLocal()
-#     try:
-#         yield db
-#     finally:
-#         db.close()
