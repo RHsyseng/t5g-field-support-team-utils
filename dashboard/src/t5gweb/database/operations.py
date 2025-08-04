@@ -6,7 +6,6 @@ from datetime import datetime, timezone
 
 from dateutil import parser
 from sqlalchemy.orm import scoped_session
-
 from t5gweb.utils import format_comment
 
 from .models import Case, JiraCard, JiraComment

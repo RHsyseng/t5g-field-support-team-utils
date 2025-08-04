@@ -21,7 +21,6 @@ from flask import (
 from flask_login import LoginManager, UserMixin, login_required, login_user
 from onelogin.saml2.auth import OneLogin_Saml2_Auth
 from onelogin.saml2.utils import OneLogin_Saml2_Utils
-
 from t5gweb.libtelco5g import (
     generate_histogram_stats,
     generate_stats,

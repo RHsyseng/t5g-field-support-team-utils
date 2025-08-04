@@ -21,7 +21,6 @@ from urllib.parse import urlparse
 import redis
 import requests
 from jira import JIRA
-
 from t5gweb.utils import (
     email_notify,
     exists_or_zero,

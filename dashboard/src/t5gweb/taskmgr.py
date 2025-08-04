@@ -7,11 +7,10 @@ import xmlrpc
 
 import bugzilla
 import redis
-from celery import Celery
-from celery.schedules import crontab
-
 import t5gweb.cache as cache
 import t5gweb.libtelco5g as libtelco5g
+from celery import Celery
+from celery.schedules import crontab
 from t5gweb.utils import email_notify, set_cfg
 
 mgr = Celery("t5gweb", broker="redis://redis:6379/0", backend="redis://redis:6379/0")

@@ -11,7 +11,6 @@ from unittest.mock import Mock, patch
 
 import pytest
 from dateutil import parser
-
 from t5gweb.database import (
     Case,
     JiraCard,

@@ -5,7 +5,6 @@ from typing import Optional
 
 from sqlalchemy import URL, create_engine
 from sqlalchemy.orm import DeclarativeBase, sessionmaker
-
 from t5gweb.utils import set_cfg
 
 cfg = set_cfg()
