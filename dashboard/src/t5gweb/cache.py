@@ -12,7 +12,7 @@ import requests
 from jira.exceptions import JIRAError
 
 from t5gweb import libtelco5g
-from t5gweb.database import load_cases_postgres, load_jira_cards_postgres
+from t5gweb.database import load_cases_postgres
 from t5gweb.utils import format_comment, format_date, make_headers
 
 # from sqlalchemy import except_
