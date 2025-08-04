@@ -16,7 +16,7 @@ from flask import (
     render_template,
     request,
     session,
-    url_for
+    url_for,
 )
 from flask_login import LoginManager, UserMixin, login_required, login_user
 from onelogin.saml2.auth import OneLogin_Saml2_Auth
