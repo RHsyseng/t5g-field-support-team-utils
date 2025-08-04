@@ -11,13 +11,9 @@ from unittest.mock import Mock, patch
 
 import pytest
 from dateutil import parser
-from t5gweb.database import (
-    Case,
-    JiraCard,
-    JiraComment,
-    load_cases_postgres,
-    load_jira_cards_postgres,
-)
+
+from t5gweb.database import (Case, JiraCard, JiraComment, load_cases_postgres,
+                             load_jira_cards_postgres)
 
 
 @pytest.fixture

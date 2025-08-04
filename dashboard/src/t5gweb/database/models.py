@@ -3,15 +3,8 @@
 from datetime import date, datetime
 from typing import List, Optional
 
-from sqlalchemy import (
-    Date,
-    DateTime,
-    ForeignKey,
-    ForeignKeyConstraint,
-    Integer,
-    String,
-    Text,
-)
+from sqlalchemy import (Date, DateTime, ForeignKey, ForeignKeyConstraint,
+                        Integer, String, Text)
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 
 from .session import Base

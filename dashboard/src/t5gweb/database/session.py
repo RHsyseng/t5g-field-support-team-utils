@@ -1,9 +1,10 @@
 """Database session and connection management"""
 
-from sqlalchemy import create_engine, URL
-from sqlalchemy.orm import DeclarativeBase, sessionmaker
-from typing import Optional
 import threading
+from typing import Optional
+
+from sqlalchemy import URL, create_engine
+from sqlalchemy.orm import DeclarativeBase, sessionmaker
 
 from t5gweb.utils import set_cfg
 
