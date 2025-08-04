@@ -53,13 +53,16 @@ def test_db_session(test_db_engine):
 def mock_database_config(test_db_engine):
     """Patch DatabaseConfig to use test database"""
     from t5gweb.database.session import db_config
-    
+
     # Create a test session maker
-    TestSessionLocal = sessionmaker(autocommit=False, autoflush=False, bind=test_db_engine)
-    
+    TestSessionLocal = sessionmaker(
+        autocommit=False, autoflush=False, bind=test_db_engine
+    )
+
     # Patch the underlying attributes instead of the properties
-    with patch.object(db_config, '_engine', test_db_engine), \
-         patch.object(db_config, '_session_local', TestSessionLocal):
+    with patch.object(db_config, "_engine", test_db_engine), patch.object(
+        db_config, "_session_local", TestSessionLocal
+    ):
         yield
 
 

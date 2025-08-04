@@ -9,15 +9,16 @@ from t5gweb.utils import set_cfg
 
 cfg = set_cfg()
 
+
 def get_database_url():
     """Build database URL from configuration"""
-    url_object =URL.create(
+    url_object = URL.create(
         "postgresql",
-        username=cfg['postgresql_username'],
-        password=cfg['postgresql_password'],
-        host=cfg['postgresql_ip'],
-        port=cfg['postgresql_port'],
-        database=cfg['postgresql_dbname'],
+        username=cfg["postgresql_username"],
+        password=cfg["postgresql_password"],
+        host=cfg["postgresql_ip"],
+        port=cfg["postgresql_port"],
+        database=cfg["postgresql_dbname"],
     )
     return url_object
 
@@ -39,7 +40,7 @@ class DatabaseConfig:
                         DATABASE_URL,
                         pool_pre_ping=True,
                         pool_recycle=3600,
-                        connect_args={"connect_timeout": 10}
+                        connect_args={"connect_timeout": 10},
                     )
         return self._engine
 
@@ -50,14 +51,12 @@ class DatabaseConfig:
             with self._lock:
                 if not self._session_local:
                     self._session_local = sessionmaker(
-                        autocommit=False,
-                        autoflush=False,
-                        bind=self.engine
+                        autocommit=False, autoflush=False, bind=self.engine
                     )
         return self._session_local
 
-db_config = DatabaseConfig()
 
+db_config = DatabaseConfig()
 
 
 # check_postgres_config(cfg)

@@ -13,7 +13,6 @@ from .models import Case, JiraCard, JiraComment
 from .session import db_config
 
 
-
 def load_cases_postgres(cases):
     """Load cases data into PostgreSQL database"""
     db = scoped_session(db_config.SessionLocal)

@@ -11,9 +11,13 @@ from unittest.mock import Mock, patch
 
 import pytest
 from dateutil import parser
-from t5gweb.database import (Case, JiraCard, JiraComment,
-                             load_cases_postgres, load_jira_cards_postgres)
-
+from t5gweb.database import (
+    Case,
+    JiraCard,
+    JiraComment,
+    load_cases_postgres,
+    load_jira_cards_postgres,
+)
 
 
 @pytest.fixture
@@ -66,7 +70,7 @@ def create_test_case(
         created_date = datetime.now(timezone.utc)
     if last_update is None:
         last_update = datetime.now(timezone.utc)
-        
+
     return Case(
         case_number=case_number,
         owner=owner,
@@ -98,7 +102,7 @@ def create_test_jira_card(
         created_date = datetime.now(timezone.utc)
     if last_update_date is None:
         last_update_date = datetime.now(timezone.utc)
-        
+
     return JiraCard(
         jira_card_id=jira_card_id,
         case_number=case_number,
@@ -122,7 +126,7 @@ def create_test_jira_comment(
     """Factory method to create a test JiraComment with default values"""
     if last_update_date is None:
         last_update_date = datetime.now(timezone.utc)
-        
+
     return JiraComment(
         jira_comment_id=jira_comment_id,
         jira_card_id=jira_card_id,
@@ -154,7 +158,7 @@ def extract_product_version(product_string):
     """Extract version number from product string (e.g., 'dolores 0.2' -> '0.2')"""
     if not product_string:
         return "1.0"
-    
+
     version_match = re.search(r"[\s]+([\d\.]+)$", product_string)
     return version_match.group(1) if version_match else "1.0"
 
@@ -169,10 +173,10 @@ def ensure_product_version_field(case_data):
 def prepare_fake_data_with_missing_fields(fake_data_cases):
     """Prepare fake data by adding missing fields that real production data has"""
     cases_data = fake_data_cases.copy()
-    
+
     for case_number, case_data in cases_data.items():
         ensure_product_version_field(case_data)
-    
+
     return cases_data
 
 
@@ -199,7 +203,9 @@ class TestDatabaseModels:
         """Test creating a JiraCard model with foreign key relationship"""
         # First create a case
         case_created_date = datetime.now(timezone.utc)
-        case = create_test_case(created_date=case_created_date, last_update=case_created_date)
+        case = create_test_case(
+            created_date=case_created_date, last_update=case_created_date
+        )
         test_db_session.add(case)
         test_db_session.commit()
 
@@ -281,7 +287,7 @@ class TestDatabaseOperations:
     ):
         """Test that load_jira_cards_postgres returns correct processing status"""
         mock_session.return_value = test_db_session
-        
+
         case_data = create_test_case_data()
         load_cases_postgres(case_data)
 
@@ -301,7 +307,7 @@ class TestDatabaseOperations:
     ):
         """Test that load_jira_cards_postgres creates correct JiraCard record"""
         mock_session.return_value = test_db_session
-        
+
         case_data = create_test_case_data()
         load_cases_postgres(case_data)
 
@@ -324,7 +330,7 @@ class TestDatabaseOperations:
     ):
         """Test that load_jira_cards_postgres creates JiraComment records"""
         mock_session.return_value = test_db_session
-        
+
         case_data = create_test_case_data()
         load_cases_postgres(case_data)
 
@@ -524,11 +530,11 @@ class TestPerformanceAndScaling:
 
         duration = (end_time - start_time).total_seconds()
         cases_processed = len(cases_subset)
-        
+
         # Verify meaningful performance characteristics
         assert cases_processed > 0
         assert duration >= 0  # Should not be negative
-        
+
         # Calculate processing rate (cases per second)
         if duration > 0:
             processing_rate = cases_processed / duration
@@ -547,7 +553,7 @@ class TestPerformanceAndScaling:
                 jira_card_id=f"TEST-{i}",
                 summary=f"TEST-{i}: Test Summary",
                 created_date=case_date,
-                status="Open"
+                status="Open",
             )
             test_db_session.add(card)
 
