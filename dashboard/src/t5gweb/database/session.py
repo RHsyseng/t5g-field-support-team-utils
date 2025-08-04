@@ -58,8 +58,10 @@ class DatabaseConfig:
 
 db_config = DatabaseConfig()
 
+
 class Base(DeclarativeBase):
     pass
+
 
 def create_postgres_tables():
     Base.metadata.create_all(bind=db_config.engine)
