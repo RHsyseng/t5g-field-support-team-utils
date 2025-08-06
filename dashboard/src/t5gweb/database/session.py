@@ -7,20 +7,20 @@ from sqlalchemy import URL, create_engine
 from sqlalchemy.orm import DeclarativeBase, sessionmaker
 from t5gweb.utils import set_cfg
 
-cfg = set_cfg()
+# cfg = set_cfg()
 
 
-def get_database_url():
-    """Build database URL from configuration"""
-    url_object = URL.create(
-        "postgresql",
-        username=cfg["postgresql_username"],
-        password=cfg["postgresql_password"],
-        host=cfg["postgresql_ip"],
-        port=cfg["postgresql_port"],
-        database=cfg["postgresql_dbname"],
-    )
-    return url_object
+# def get_database_url():
+#     """Build database URL from configuration"""
+#     url_object = URL.create(
+#         "postgresql",
+#         username=cfg["postgresql_username"],
+#         password=cfg["postgresql_password"],
+#         host=cfg["postgresql_ip"],
+#         port=cfg["postgresql_port"],
+#         database=cfg["postgresql_dbname"],
+#     )
+#     return url_object
 
 
 class DatabaseConfig:
@@ -29,13 +29,27 @@ class DatabaseConfig:
         self._session_local: Optional[sessionmaker] = None
         self._lock = threading.Lock()
 
+    @staticmethod
+    def get_database_url():
+        cfg = set_cfg()
+        """Build database URL from configuration"""
+        url_object = URL.create(
+            "postgresql",
+            username=cfg["postgresql_username"],
+            password=cfg["postgresql_password"],
+            host=cfg["postgresql_ip"],
+            port=cfg["postgresql_port"],
+            database=cfg["postgresql_dbname"],
+        )
+        return url_object
+
     @property
     def engine(self) -> create_engine:
         """Lazy initialize the database engine"""
         if not self._engine:
             with self._lock:
                 if not self._engine:
-                    DATABASE_URL = get_database_url()
+                    DATABASE_URL = self.get_database_url()
                     self._engine = create_engine(
                         DATABASE_URL,
                         pool_pre_ping=True,
