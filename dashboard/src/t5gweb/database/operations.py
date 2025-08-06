@@ -84,7 +84,6 @@ def load_jira_cards_postgres(cases, case_number, issue):
                 # Skip this card - will be handled in finally block
                 card_processed = False
             else:
-                card_processed = True
                 # Temporarily disabled
                 # jira_issue_created_date = parser.parse(issue.fields.created)
                 time_now = datetime.now(timezone.utc)
@@ -115,6 +114,7 @@ def load_jira_cards_postgres(cases, case_number, issue):
                 db.add(jira_card)
                 db.commit()
                 db.refresh(jira_card)
+                card_processed = True
         else:
             card_processed = True
 
