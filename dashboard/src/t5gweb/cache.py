@@ -145,8 +145,6 @@ def get_cards(cfg, self=None, background=False):
             logging.warning("Error processing card %s: %s", card, str(e))
             continue
 
-
-
     # Cache the results
     libtelco5g.redis_set("cards", json.dumps(jira_cards))
     libtelco5g.redis_set(
