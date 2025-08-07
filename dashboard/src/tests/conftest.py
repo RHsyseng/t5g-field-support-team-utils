@@ -66,9 +66,7 @@ def mock_database_config(test_db_engine):
     # Patch the underlying attributes and the SessionLocal method
     with patch.object(db_config, "_engine", test_db_engine), patch.object(
         db_config, "_session_local", TestSessionLocal
-    ), patch.object(
-        db_config, "SessionLocal", mock_session_local
-    ):
+    ), patch.object(db_config, "SessionLocal", mock_session_local):
         yield
 
 
