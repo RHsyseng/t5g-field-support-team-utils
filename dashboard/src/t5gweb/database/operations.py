@@ -173,7 +173,6 @@ def load_jira_card_postgres(cases, case_number, issue):
 
         # Single commit for all operations
         session.commit()
-        # logging.warning(f"Successfully loaded Jira card {issue.key} and {len(comments)} comments")
 
     except Exception as e:
         session.rollback()

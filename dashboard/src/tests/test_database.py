@@ -252,9 +252,7 @@ class TestDatabaseModels:
 class TestDatabaseOperations:
     """Test database operations functions"""
 
-    def test_load_cases_postgres_with_fake_data(
-        self, fake_data, test_db_session
-    ):
+    def test_load_cases_postgres_with_fake_data(self, fake_data, test_db_session):
         """Test loading cases using fake data"""
         # Use the auto-fixture that patches db_config to use test database
         # The mock_database_config fixture handles the session mocking
@@ -321,9 +319,7 @@ class TestDatabaseOperations:
         assert jira_card.priority == "High"
         assert jira_card.status == "In Progress"
 
-    def test_load_jira_card_creates_comments(
-        self, test_db_session, mock_jira_issue
-    ):
+    def test_load_jira_card_creates_comments(self, test_db_session, mock_jira_issue):
         """Test that load_jira_card_postgres creates JiraComment records"""
         # Use the auto-fixture that patches db_config to use test database
 
@@ -488,9 +484,7 @@ class TestDataValidation:
 class TestPerformanceAndScaling:
     """Test performance characteristics and scaling behavior"""
 
-    def test_bulk_case_loading_completes_successfully(
-        self, test_db_session, fake_data
-    ):
+    def test_bulk_case_loading_completes_successfully(self, test_db_session, fake_data):
         """Test that bulk loading of cases completes without errors"""
         # Use the auto-fixture that patches db_config to use test database
 
@@ -505,9 +499,7 @@ class TestPerformanceAndScaling:
         expected_count = len(fake_data["cases"])
         assert loaded_count == expected_count
 
-    def test_bulk_case_loading_tracks_metrics(
-        self, test_db_session, fake_data
-    ):
+    def test_bulk_case_loading_tracks_metrics(self, test_db_session, fake_data):
         """Test that bulk loading provides meaningful performance metrics"""
         # Use the auto-fixture that patches db_config to use test database
 
