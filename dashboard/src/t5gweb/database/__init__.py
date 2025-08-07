@@ -11,7 +11,7 @@ This module provides database functionality including:
 from .models import Case, Comment, JiraCard, JiraComment
 
 # Import database operations
-from .operations import load_cases_postgres, load_jira_cards_postgres
+from .operations import load_cases_postgres, load_jira_card_postgres
 
 # Import session management components
 from .session import Base, create_postgres_tables, db_config
@@ -29,5 +29,5 @@ __all__ = [
     "JiraComment",
     # Operations
     "load_cases_postgres",
-    "load_jira_cards_postgres",
+    "load_jira_card_postgres",
 ]

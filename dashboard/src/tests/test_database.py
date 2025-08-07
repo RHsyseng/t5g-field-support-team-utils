@@ -16,7 +16,7 @@ from t5gweb.database import (
     JiraCard,
     JiraComment,
     load_cases_postgres,
-    load_jira_cards_postgres,
+    load_jira_card_postgres,
 )
 
 
@@ -285,7 +285,7 @@ class TestDatabaseOperations:
     def test_load_jira_card_returns_correct_status(
         self, mock_session, test_db_session, mock_jira_issue
     ):
-        """Test that load_jira_cards_postgres returns correct processing status"""
+        """Test that load_jira_card_postgres returns correct processing status"""
         mock_session.return_value = test_db_session
 
         case_data = create_test_case_data()
@@ -294,7 +294,7 @@ class TestDatabaseOperations:
         with patch(
             "t5gweb.database.operations.format_comment", side_effect=lambda x: x.body
         ):
-            card_processed, card_comments = load_jira_cards_postgres(
+            card_processed, card_comments = load_jira_card_postgres(
                 case_data, "12345678", mock_jira_issue
             )
 
@@ -305,7 +305,7 @@ class TestDatabaseOperations:
     def test_load_jira_card_creates_database_record(
         self, mock_session, test_db_session, mock_jira_issue
     ):
-        """Test that load_jira_cards_postgres creates correct JiraCard record"""
+        """Test that load_jira_card_postgres creates correct JiraCard record"""
         mock_session.return_value = test_db_session
 
         case_data = create_test_case_data()
@@ -314,7 +314,7 @@ class TestDatabaseOperations:
         with patch(
             "t5gweb.database.operations.format_comment", side_effect=lambda x: x.body
         ):
-            load_jira_cards_postgres(case_data, "12345678", mock_jira_issue)
+            load_jira_card_postgres(case_data, "12345678", mock_jira_issue)
 
         jira_card = (
             test_db_session.query(JiraCard).filter_by(jira_card_id="TEST-123").first()
@@ -328,7 +328,7 @@ class TestDatabaseOperations:
     def test_load_jira_card_creates_comments(
         self, mock_session, test_db_session, mock_jira_issue
     ):
-        """Test that load_jira_cards_postgres creates JiraComment records"""
+        """Test that load_jira_card_postgres creates JiraComment records"""
         mock_session.return_value = test_db_session
 
         case_data = create_test_case_data()
@@ -337,7 +337,7 @@ class TestDatabaseOperations:
         with patch(
             "t5gweb.database.operations.format_comment", side_effect=lambda x: x.body
         ):
-            load_jira_cards_postgres(case_data, "12345678", mock_jira_issue)
+            load_jira_card_postgres(case_data, "12345678", mock_jira_issue)
 
         comments = (
             test_db_session.query(JiraComment).filter_by(jira_card_id="TEST-123").all()

@@ -10,13 +10,18 @@ from t5gweb.utils import format_comment
 
 from .models import Case, JiraCard, JiraComment
 from .session import db_config
+from posix import error
 
 
 def load_cases_postgres(cases):
     """Load cases data into PostgreSQL database"""
-    db = scoped_session(db_config.SessionLocal)
+    logging.warning(f"Starting load_cases_postgres with {len(cases)} cases")
+    logging.warning(f"Execution context: {db_config.get_execution_context()}")
+    session = db_config.SessionLocal()
+    # logging.warning("Database session created")
     try:
-        for case in cases:
+        # logging.warning("Starting case processing loop")
+        for index, case in enumerate(cases):
             # Parse the creation date to ensure consistent datetime format
             case_created_date = parser.parse(cases[case]["createdate"])
 
@@ -33,29 +38,35 @@ def load_cases_postgres(cases):
                 product=cases[case]["product"],
                 product_version=cases[case]["product_version"],
             )
-            qry_object = db.query(Case).where(
+            qry_object = session.query(Case).where(
                 (Case.case_number == case) & (Case.created_date == case_created_date)
             )
             if qry_object.first() is None:
-                db.add(pg_case)
+                session.add(pg_case)
             else:
-                pg_case = db.merge(pg_case)
-            db.commit()
-            db.refresh(pg_case)
+                pg_case = session.merge(pg_case)
+            # session.refresh(pg_case)
+        session.commit()
+        logging.warning("Database commit completed successfully")
+    except Exception as e:
+        session.rollback()
+        logging.error(f"Failed to load cases: {e}")
     finally:
-        db.close()
+        # logging.warning("Entering finally block")
+        session.close()
+        # logging.warning("Loaded cases to Postgres")
 
 
-def load_jira_cards_postgres(cases, case_number, issue):
-    """Load Jira cards and comments into PostgreSQL database"""
+def load_jira_card_postgres(cases, case_number, issue):
+    """Loads a Jira card and comments into PostgreSQL database"""
     # Process each card with its own database connection
-    db = scoped_session(db_config.SessionLocal)
+    session = db_config.SessionLocal()  # Fix: Add () to create instance
     card_processed = False
     card_comments = []  # Initialize card_comments for all code paths
 
     try:
         # Ensure JiraCard exists or create it
-        jira_card = db.query(JiraCard).filter_by(jira_card_id=issue.key).first()
+        jira_card = session.query(JiraCard).filter_by(jira_card_id=issue.key).first()
 
         if jira_card is None:
             # Extract severity as integer from cases data
@@ -70,7 +81,7 @@ def load_jira_cards_postgres(cases, case_number, issue):
 
             # Verify that the corresponding case exists in the database
             existing_case = (
-                db.query(Case)
+                session.query(Case)
                 .filter_by(case_number=case_number, created_date=case_created_date)
                 .first()
             )
@@ -111,9 +122,7 @@ def load_jira_cards_postgres(cases, case_number, issue):
                     ),
                     severity=severity_int,
                 )
-                db.add(jira_card)
-                db.commit()
-                db.refresh(jira_card)
+                session.add(jira_card)
                 card_processed = True
         else:
             card_processed = True
@@ -131,7 +140,7 @@ def load_jira_cards_postgres(cases, case_number, issue):
                 # Store comment in PostgreSQL database
                 try:
                     existing_comment = (
-                        db.query(JiraComment)
+                        session.query(JiraComment)
                         .filter_by(jira_comment_id=comment.id)
                         .first()
                     )
@@ -147,7 +156,7 @@ def load_jira_cards_postgres(cases, case_number, issue):
                             body=body,
                             last_update_date=last_comment_update,
                         )
-                        db.add(jira_comment)
+                        session.add(jira_comment)
                     else:
                         # Update existing comment - create a new object and merge it
                         updated_comment = JiraComment(
@@ -157,15 +166,23 @@ def load_jira_cards_postgres(cases, case_number, issue):
                             body=body,
                             last_update_date=parser.parse(comment.updated),
                         )
-                        db.merge(updated_comment)
+                        session.merge(updated_comment)
 
-                    db.commit()
                 except Exception as e:
                     logging.warning("Issue storing comment into database: %s", e)
-                    db.rollback()
+                    session.rollback()
+                    continue
 
+        # Single commit for all operations
+        session.commit()
+        # logging.warning(f"Successfully loaded Jira card {issue.key} and {len(comments)} comments")
+
+    except Exception as e:
+        session.rollback()
+        logging.error(f"Failed to load Jira card {issue.key}: {e}")
+        raise
     finally:
         # Always close the database connection for this card
-        db.close()
+        session.close()
 
     return card_processed, card_comments  # Return both values
