@@ -64,7 +64,9 @@ class DatabaseConfig:
         """Create a new database session - context aware"""
         if self.get_execution_context() == "celery":
             # Return fresh session for Celery workers (non-scoped)
-            sessionmaker_class = sessionmaker(autocommit=False, autoflush=False, bind=self.engine)
+            sessionmaker_class = sessionmaker(
+                autocommit=False, autoflush=False, bind=self.engine
+            )
             return sessionmaker_class()
         else:
             # Return session from cached sessionmaker for web requests (scoped)
