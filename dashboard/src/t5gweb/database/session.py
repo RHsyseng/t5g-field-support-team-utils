@@ -60,21 +60,21 @@ class DatabaseConfig:
                     )
         return self._engine
 
-    @property
-    def SessionLocal(self) -> sessionmaker:
-        """Lazy initialize the session maker - context aware"""
+    def SessionLocal(self):
+        """Create a new database session - context aware"""
         if self.get_execution_context() == "celery":
-            # Return fresh sessionmaker for Celery workers (non-scoped)
-            return sessionmaker(autocommit=False, autoflush=False, bind=self.engine)
+            # Return fresh session for Celery workers (non-scoped)
+            sessionmaker_class = sessionmaker(autocommit=False, autoflush=False, bind=self.engine)
+            return sessionmaker_class()
         else:
-            # Return cached sessionmaker for web requests (scoped)
+            # Return session from cached sessionmaker for web requests (scoped)
             if not self._session_local:
                 with self._lock:
                     if not self._session_local:
                         self._session_local = sessionmaker(
                             autocommit=False, autoflush=False, bind=self.engine
                         )
-            return self._session_local
+            return self._session_local()
 
 
 db_config = DatabaseConfig()

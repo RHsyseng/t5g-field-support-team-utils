@@ -19,7 +19,7 @@ def load_cases_postgres(cases):
     # logging.warning("Database session created")
     try:
         # logging.warning("Starting case processing loop")
-        for index, case in enumerate(cases):
+        for case in cases:
             # Parse the creation date to ensure consistent datetime format
             case_created_date = parser.parse(cases[case]["createdate"])
 
