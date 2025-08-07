@@ -59,10 +59,14 @@ def mock_database_config(test_db_engine):
         autocommit=False, autoflush=False, bind=test_db_engine
     )
 
-    # Patch the underlying attributes instead of the properties
-    with patch.object(db_config, "_engine", test_db_engine), patch.object(
-        db_config, "_session_local", TestSessionLocal
-    ):
+    # Create a mock that returns a session instance when called
+    def mock_session_local():
+        return TestSessionLocal()
+
+    # Patch the underlying attributes and the SessionLocal property
+    with patch.object(db_config, "_engine", test_db_engine), \
+         patch.object(db_config, "_session_local", TestSessionLocal), \
+         patch.object(type(db_config), "SessionLocal", property(lambda self: mock_session_local)):
         yield
 
 

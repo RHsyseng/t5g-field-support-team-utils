@@ -252,13 +252,12 @@ class TestDatabaseModels:
 class TestDatabaseOperations:
     """Test database operations functions"""
 
-    @patch("t5gweb.database.operations.scoped_session")
     def test_load_cases_postgres_with_fake_data(
-        self, mock_session, fake_data, test_db_session
+        self, fake_data, test_db_session
     ):
         """Test loading cases using fake data"""
-        # Configure mock to use our test session
-        mock_session.return_value = test_db_session
+        # Use the auto-fixture that patches db_config to use test database
+        # The mock_database_config fixture handles the session mocking
 
         # Get subset of cases from fake data and add missing fields for testing
         subset_fake_data = dict(list(fake_data["cases"].items())[:3])
@@ -281,12 +280,11 @@ class TestDatabaseOperations:
         assert case_81381364.severity == 3  # From "3 (Normal)"
         assert case_81381364.status == "Closed"
 
-    @patch("t5gweb.database.operations.scoped_session")
     def test_load_jira_card_returns_correct_status(
-        self, mock_session, test_db_session, mock_jira_issue
+        self, test_db_session, mock_jira_issue
     ):
         """Test that load_jira_card_postgres returns correct processing status"""
-        mock_session.return_value = test_db_session
+        # Use the auto-fixture that patches db_config to use test database
 
         case_data = create_test_case_data()
         load_cases_postgres(case_data)
@@ -301,12 +299,11 @@ class TestDatabaseOperations:
         assert card_processed is True
         assert len(card_comments) == 2
 
-    @patch("t5gweb.database.operations.scoped_session")
     def test_load_jira_card_creates_database_record(
-        self, mock_session, test_db_session, mock_jira_issue
+        self, test_db_session, mock_jira_issue
     ):
         """Test that load_jira_card_postgres creates correct JiraCard record"""
-        mock_session.return_value = test_db_session
+        # Use the auto-fixture that patches db_config to use test database
 
         case_data = create_test_case_data()
         load_cases_postgres(case_data)
@@ -324,12 +321,11 @@ class TestDatabaseOperations:
         assert jira_card.priority == "High"
         assert jira_card.status == "In Progress"
 
-    @patch("t5gweb.database.operations.scoped_session")
     def test_load_jira_card_creates_comments(
-        self, mock_session, test_db_session, mock_jira_issue
+        self, test_db_session, mock_jira_issue
     ):
         """Test that load_jira_card_postgres creates JiraComment records"""
-        mock_session.return_value = test_db_session
+        # Use the auto-fixture that patches db_config to use test database
 
         case_data = create_test_case_data()
         load_cases_postgres(case_data)
@@ -348,10 +344,9 @@ class TestDatabaseOperations:
 class TestDataIntegrity:
     """Test data integrity and edge cases"""
 
-    @patch("t5gweb.database.operations.scoped_session")
-    def test_duplicate_case_handling(self, mock_session, test_db_session, fake_data):
+    def test_duplicate_case_handling(self, test_db_session, fake_data):
         """Test that duplicate cases are handled correctly (merge vs create)"""
-        mock_session.return_value = test_db_session
+        # Use the auto-fixture that patches db_config to use test database
 
         # Load same case data twice
         single_case_raw = {"81381364": fake_data["cases"]["81381364"].copy()}
@@ -403,10 +398,9 @@ class TestDataIntegrity:
             # constraints are working
             assert "constraint" in str(e).lower() or "foreign key" in str(e).lower()
 
-    @patch("t5gweb.database.operations.scoped_session")
-    def test_load_cases_with_missing_fields(self, mock_session, test_db_session):
+    def test_load_cases_with_missing_fields(self, test_db_session):
         """Test loading cases with some missing optional fields"""
-        mock_session.return_value = test_db_session
+        # Use the auto-fixture that patches db_config to use test database
 
         # Case data with missing optional fields
         incomplete_case = {
@@ -494,12 +488,11 @@ class TestDataValidation:
 class TestPerformanceAndScaling:
     """Test performance characteristics and scaling behavior"""
 
-    @patch("t5gweb.database.operations.scoped_session")
     def test_bulk_case_loading_completes_successfully(
-        self, mock_session, test_db_session, fake_data
+        self, test_db_session, fake_data
     ):
         """Test that bulk loading of cases completes without errors"""
-        mock_session.return_value = test_db_session
+        # Use the auto-fixture that patches db_config to use test database
 
         # Prepare fake data with missing fields for testing
         cases_data = prepare_fake_data_with_missing_fields(fake_data["cases"])
@@ -512,12 +505,11 @@ class TestPerformanceAndScaling:
         expected_count = len(fake_data["cases"])
         assert loaded_count == expected_count
 
-    @patch("t5gweb.database.operations.scoped_session")
     def test_bulk_case_loading_tracks_metrics(
-        self, mock_session, test_db_session, fake_data
+        self, test_db_session, fake_data
     ):
         """Test that bulk loading provides meaningful performance metrics"""
-        mock_session.return_value = test_db_session
+        # Use the auto-fixture that patches db_config to use test database
 
         # Prepare a subset of cases for performance measurement
         cases_subset_raw = dict(list(fake_data["cases"].items())[:5])
