@@ -8,7 +8,6 @@ from prometheus_flask_exporter import PrometheusMetrics
 from . import api, t5gweb, ui
 from .database import create_postgres_tables
 
-# from dashboard.src.t5gweb.database.session import db_config
 
 
 def create_app(test_config=None):

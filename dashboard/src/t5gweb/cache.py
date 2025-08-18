@@ -14,8 +14,6 @@ from t5gweb import libtelco5g
 from t5gweb.database import load_cases_postgres, load_jira_card_postgres
 from t5gweb.utils import format_comment, format_date, make_headers
 
-# from sqlalchemy import except_
-
 
 def get_cases(cfg):
     # https://source.redhat.com/groups/public/hydra/hydra_integration_platform_cee_integration_wiki/hydras_api_layer

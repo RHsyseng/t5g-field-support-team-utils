@@ -16,9 +16,8 @@ def load_cases_postgres(cases):
     logging.warning(f"Starting load_cases_postgres with {len(cases)} cases")
     logging.warning(f"Execution context: {db_config.get_execution_context()}")
     session = db_config.SessionLocal()
-    # logging.warning("Database session created")
+    logging.warning("Database session created")
     try:
-        # logging.warning("Starting case processing loop")
         for case in cases:
             # Parse the creation date to ensure consistent datetime format
             case_created_date = parser.parse(cases[case]["createdate"])
@@ -43,16 +42,14 @@ def load_cases_postgres(cases):
                 session.add(pg_case)
             else:
                 pg_case = session.merge(pg_case)
-            # session.refresh(pg_case)
         session.commit()
         logging.warning("Database commit completed successfully")
     except Exception as e:
         session.rollback()
         logging.error(f"Failed to load cases: {e}")
     finally:
-        # logging.warning("Entering finally block")
         session.close()
-        # logging.warning("Loaded cases to Postgres")
+        logging.warning("Loaded cases to Postgres")
 
 
 def load_jira_card_postgres(cases, case_number, issue):
