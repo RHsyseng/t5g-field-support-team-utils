@@ -9,7 +9,6 @@ from . import api, t5gweb, ui
 from .database import create_postgres_tables
 
 
-
 def create_app(test_config=None):
     """factory functions to launch app"""
     # create and configure the app

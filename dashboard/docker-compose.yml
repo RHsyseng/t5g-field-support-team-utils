@@ -23,6 +23,8 @@ services:
       interval: 5s
       timeout: 5s
       retries: 5
+    volumes:
+      - postgresql_data:/var/lib/postgresql/data
     ports:
       - "5432:5432"
 
@@ -102,3 +104,4 @@ services:
         condition: service_healthy
 volumes:
   redis_data:
+  postgresql_data:
