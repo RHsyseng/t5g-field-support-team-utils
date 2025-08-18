@@ -37,11 +37,11 @@ class DatabaseConfig:
         """Build database URL from configuration"""
         url_object = URL.create(
             "postgresql+psycopg",
-            username=cfg["postgresql_username"],
-            password=cfg["postgresql_password"],
-            host=cfg["postgresql_ip"],
-            port=cfg["postgresql_port"],
-            database=cfg["postgresql_dbname"],
+            username=cfg["POSTGRESQL_USER"],
+            password=cfg["POSTGRESQL_PASSWORD"],
+            host=cfg["POSTGRESQL_HOSTNAME"],
+            port=cfg["POSTGRESQL_PORT"],
+            database=cfg["POSTGRESQL_DATABASE"],
         )
         return url_object
 
