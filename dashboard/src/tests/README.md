@@ -1,6 +1,6 @@
-# T5GWeb Database Module Tests
+# T5GWeb Tests
 
-This directory contains comprehensive tests for the `t5gweb.database` module, including models, operations, and data integrity testing.
+This directory contains comprehensive tests for several modules of the dashboard, including models, operations, and data integrity testing.
 
 ## Test Structure
 
@@ -51,7 +51,7 @@ Tests use mocked Jira objects to simulate API responses without external depende
 
 ```bash
 cd dashboard/src
-pip install -r tests/requirements-test.txt
+pip install -r ../../.github/workflows/requirements-pytest.txt
 ```
 
 ### Install Project Dependencies
@@ -146,24 +146,17 @@ The tests cover:
 When running the full test suite, you should see:
 
 ```shell
-========================= test session starts =========================
-collected 18 items
+$ pytest
+========================================== test session starts ===========================================
+[...]
+plugins: mock-3.14.1
+collected 39 items
 
-tests/test_database.py::TestDatabaseModels::test_case_model_creation PASSED
-tests/test_database.py::TestDatabaseModels::test_jira_card_model_creation PASSED
-tests/test_database.py::TestDatabaseModels::test_jira_comment_model_creation PASSED
-tests/test_database.py::TestDatabaseOperations::test_load_cases_postgres_with_fake_data PASSED
-tests/test_database.py::TestDatabaseOperations::test_load_jira_cards_postgres_with_mock_issue PASSED
-tests/test_database.py::TestDatabaseOperations::test_load_jira_cards_postgres_optimized PASSED
-tests/test_database.py::TestDataIntegrity::test_duplicate_case_handling PASSED
-tests/test_database.py::TestDataIntegrity::test_foreign_key_constraints PASSED
-tests/test_database.py::TestDataIntegrity::test_load_cases_with_missing_fields PASSED
-tests/test_database.py::TestDataValidation::test_severity_parsing PASSED
-tests/test_database.py::TestDataValidation::test_date_parsing_consistency PASSED
-tests/test_database.py::TestPerformanceAndScaling::test_bulk_case_loading_performance PASSED
-tests/test_database.py::TestPerformanceAndScaling::test_query_efficiency_with_relationships PASSED
+tests/test_database.py ...............                                                             [ 38%]
+tests/test_libtelco5g.py ...............                                                           [ 76%]
+tests/test_utils.py .........                                                                      [100%]
 
-========================= 13 passed in 2.34s =========================
+=========================================== 39 passed in 0.17s ===========================================
 ```
 
 ## Continuous Integration
@@ -175,34 +168,15 @@ These tests are designed to be CI/CD friendly:
 - Deterministic results
 - Clear pass/fail indicators
 
-## Extending Tests
-
-To add new tests:
-
-1. **Model tests** - Add to `TestDatabaseModels` class
-2. **Operation tests** - Add to `TestDatabaseOperations` class
-3. **New test files** - Follow `test_*.py` naming convention
-4. **Fixtures** - Add reusable fixtures to `conftest.py`
-
 ## Troubleshooting
 
 ### Common Issues
 
 1. **Import errors** - Ensure you're running from `dashboard/src` directory
-2. **Missing dependencies** - Install test requirements: `pip install -r tests/requirements-test.txt`
+2. **Missing dependencies** - Install test requirements: `pip install -r ../../.github/workflows/requirements-pytest.txt`
 3. **Slow tests** - Check if using correct in-memory SQLite (not file-based)
 4. **Failed assertions** - Use `-vv` flag for detailed assertion output
 
 ### Debug Mode
 
 Enable SQL debugging by setting `echo=True` in the `test_db_engine` fixture in `conftest.py`.
-
-## Contributing
-
-When adding new database functionality:
-
-1. Write tests first (TDD approach)
-2. Test both success and failure cases
-3. Include performance considerations for bulk operations
-4. Use realistic test data from `fake_data.json`
-5. Mock external dependencies (Jira, Redis, etc.)
