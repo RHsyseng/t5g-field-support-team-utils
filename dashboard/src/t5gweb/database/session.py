@@ -10,7 +10,7 @@ from t5gweb.utils import set_cfg
 
 class DatabaseConfig:
     def __init__(self):
-        self._engine: Optional[create_engine] = None
+        self._engine: Optional[create_engine] = None # type: ignore
         self._session_local: Optional[sessionmaker] = None
         self._lock = threading.Lock()
 
@@ -46,7 +46,7 @@ class DatabaseConfig:
         return url_object
 
     @property
-    def engine(self) -> create_engine:
+    def engine(self) -> create_engine: # type: ignore
         """Lazy initialize the database engine"""
         if not self._engine:
             with self._lock:
