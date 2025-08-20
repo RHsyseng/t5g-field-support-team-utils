@@ -11,6 +11,7 @@ import bugzilla
 import requests
 from jira.exceptions import JIRAError
 from t5gweb import libtelco5g
+from t5gweb.database import load_cases_postgres, load_jira_card_postgres
 from t5gweb.utils import format_comment, format_date, make_headers
 
 
@@ -29,6 +30,7 @@ def get_cases(cfg):
     logging.warning("searching the portal for cases")
     start = time.time()
     r = requests.get(url, headers=headers, params=payload)
+    r.raise_for_status()
     cases_json = r.json()["response"]["docs"]
     end = time.time()
     logging.warning("found %s cases in %s seconds", len(cases_json), end - start)
@@ -44,6 +46,7 @@ def get_cases(cfg):
             "last_update": case["case_lastModifiedDate"],
             "description": case["case_description"],
             "product": case["case_product"][0] + " " + case["case_version"],
+            "product_version": case["case_version"],
         }
         # Sometimes there is no BZ attached to the case
         if "case_bugzillaNumber" in case:
@@ -58,6 +61,8 @@ def get_cases(cfg):
             cases[case["case_number"]]["tags"] = tags
         if "case_closedDate" in case:
             cases[case["case_number"]]["closeddate"] = case["case_closedDate"]
+
+    load_cases_postgres(cases)
 
     libtelco5g.redis_set("cases", json.dumps(cases))
 
@@ -132,6 +137,8 @@ def get_cards(cfg, self=None, background=False):
             )
             if card_data:
                 jira_cards[card.key] = card_data
+                load_jira_card_postgres(cases, card_data["case_number"], card)
+
         except Exception as e:
             logging.warning("Error processing card %s: %s", card, str(e))
             continue

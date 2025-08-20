@@ -160,6 +160,13 @@ def set_cfg():
     )
     if os.environ.get("sla_settings"):
         cfg["sla_settings"] = json.loads(os.environ.get("sla_settings"))
+
+    # postgres
+    cfg["POSTGRESQL_USER"] = os.environ.get("POSTGRESQL_USER")
+    cfg["POSTGRESQL_PASSWORD"] = os.environ.get("POSTGRESQL_PASSWORD")
+    cfg["POSTGRESQL_HOSTNAME"] = os.environ.get("POSTGRESQL_HOSTNAME")
+    cfg["POSTGRESQL_PORT"] = os.environ.get("POSTGRESQL_PORT")
+    cfg["POSTGRESQL_DATABASE"] = os.environ.get("POSTGRESQL_DATABASE")
     # sso
     cfg["rbac"] = os.environ.get("rbac").split(",") if os.environ.get("rbac") else []
     cfg["max_to_create"] = os.environ.get("max_to_create")
