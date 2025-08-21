@@ -164,8 +164,8 @@ def set_cfg():
     # postgres
     cfg["POSTGRESQL_USER"] = os.environ.get("POSTGRESQL_USER")
     cfg["POSTGRESQL_PASSWORD"] = os.environ.get("POSTGRESQL_PASSWORD")
-    cfg["POSTGRESQL_HOSTNAME"] = os.environ.get("POSTGRESQL_HOSTNAME")
-    cfg["POSTGRESQL_PORT"] = os.environ.get("POSTGRESQL_PORT")
+    cfg["POSTGRESQL_SERVICE_HOST"] = os.environ.get("POSTGRESQL_SERVICE_HOST")
+    cfg["POSTGRESQL_SERVICE_PORT"] = os.environ.get("POSTGRESQL_SERVICE_PORT")
     cfg["POSTGRESQL_DATABASE"] = os.environ.get("POSTGRESQL_DATABASE")
     # sso
     cfg["rbac"] = os.environ.get("rbac").split(",") if os.environ.get("rbac") else []
