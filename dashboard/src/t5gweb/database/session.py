@@ -39,8 +39,8 @@ class DatabaseConfig:
             "postgresql+psycopg",
             username=cfg["POSTGRESQL_USER"],
             password=cfg["POSTGRESQL_PASSWORD"],
-            host=cfg["POSTGRESQL_HOSTNAME"],
-            port=cfg["POSTGRESQL_PORT"],
+            host=cfg["POSTGRESQL_SERVICE_HOST"],
+            port=cfg["POSTGRESQL_SERVICE_PORT"],
             database=cfg["POSTGRESQL_DATABASE"],
         )
         return url_object
