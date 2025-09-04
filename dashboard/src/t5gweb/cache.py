@@ -62,7 +62,10 @@ def get_cases(cfg):
         if "case_closedDate" in case:
             cases[case["case_number"]]["closeddate"] = case["case_closedDate"]
 
-    load_cases_postgres(cases)
+    try:
+        load_cases_postgres(cases)
+    except Exception as e:
+        logging.error("Failed to load cases to Postgres: %s ", e)
 
     libtelco5g.redis_set("cases", json.dumps(cases))
 
