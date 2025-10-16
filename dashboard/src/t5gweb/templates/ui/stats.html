@@ -133,8 +133,14 @@
                     </thead>
                     <tbody class="list">
                         {% for severity in stats['by_severity'] %}
+                            {% set base_url = url_for('ui.table_view_all') %}
+                            {% set order_params = 'order=[[2,%22desc%22],[3,%22desc%22],[4,%22desc%22]]' %}
+                            {% set search_params = 'searchPanes.preSelect=[{%22column%22:2,%22rows%22:[%22' + severity + '%22]}]' %}
+                            {% set full_url = base_url + '?' + order_params + '&' + search_params %}
                             <tr>
-                                <td class="align-middle">{{ severity }}</td>
+                                <td class="align-middle">
+                                    <a href="{{ full_url }}">{{ severity }}</a>
+                                </td>
                                 <td class="align-middle text-center">{{ stats['by_severity'][severity] }}</td>
                             </tr>
                         {% endfor %}
@@ -168,7 +174,9 @@
                     <tbody class="list">
                         {% for engineer in stats['by_engineer'] %}
                             <tr>
-                                <td class="align-middle">{{ engineer }}</td>
+                                <td class="align-middle">
+                                    <a href="{{ url_for('ui.get_engineer', engineer=engineer) }}">{{ engineer }}</a>
+                                </td>
                                 <td class="align-middle text-center">{{ stats['by_engineer'][engineer] }}</td>
                             </tr>
                         {% endfor %}
