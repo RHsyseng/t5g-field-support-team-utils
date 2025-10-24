@@ -6,6 +6,7 @@ from datetime import datetime, timezone
 
 from dateutil import parser
 from t5gweb.utils import format_comment
+from t5gweb import libtelco5g
 
 from .models import Case, JiraCard, JiraComment
 from .session import db_config
@@ -180,3 +181,94 @@ def load_jira_card_postgres(cases, case_number, issue):
         session.close()
 
     return card_processed, card_comments  # Return both values
+
+
+def get_current_sprint_cards_from_postgres(cfg):
+    """Get JIRA cards from current sprint and their linked cases from Postgres"""
+    session = db_config.SessionLocal()
+    try:
+        # Get current sprint info from JIRA
+        jira_conn = libtelco5g.jira_connection(cfg)
+        board = libtelco5g.get_board_id(jira_conn, cfg["board"])
+        
+        if cfg["sprintname"] and cfg["sprintname"] != "":
+            sprint = libtelco5g.get_latest_sprint(jira_conn, board.id, cfg["sprintname"])
+            sprint_name_pattern = f"%{sprint.name}%"
+            
+            # Query cards from current sprint
+            sprint_cards = session.query(JiraCard).filter(
+                JiraCard.sprint.like(sprint_name_pattern)
+            ).all()
+        else:
+            # If no sprint specified, get all cards
+            sprint_cards = session.query(JiraCard).all()
+        
+        # Build cards dictionary
+        cards_dict = {}
+        cases_dict = {}
+        
+        for card in sprint_cards:
+            # Get linked case
+            case = session.query(Case).filter_by(
+                case_number=card.case_number,
+                created_date=card.created_date
+            ).first()
+            
+            if case:
+                # Add case to cases dictionary
+                cases_dict[case.case_number] = {
+                    "owner": case.owner,
+                    "severity": f"{case.severity} (Urgent)" if case.severity == 1 else str(case.severity),
+                    "account": case.account,
+                    "problem": case.summary,
+                    "status": case.status,
+                    "createdate": case.created_date.isoformat(),
+                    "last_update": case.last_update.isoformat() if case.last_update else None,
+                    "description": case.description,
+                    "product": case.product,
+                    "product_version": case.product_version,
+                }
+                
+                # Get comments for this card
+                comments = [(comment.body, comment.last_update_date.isoformat()) 
+                           for comment in card.comments]
+                
+                # Build card data matching Redis format
+                cards_dict[card.jira_card_id] = {
+                    "case_number": card.case_number,
+                    "summary": card.summary,
+                    "priority": card.priority,
+                    "card_status": libtelco5g.status_map.get(card.status, card.status),
+                    "assignee": {"key": card.assignee, "name": card.assignee, "displayName": card.assignee} if card.assignee else {"displayName": None, "key": None, "name": None},
+                    "severity": card.severity,
+                    "comments": comments,
+                    "card_created": card.created_date.isoformat(),
+                    "last_update": card.last_update_date.isoformat() if card.last_update_date else None,
+                    "account": case.account,
+                    "description": case.description,
+                    "product": case.product,
+                    "case_status": case.status,
+                    "tags": [],  # Will need to be populated from case details if needed
+                    "labels": [],  # Will need to be populated from JIRA if needed
+                    "bugzilla": None,  # Will need separate query if needed
+                    "issues": None,  # Will need separate query if needed
+                    "escalated": False,  # Will need separate query if needed
+                    "escalated_link": None,
+                    "potential_escalation": False,
+                    "crit_sit": False,  # Will need separate query if needed
+                    "group_name": None,
+                    "case_updated_date": case.last_update.strftime("%Y-%m-%d %H:%M") if case.last_update else None,
+                    "case_days_open": (datetime.now(timezone.utc).replace(tzinfo=None) - case.created_date).days,
+                    "notified_users": [],
+                    "relief_at": None,
+                    "resolved_at": None,
+                    "daily_telco": False,
+                    "contributor": [],
+                }
+        
+        return {"cards": cards_dict, "cases": cases_dict}
+        
+    finally:
+        session.close()
+
+

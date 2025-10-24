@@ -12,6 +12,7 @@ import requests
 from jira.exceptions import JIRAError
 from t5gweb import libtelco5g
 from t5gweb.database import load_cases_postgres, load_jira_card_postgres
+from t5gweb.database.operations import get_current_sprint_cards_from_postgres
 from t5gweb.utils import format_comment, format_date, make_headers
 
 
@@ -62,12 +63,27 @@ def get_cases(cfg):
         if "case_closedDate" in case:
             cases[case["case_number"]]["closeddate"] = case["case_closedDate"]
 
+    # Load to Postgres first, then update Redis cache
+    postgres_success = False
     try:
+        logging.warning("Loading cases to Postgres database")
         load_cases_postgres(cases)
+        logging.warning("Successfully loaded cases to Postgres")
+        postgres_success = True
     except Exception as e:
-        logging.error("Failed to load cases to Postgres: %s ", e)
+        logging.error("Failed to load cases to Postgres: %s. Skipping Redis cache update.", e)
+        # Don't update Redis if Postgres load fails to maintain data consistency
+        return
 
-    libtelco5g.redis_set("cases", json.dumps(cases))
+    # # Only update Redis if Postgres succeeded
+    # if postgres_success:
+    #     try:
+    #         logging.warning("Updating Redis cache with cases")
+    #         libtelco5g.redis_set("cases", json.dumps(cases))
+    #         logging.warning("Successfully updated Redis cache with cases")
+    #     except Exception as e:
+    #         logging.error("Failed to update Redis cache with cases: %s. Data is safely stored in Postgres.", e)
+    #         # Postgres data is safe, Redis cache failure is not critical
 
 
 def get_escalations(cfg, cases):
@@ -140,17 +156,28 @@ def get_cards(cfg, self=None, background=False):
             )
             if card_data:
                 jira_cards[card.key] = card_data
-                load_jira_card_postgres(cases, card_data["case_number"], card)
+                # Load to Postgres
+                try:
+                    load_jira_card_postgres(cases, card_data["case_number"], card)
+                except Exception as postgres_error:
+                    logging.error("Failed to load card %s to Postgres: %s", card.key, postgres_error)
+                    # Remove from jira_cards if Postgres load fails to maintain consistency
+                    jira_cards.pop(card.key, None)
+                    continue
 
         except Exception as e:
             logging.warning("Error processing card %s: %s", card, str(e))
             continue
 
-    # Cache the results
-    libtelco5g.redis_set("cards", json.dumps(jira_cards))
-    libtelco5g.redis_set(
-        "timestamp", json.dumps(str(datetime.datetime.now(datetime.timezone.utc)))
-    )
+
+    # After successful card processing, refresh cache from Postgres to get current sprint data
+    try:
+        logging.warning("Refreshing Redis cache from Postgres to get current sprint data")
+        refresh_result = refresh_cache_from_postgres(cfg)
+        logging.warning("Cache refresh result: %s", refresh_result)
+    except Exception as e:
+        logging.error("Failed to refresh cache from Postgres: %s", e)
+
     return {"cards cached": len(jira_cards)}
 
 
@@ -690,6 +717,45 @@ def _extract_private_keywords(bug):
     if private_keywords_raw is not None and len(private_keywords_raw) > 0:
         return [private_keyword.value for private_keyword in private_keywords_raw]
     return None
+
+
+def refresh_cache_from_postgres(cfg):
+    """Refresh Redis cache using data from Postgres database
+
+    This decouples cache updates from data loading - cache is refreshed
+    from the database rather than from API calls.
+    """
+    logging.warning("Refreshing Redis cache from Postgres database")
+
+    try:
+        # Get current sprint data from Postgres
+        sprint_data = get_current_sprint_cards_from_postgres(cfg)
+        cards = sprint_data["cards"]
+        cases = sprint_data["cases"]
+
+        # Update Redis cache with Postgres data
+        try:
+            logging.warning("Updating Redis cache with %d cards from Postgres", len(cards))
+            libtelco5g.redis_set("cards", json.dumps(cards))
+
+            logging.warning("Updating Redis cache with %d cases from Postgres", len(cases))
+            libtelco5g.redis_set("cases", json.dumps(cases))
+
+            # Update timestamp
+            libtelco5g.redis_set(
+                "timestamp", json.dumps(str(datetime.datetime.now(datetime.timezone.utc)))
+            )
+
+            logging.warning("Successfully refreshed Redis cache from Postgres")
+            return {"cards_cached": len(cards), "cases_cached": len(cases)}
+
+        except Exception as redis_error:
+            logging.error("Failed to update Redis cache: %s. Data is available in Postgres.", redis_error)
+            return {"error": "Redis update failed", "cards_available": len(cards), "cases_available": len(cases)}
+
+    except Exception as postgres_error:
+        logging.error("Failed to read data from Postgres: %s", postgres_error)
+        return {"error": "Postgres read failed"}
 
 
 def get_stats():
