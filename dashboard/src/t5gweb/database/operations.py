@@ -12,7 +12,28 @@ from .session import db_config
 
 
 def load_cases_postgres(cases):
-    """Load cases data into PostgreSQL database"""
+    """Load or update cases data in PostgreSQL database
+    
+    Inserts new cases or updates existing cases in the database. Uses case
+    number and creation date as composite primary key. Automatically commits
+    changes and handles rollback on errors.
+    
+    Args:
+        cases: Dictionary of case data keyed by case number, each containing:
+            - owner: Case owner name
+            - severity: Severity level string (e.g., '1 (Urgent)')
+            - account: Customer account name
+            - problem: Case summary/title
+            - status: Current case status
+            - createdate: Case creation timestamp string
+            - last_update: Last modified timestamp string
+            - description: Case description text
+            - product: Product name
+            - product_version: Product version
+            
+    Returns:
+        None. Data is committed to PostgreSQL database.
+    """
     logging.warning(f"Starting load_cases_postgres with {len(cases)} cases")
     logging.warning(f"Execution context: {db_config.get_execution_context()}")
     session = db_config.SessionLocal()
@@ -53,7 +74,30 @@ def load_cases_postgres(cases):
 
 
 def load_jira_card_postgres(cases, case_number, issue):
-    """Loads a Jira card and comments into PostgreSQL database"""
+    """Load or update a JIRA card and its comments in PostgreSQL database
+    
+    Creates or updates a JIRA card record and all its associated comments in
+    the database. Establishes foreign key relationship with the parent case
+    using case_number and creation_date composite key. Each call uses its own
+    database session for isolation.
+    
+    Args:
+        cases: Dictionary of all case data keyed by case number
+        case_number: Case number that this JIRA card is associated with
+        issue: JIRA issue object containing card details including:
+            - key: JIRA card identifier
+            - fields.summary: Card title
+            - fields.priority: Priority object
+            - fields.status: Status object
+            - fields.assignee: Assignee object
+            - fields.comment.comments: List of comment objects
+            - fields.customfield_10007: Sprint information
+            
+    Returns:
+        tuple: (card_processed: bool, card_comments: list) where card_processed
+            indicates if card was successfully stored and card_comments contains
+            list of (body, timestamp) tuples for all comments
+    """
     # Process each card with its own database connection
     session = db_config.SessionLocal()  # Fix: Add () to create instance
     card_processed = False
