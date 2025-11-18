@@ -20,13 +20,13 @@ mgr = Celery("t5gweb", broker="redis://redis:6379/0", backend="redis://redis:637
 @mgr.on_after_configure.connect
 def setup_scheduled_tasks(sender, **kwargs):
     """Configure periodic Celery tasks for data synchronization
-    
-    Sets up scheduled tasks for syncing cases, cards, bugs, issues, and 
+
+    Sets up scheduled tasks for syncing cases, cards, bugs, issues, and
     statistics between Redis cache and external APIs (Red Hat Portal, JIRA,
     Bugzilla). Task scheduling depends on READ_ONLY environment variable -
     if not read-only, tasks that modify JIRA cards and send notifications
     are enabled.
-    
+
     Scheduled tasks include:
     - Portal to JIRA sync (hourly + 10min)
     - Card cache updates (hourly + 21min)
@@ -38,7 +38,7 @@ def setup_scheduled_tasks(sender, **kwargs):
     - Bug tagging (daily, read-write only, telco5g specific)
     - Bugzilla details cache (twice daily, if API key configured)
     - Escalations cache (12x daily, if configured)
-    
+
     Args:
         sender: Celery application instance
         **kwargs: Additional keyword arguments from the signal
@@ -132,11 +132,11 @@ def setup_scheduled_tasks(sender, **kwargs):
 @mgr.task
 def portal_jira_sync():
     """Celery task to synchronize Red Hat Portal cases to JIRA cards
-    
+
     Checks for new cases from the Red Hat Portal that don't have corresponding
     JIRA cards and creates them. Uses a distributed lock to prevent concurrent
     executions. Lock times out after 2 hours.
-    
+
     Returns:
         dict: Result dictionary containing either:
             - cards_created count if sync completed successfully
@@ -161,14 +161,14 @@ def portal_jira_sync():
 @mgr.task(autoretry_for=(Exception,), max_retries=5, retry_backoff=30)
 def cache_data(data_type):
     """Celery task to refresh specific data type in Redis cache
-    
+
     Fetches data from external APIs and updates the Redis cache for the
     specified data type. Supports cases, cards, details, bugs, issues, and
     escalations. Card refreshes use a distributed lock to prevent concurrent
     updates (30-minute timeout).
-    
+
     Task automatically retries up to 5 times with 30-second backoff on failure.
-    
+
     Args:
         data_type: Type of data to cache. Valid values:
             - 'cases': Red Hat Portal cases
@@ -177,7 +177,7 @@ def cache_data(data_type):
             - 'bugs': Bugzilla bug details
             - 'issues': JIRA issues linked to cases
             - 'escalations': Escalated cases from JIRA board
-            
+
     Returns:
         dict or None: Result dictionary for card refresh with count, None for
             other data types. Returns None if locked when attempting card refresh.
@@ -223,19 +223,19 @@ def cache_data(data_type):
 @mgr.task(autoretry_for=(Exception,), max_retries=3, retry_backoff=30)
 def tag_bz():
     """Celery task to tag Bugzilla and JIRA bugs with Telco keywords
-    
+
     Telco5g-specific task that tags bugs and JIRA issues with 'Telco' and
     'Telco:Case' keywords in the internal whiteboard or private keywords
     fields. Only runs if jira_query is 'field'. Sends email summary of
     tagging actions.
-    
+
     For Bugzilla bugs, updates the internal_whiteboard field.
     For JIRA bugs, updates the Private Keywords (customfield_12323649) field
     or falls back to Internal Whiteboard (customfield_12322040) if Private
     Keywords is not available.
-    
+
     Task automatically retries up to 3 times with 30-second backoff on failure.
-    
+
     Returns:
         None. Sends email notification with tagging summary.
     """
@@ -400,11 +400,11 @@ def tag_bz():
 @mgr.task
 def cache_stats():
     """Celery task to generate and cache daily statistics
-    
+
     Generates statistics for the current day including case counts by
     customer, engineer, severity, status, escalations, and bug metrics.
     Appends to historical statistics in Redis cache.
-    
+
     Returns:
         None. Results are stored in Redis under 'stats' key.
     """
@@ -415,18 +415,18 @@ def cache_stats():
 @mgr.task(bind=True)
 def refresh_background(self):
     """Celery task to refresh JIRA cards cache in background
-    
+
     Refreshes the JIRA cards cache and reports progress updates during
     execution. Uses a distributed lock to prevent concurrent refreshes
     (30-minute timeout). The task ID is stored in Redis for progress tracking.
-    
+
     If the refresh is already in progress, the task will not run and returns
     a locked status. Lock code derived from:
     http://loose-bits.com/2010/10/distributed-task-locking-in-celery.html
-    
+
     Args:
         self: Celery task instance (bound), used for progress updates
-        
+
     Returns:
         dict: Response dictionary containing either:
             - Progress info (current, total, status, result) if completed
@@ -458,11 +458,11 @@ def refresh_background(self):
 @mgr.task
 def t_sync_priority():
     """Celery task to synchronize case severities with JIRA card priorities
-    
+
     Ensures that the severity level of Red Hat Portal cases matches the
     priority setting of corresponding JIRA cards. Updates out-of-sync cards
     to match case severity levels.
-    
+
     Returns:
         None. Updates are made directly to JIRA cards.
     """

@@ -23,10 +23,10 @@ BP = Blueprint("api", __name__, url_prefix="/api")
 @login_required
 def index():
     """List all available API endpoints
-    
+
     Returns a JSON object containing URLs for all available API endpoints
     including refresh endpoints and data retrieval endpoints.
-    
+
     Returns:
         dict: Dictionary with 'endpoints' key containing list of endpoint URLs
     """
@@ -55,11 +55,11 @@ def index():
 @login_required
 def refresh(data_type):
     """Force an immediate refresh of cached data
-    
+
     Triggers synchronous data refresh for the specified data type. Supported
     types include cards, cases, details, bugs, escalations, issues,
     create_jira_cards, and stats.
-    
+
     Args:
         data_type: Type of data to refresh. Valid values:
             - 'cards': JIRA cards cache
@@ -70,7 +70,7 @@ def refresh(data_type):
             - 'issues': JIRA issues linked to cases
             - 'create_jira_cards': Sync Portal cases to JIRA
             - 'stats': Statistics cache
-            
+
     Returns:
         Response: JSON response indicating success or error for the operation
     """
@@ -108,9 +108,9 @@ def refresh(data_type):
 @login_required
 def show_cards():
     """Retrieve all JIRA cards from cache
-    
+
     Returns cached JIRA cards data in JSON format.
-    
+
     Returns:
         Response: JSON object containing all cached JIRA cards
     """
@@ -122,9 +122,9 @@ def show_cards():
 @login_required
 def show_cases():
     """Retrieve all Red Hat Portal cases from cache
-    
+
     Returns cached case data in JSON format.
-    
+
     Returns:
         Response: JSON object containing all cached cases
     """
@@ -136,9 +136,9 @@ def show_cases():
 @login_required
 def show_bugs():
     """Retrieve all Bugzilla bugs from cache
-    
+
     Returns cached Bugzilla bug data in JSON format.
-    
+
     Returns:
         Response: JSON object containing all cached bugs
     """
@@ -150,9 +150,9 @@ def show_bugs():
 @login_required
 def show_escalations():
     """Retrieve all escalated cases from cache
-    
+
     Returns list of escalated case numbers in JSON format.
-    
+
     Returns:
         Response: JSON object containing all escalated case numbers
     """
@@ -164,10 +164,10 @@ def show_escalations():
 @login_required
 def show_details():
     """Retrieve case details including CritSit status and group names
-    
+
     Returns detailed case information including CritSit flags, group names,
     notified users, and relief/resolution timestamps in JSON format.
-    
+
     Returns:
         Response: JSON object containing case details for all cases
     """
@@ -179,9 +179,9 @@ def show_details():
 @login_required
 def show_issues():
     """Retrieve all JIRA issues associated with open cases
-    
+
     Returns cached JIRA issue data linked to cases in JSON format.
-    
+
     Returns:
         Response: JSON object containing all cached JIRA issues
     """
@@ -193,10 +193,10 @@ def show_issues():
 @login_required
 def show_stats():
     """Generate and return current statistics
-    
+
     Generates fresh statistics including counts by customer, engineer,
     severity, status, and bug metrics in JSON format.
-    
+
     Returns:
         Response: JSON object containing current statistics
     """

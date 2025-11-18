@@ -16,10 +16,10 @@ from . import cache, libtelco5g
 
 def get_new_cases():
     """Get new cases created within the last 7 days
-    
+
     Retrieves cases from cache and filters for those created within the last
     7 days. Severity values are cleaned to remove special characters and numbers.
-    
+
     Returns:
         dict: Dictionary of new cases keyed by case number, with severity
             values cleaned and sorted by severity
@@ -44,11 +44,11 @@ def get_new_cases():
 
 def get_new_comments(cards, new_comments_only=True, account=None, engineer=None):
     """Get cards with recent comments, organized by account
-    
+
     Filters JIRA cards for those with comments created in the last week,
     optionally filtering by account or engineer. Returns cards organized
     by account and case status.
-    
+
     Args:
         cards: Dictionary of JIRA cards with their details
         new_comments_only: If True, only include comments from the last 7 days.
@@ -57,7 +57,7 @@ def get_new_comments(cards, new_comments_only=True, account=None, engineer=None)
             (all accounts).
         engineer: Optional engineer name to filter cards by assignee.
             Defaults to None (all engineers).
-            
+
     Returns:
         dict: Cards organized by account and status, containing only cards
             with comments matching the filter criteria
@@ -108,13 +108,13 @@ def get_new_comments(cards, new_comments_only=True, account=None, engineer=None)
 
 def get_trending_cards(cards):
     """Get cards marked with the 'Trends' label
-    
+
     Filters cards for those with the 'Trends' label and organizes them
     by account and status.
-    
+
     Args:
         cards: Dictionary of JIRA cards with their details
-        
+
     Returns:
         dict: Trending cards organized by account and status
     """
@@ -138,9 +138,9 @@ def get_trending_cards(cards):
 
 def plots():
     """Generate card summary statistics for plotting
-    
+
     Retrieves a summary of card counts by status category.
-    
+
     Returns:
         dict: Summary dictionary with counts for each card status
     """
@@ -150,14 +150,14 @@ def plots():
 
 def organize_cards(detailed_cards, account_list):
     """Group cards by account and status
-    
+
     Organizes cards into a nested dictionary structure grouped by account
     and then by case status (Waiting on Red Hat, Waiting on Customer, Closed).
-    
+
     Args:
         detailed_cards: Dictionary of cards to organize, keyed by card ID
         account_list: List of account names to create groupings for
-        
+
     Returns:
         dict: Nested dictionary structure with accounts as top-level keys,
             status categories as second-level keys, and card data as values
@@ -182,15 +182,15 @@ def organize_cards(detailed_cards, account_list):
 @with_appcontext
 def init_cache():
     """Initialize Redis cache with application data
-    
+
     Flask CLI command that populates the Redis cache with either real data
     from APIs (cases, cards, bugs, issues, escalations, stats) or fake data
     for development/testing. Checks each cache key and refreshes if empty.
-    
+
     The behavior is controlled by the 'fake_data' environment variable:
     - If 'fake_data=true', uses fake data from get_fake_data()
     - Otherwise, fetches real data from Red Hat Portal and JIRA APIs
-    
+
     Note:
         This is a Flask CLI command and should be run using:
         flask init-cache
@@ -239,9 +239,9 @@ def init_cache():
 
 def init_app(app):
     """Register CLI commands with the Flask application
-    
+
     Adds custom CLI commands to the Flask app's command-line interface.
-    
+
     Args:
         app: Flask application instance to register commands with
     """

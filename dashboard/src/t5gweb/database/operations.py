@@ -13,11 +13,11 @@ from .session import db_config
 
 def load_cases_postgres(cases):
     """Load or update cases data in PostgreSQL database
-    
+
     Inserts new cases or updates existing cases in the database. Uses case
     number and creation date as composite primary key. Automatically commits
     changes and handles rollback on errors.
-    
+
     Args:
         cases: Dictionary of case data keyed by case number, each containing:
             - owner: Case owner name
@@ -30,7 +30,7 @@ def load_cases_postgres(cases):
             - description: Case description text
             - product: Product name
             - product_version: Product version
-            
+
     Returns:
         None. Data is committed to PostgreSQL database.
     """
@@ -75,12 +75,12 @@ def load_cases_postgres(cases):
 
 def load_jira_card_postgres(cases, case_number, issue):
     """Load or update a JIRA card and its comments in PostgreSQL database
-    
+
     Creates or updates a JIRA card record and all its associated comments in
     the database. Establishes foreign key relationship with the parent case
     using case_number and creation_date composite key. Each call uses its own
     database session for isolation.
-    
+
     Args:
         cases: Dictionary of all case data keyed by case number
         case_number: Case number that this JIRA card is associated with
@@ -92,7 +92,7 @@ def load_jira_card_postgres(cases, case_number, issue):
             - fields.assignee: Assignee object
             - fields.comment.comments: List of comment objects
             - fields.customfield_10007: Sprint information
-            
+
     Returns:
         tuple: (card_processed: bool, card_comments: list) where card_processed
             indicates if card was successfully stored and card_comments contains

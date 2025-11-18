@@ -40,13 +40,14 @@ users = redis_get("users")
 
 class User(UserMixin):
     """Flask-Login user class for authentication
-    
+
     Extends UserMixin to provide user authentication functionality. User data
     is retrieved from Redis cache based on the user's rhatUUID.
-    
+
     Args:
         user_id: The rhatUUID of the user to load from cache
     """
+
     def __init__(self, user_id):
         user = users[user_id]
         self.id = user_id
@@ -56,14 +57,14 @@ class User(UserMixin):
 
 def is_safe_url(target):
     """Validate that a redirect URL is safe to prevent Open Redirect attacks
-    
+
     Checks that the target URL uses http/https scheme and matches the current
     host to prevent malicious redirects. Implementation from Flask-Login
     documentation: https://flask-login.readthedocs.io/en/latest/#login-example
-    
+
     Args:
         target: Target URL to validate for redirection
-        
+
     Returns:
         bool: True if URL is safe to redirect to, False otherwise
     """
@@ -75,13 +76,13 @@ def is_safe_url(target):
 @login_manager.user_loader
 def load_user(user_id):
     """Flask-Login callback to reload user from user ID in session
-    
+
     Required callback for Flask-Login to load a user from the user ID stored
     in the session. See: https://flask-login.readthedocs.io/en/latest/#how-it-works
-    
+
     Args:
         user_id: User identifier (rhatUUID) stored in the session
-        
+
     Returns:
         User: User object if user exists in cache, None otherwise
     """
@@ -92,13 +93,13 @@ def load_user(user_id):
 
 def init_saml_auth(req):
     """Initialize SAML authentication with configured settings
-    
+
     Loads SAML settings from environment variable and creates a SAML
     authentication object for handling SSO authentication flow.
-    
+
     Args:
         req: Prepared request dictionary containing HTTP request data
-        
+
     Returns:
         OneLogin_Saml2_Auth: Initialized SAML authentication object
     """
@@ -109,14 +110,14 @@ def init_saml_auth(req):
 
 def prepare_flask_request(request):
     """Prepare Flask request data for SAML authentication
-    
+
     Converts Flask request object into a dictionary format required by the
     OneLogin SAML library. Handles proxy/load balancer scenarios using
     HTTP_X_FORWARDED fields.
-    
+
     Args:
         request: Flask request object
-        
+
     Returns:
         dict: Request data dictionary with https, http_host, script_name,
             get_data, and post_data keys
@@ -134,21 +135,21 @@ def prepare_flask_request(request):
 @BP.route("/", methods=["GET", "POST"])
 def login():
     """Handle SAML SSO authentication flow and user provisioning
-    
+
     Manages the complete SAML authentication process including:
     - Initiating SSO login flow
     - Processing SAML responses from identity provider
     - Validating user group membership (RBAC)
     - Just-In-Time (JIT) user provisioning in Redis
     - Session management and safe redirects
-    
+
     Can be disabled by setting FLASK_LOGIN_DISABLED=true environment variable.
-    
+
     Query Parameters:
         sso: Initiates SSO redirect to identity provider
         acs: Assertion Consumer Service - processes SAML response
         next: Optional URL to redirect to after successful login
-        
+
     Returns:
         Response: Redirect to index on successful auth, login page template
             on failure or for initial request
@@ -263,10 +264,10 @@ def login():
 @login_required
 def index():
     """Display dashboard home page with new cases and statistics
-    
+
     Main dashboard view showing new cases created in the last 7 days and
     summary statistics of card counts by status.
-    
+
     Returns:
         str: Rendered HTML template with new cases and plot data
     """
@@ -283,11 +284,11 @@ def index():
 @login_required
 def progress_status():
     """Check if a card refresh is in progress and return task information
-    
+
     Called on page load to determine if a background card refresh is running.
     If a refresh is in progress, returns a 202 status with Location header
     pointing to the task status endpoint.
-    
+
     Returns:
         tuple: JSON response, status code, and optional Location header.
             Returns (empty JSON, 202, Location) if refresh in progress,
@@ -308,14 +309,14 @@ def progress_status():
 @login_required
 def refresh_status(task_id):
     """Provide real-time status updates for background refresh task
-    
+
     Returns the current state of a background card refresh task including
     progress information (current/total cards processed) and status messages.
     Used for displaying progress bars in the UI.
-    
+
     Args:
         task_id: Celery task ID for the refresh operation
-        
+
     Returns:
         Response: JSON response with task state, current progress, total
             items, and status message
@@ -355,10 +356,10 @@ def refresh_status(task_id):
 @login_required
 def refresh():
     """Trigger a background refresh of JIRA cards cache
-    
+
     Initiates an asynchronous background task to refresh the JIRA cards
     cache. Returns immediately with task ID for status polling.
-    
+
     Returns:
         tuple: JSON response, 202 status code, and Location header pointing
             to the task status endpoint
@@ -371,10 +372,10 @@ def refresh():
 @login_required
 def report_view():
     """Display cards with comments from the last week
-    
+
     Retrieves and displays JIRA cards that have comments created within the
     last 7 days, organized by account and status.
-    
+
     Returns:
         str: Rendered HTML template showing cards with recent updates
     """
@@ -393,10 +394,10 @@ def report_view():
 @login_required
 def report_view_all():
     """Display all cards with all comments
-    
+
     Retrieves and displays all JIRA cards with all their comments (not just
     recent ones), organized by account and status.
-    
+
     Returns:
         str: Rendered HTML template showing all cards and comments
     """
@@ -415,11 +416,11 @@ def report_view_all():
 @login_required
 def trends():
     """Display cards marked with the 'Trends' label
-    
+
     Retrieves and displays JIRA cards that have been labeled with 'Trends',
     typically used for tracking trending issues or patterns. Cards are
     organized by account and status.
-    
+
     Returns:
         str: Rendered HTML template showing trending cards with SLA settings
     """
@@ -439,10 +440,10 @@ def trends():
 @login_required
 def table_view():
     """Display cards with recent comments in table format sorted by severity
-    
+
     Shows JIRA cards with comments from the last 7 days in a table view,
     organized by severity level for prioritization.
-    
+
     Returns:
         str: Rendered HTML table template with cards sorted by severity
     """
@@ -462,10 +463,10 @@ def table_view():
 @login_required
 def table_view_all():
     """Display all cards in table format sorted by severity
-    
+
     Shows all JIRA cards (not just those with recent comments) in a table
     view, organized by severity level for comprehensive overview.
-    
+
     Returns:
         str: Rendered HTML table template with all cards sorted by severity
     """
@@ -485,11 +486,11 @@ def table_view_all():
 @login_required
 def weekly_updates():
     """Display weekly updates in plain format for easy copying
-    
+
     Shows cards with recent comments in a simplified, plain-text format
     optimized for copy/pasting into emails, reports, or other distribution
     channels.
-    
+
     Returns:
         str: Rendered HTML template with plain-formatted weekly updates
     """
@@ -509,11 +510,11 @@ def weekly_updates():
 @login_required
 def get_stats():
     """Display comprehensive statistics and metrics dashboard
-    
+
     Generates and displays overall statistics including counts by customer,
     engineer, severity, status, historical trends, and time-to-resolution
     histograms for all cases and cards.
-    
+
     Returns:
         str: Rendered HTML template with statistics, time-series plots, and
             histogram data
@@ -536,13 +537,13 @@ def get_stats():
 @login_required
 def get_account(account):
     """Display detailed view for a specific account
-    
+
     Shows filtered statistics, cards, comments, and metrics for a single
     customer account including pie charts and time-to-resolution histograms.
-    
+
     Args:
         account: Customer account name to filter by
-        
+
     Returns:
         str: Rendered HTML template with account-specific data and statistics
     """
@@ -570,14 +571,14 @@ def get_account(account):
 @login_required
 def get_engineer(engineer):
     """Display detailed view for a specific engineer
-    
+
     Shows filtered statistics, cards, comments, and metrics for a single
     engineer including pie charts and time-to-resolution histograms. Uses
     the same template as account view with engineer_view flag enabled.
-    
+
     Args:
         engineer: Engineer name (display name) to filter by
-        
+
     Returns:
         str: Rendered HTML template with engineer-specific data and statistics
     """

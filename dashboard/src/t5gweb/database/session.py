@@ -10,15 +10,16 @@ from t5gweb.utils import set_cfg
 
 class DatabaseConfig:
     """Database configuration and session management with execution context awareness
-    
+
     Manages PostgreSQL database connections with different session strategies
     for web requests vs Celery workers. Web requests use cached sessionmaker
     while Celery workers get fresh sessions to avoid connection issues across
     process boundaries.
-    
+
     Thread-safe lazy initialization of database engine with connection pooling
     and automatic ping testing.
     """
+
     def __init__(self):
         self._engine: Optional[create_engine] = None  # type: ignore
         self._session_local: Optional[sessionmaker] = None
@@ -27,10 +28,10 @@ class DatabaseConfig:
     @staticmethod
     def get_execution_context():
         """Detect execution context (web vs Celery worker)
-        
+
         Determines if code is running in a Celery worker process or web
         application context by checking environment variables and process name.
-        
+
         Returns:
             str: 'celery' if running in Celery worker, 'web' otherwise
         """
@@ -49,10 +50,10 @@ class DatabaseConfig:
     @staticmethod
     def get_database_url():
         """Build PostgreSQL database URL from configuration
-        
+
         Constructs SQLAlchemy database URL using PostgreSQL connection
         parameters from application configuration.
-        
+
         Returns:
             URL: SQLAlchemy URL object for PostgreSQL connection
         """
@@ -70,11 +71,11 @@ class DatabaseConfig:
     @property
     def engine(self) -> create_engine:  # type: ignore
         """Lazy initialize the database engine with connection pooling
-        
+
         Creates database engine on first access with thread-safe initialization.
         Configured with connection pool pre-ping, 1-hour recycle time, and
         10-second connection timeout.
-        
+
         Returns:
             Engine: SQLAlchemy database engine instance
         """
@@ -92,14 +93,14 @@ class DatabaseConfig:
 
     def SessionLocal(self):
         """Create a new database session with context-aware strategy
-        
+
         Returns different session types based on execution context:
         - Celery workers: Fresh session from new sessionmaker (non-scoped)
         - Web requests: Session from cached sessionmaker (scoped)
-        
+
         This prevents connection issues in Celery workers where connections
         can't be shared across process boundaries.
-        
+
         Returns:
             Session: SQLAlchemy database session instance
         """
@@ -125,19 +126,20 @@ db_config = DatabaseConfig()
 
 class Base(DeclarativeBase):
     """SQLAlchemy declarative base class for all database models
-    
+
     All database model classes should inherit from this base class to be
     properly registered with SQLAlchemy's ORM system.
     """
+
     pass
 
 
 def create_postgres_tables():
     """Create all database tables defined in models
-    
+
     Uses SQLAlchemy metadata to create all tables that don't already exist.
     Safe to call multiple times - only creates missing tables.
-    
+
     Returns:
         None. Tables are created in PostgreSQL database.
     """

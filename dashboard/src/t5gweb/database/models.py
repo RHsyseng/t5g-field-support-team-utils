@@ -19,11 +19,11 @@ from .session import Base
 
 class Case(Base):
     """SQLAlchemy model for Red Hat support cases
-    
+
     Represents a support case from the Red Hat Portal with all associated
     metadata. Uses composite primary key of case_number and created_date.
     Establishes relationships with JIRA cards and comments.
-    
+
     Attributes:
         case_number: Unique case identifier (e.g., '01234567')
         owner: Case owner/engineer name
@@ -40,6 +40,7 @@ class Case(Base):
         jira_cards: Relationship to JiraCard records
         comments: Relationship to Comment records
     """
+
     __tablename__ = "cases"
 
     case_number: Mapped[str] = mapped_column(String, primary_key=True, unique=True)
@@ -67,10 +68,10 @@ class Case(Base):
 
 class Comment(Base):
     """SQLAlchemy model for case comments
-    
+
     Represents comments on Red Hat support cases. Links to parent Case via
     composite foreign key on case_number and created_date.
-    
+
     Attributes:
         id: Auto-incrementing primary key
         case_number: Reference to parent case number
@@ -80,6 +81,7 @@ class Comment(Base):
         commented_at: Date comment was posted
         case: Relationship to parent Case record
     """
+
     __tablename__ = "comments"
 
     id: Mapped[int] = mapped_column(Integer, primary_key=True, autoincrement=True)
@@ -104,11 +106,11 @@ class Comment(Base):
 
 class JiraCard(Base):
     """SQLAlchemy model for JIRA cards tracking support cases
-    
+
     Represents JIRA issues created to track Red Hat support cases. Links to
     parent Case via composite foreign key on case_number and created_date.
     Contains card metadata and establishes relationship with card comments.
-    
+
     Attributes:
         jira_card_id: JIRA issue key (e.g., 'PROJECT-123')
         case_number: Reference to parent case number
@@ -123,6 +125,7 @@ class JiraCard(Base):
         case: Relationship to parent Case record
         comments: Relationship to JiraComment records
     """
+
     __tablename__ = "jira_cards"
 
     jira_card_id: Mapped[str] = mapped_column(String, primary_key=True)
@@ -167,10 +170,10 @@ class JiraCard(Base):
 
 class JiraComment(Base):
     """SQLAlchemy model for JIRA card comments
-    
+
     Represents comments on JIRA cards. Links to parent JiraCard via foreign
     key on jira_card_id with cascade delete.
-    
+
     Attributes:
         jira_comment_id: JIRA comment unique identifier
         jira_card_id: Reference to parent JIRA card
@@ -179,6 +182,7 @@ class JiraComment(Base):
         last_update_date: Last time comment was modified
         jira_card: Relationship to parent JiraCard record
     """
+
     __tablename__ = "jira_comments"
 
     jira_comment_id: Mapped[str] = mapped_column(String, primary_key=True)
