@@ -132,7 +132,7 @@ def show_escalations():
 @BP.route("/details")
 @login_required
 def show_details():
-    """Return case details including CritSit status and group names in JSON format. """
+    """Return case details including CritSit status and group names in JSON format."""
     details = redis_get("details")
     return jsonify(details)
 
