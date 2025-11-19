@@ -22,7 +22,7 @@ BP = Blueprint("api", __name__, url_prefix="/api")
 @BP.route("/")
 @login_required
 def index():
-    """list api endpoints"""
+    """Return a dictionary with 'endpoints' key containing list of endpoint URLs."""
     endpoints = {
         "endpoints": [
             "{}refresh/cards".format(request.base_url),
@@ -47,7 +47,26 @@ def index():
 @BP.route("/refresh/<string:data_type>")
 @login_required
 def refresh(data_type):
-    """Forces an update to the dashboard"""
+    """Force an immediate refresh of cached data
+
+    Triggers synchronous data refresh for the specified data type. Supported
+    types include cards, cases, details, bugs, escalations, issues,
+    create_jira_cards, and stats.
+
+    Args:
+        data_type: Type of data to refresh. Valid values:
+            - 'cards': JIRA cards cache
+            - 'cases': Red Hat Portal cases cache
+            - 'details': Case details including CritSit status
+            - 'bugs': Bugzilla bug details
+            - 'escalations': Escalated cases from JIRA board
+            - 'issues': JIRA issues linked to cases
+            - 'create_jira_cards': Sync Portal cases to JIRA
+            - 'stats': Statistics cache
+
+    Returns:
+        Response: JSON response indicating success or error for the operation
+    """
     cfg = set_cfg()
     if data_type == "cards":
         get_cards(cfg)
@@ -81,7 +100,7 @@ def refresh(data_type):
 @BP.route("/cards")
 @login_required
 def show_cards():
-    """Retrieves all cards"""
+    """Return cached JIRA cards data in JSON format."""
     cards = redis_get("cards")
     return jsonify(cards)
 
@@ -89,7 +108,7 @@ def show_cards():
 @BP.route("/cases")
 @login_required
 def show_cases():
-    """Retrieves all cases"""
+    """Return all Red Hat Portal cases from cache in JSON format."""
     cases = redis_get("cases")
     return jsonify(cases)
 
@@ -97,7 +116,7 @@ def show_cases():
 @BP.route("/bugs")
 @login_required
 def show_bugs():
-    """Retrieves all bugs"""
+    """Return all Bugzilla bugs from cache in JSON format."""
     bugs = redis_get("bugs")
     return jsonify(bugs)
 
@@ -105,7 +124,7 @@ def show_bugs():
 @BP.route("/escalations")
 @login_required
 def show_escalations():
-    """Retrieves all escalations"""
+    """Return all escalated cases from cache in JSON format."""
     escalations = redis_get("escalations")
     return jsonify(escalations)
 
@@ -113,7 +132,7 @@ def show_escalations():
 @BP.route("/details")
 @login_required
 def show_details():
-    """Retrieves CritSit and Group Name for each case"""
+    """Return case details including CritSit status and group names in JSON format."""
     details = redis_get("details")
     return jsonify(details)
 
@@ -121,7 +140,7 @@ def show_details():
 @BP.route("/issues")
 @login_required
 def show_issues():
-    """Retrieves all JIRA issues associated with open cases"""
+    """Return all JIRA issues associated with open cases in JSON format."""
     issues = redis_get("issues")
     return jsonify(issues)
 
@@ -129,5 +148,6 @@ def show_issues():
 @BP.route("/stats")
 @login_required
 def show_stats():
+    """Generate and return current statistics in JSON format."""
     stats = generate_stats()
     return jsonify(stats)

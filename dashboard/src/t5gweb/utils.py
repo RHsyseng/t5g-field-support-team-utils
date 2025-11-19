@@ -15,7 +15,24 @@ from slack_sdk.errors import SlackApiError
 
 
 def email_notify(ini, message_content, recipient=None, subject=None):
-    """send an email to notify the team of a new case"""
+    """Send email notification about new cases or updates
+
+    Composes and sends an email using SMTP with content from multiple cards.
+    Concatenates all card messages into a single email body.
+
+    Args:
+        ini: Configuration dictionary containing SMTP settings (smtp, from, to,
+            subject)
+        message_content: Dictionary of card messages, each containing a
+            'full_message' key with the message text
+        recipient: Optional config key for recipient email address. If None,
+            uses 'to' from ini. Defaults to None.
+        subject: Optional config key for email subject. If None, uses 'subject'
+            from ini. Defaults to None.
+
+    Returns:
+        None. Sends email via SMTP and closes connection.
+    """
 
     body = ""
     for card in message_content:
@@ -33,14 +50,39 @@ def email_notify(ini, message_content, recipient=None, subject=None):
 
 
 def exists_or_zero(data, key):
-    """hack for when a new data point is added -> history does not exist"""
+    """Safely retrieve value from dictionary or return 0 if missing
+
+    Helper function to handle cases where historical data points don't exist
+    yet in statistics dictionaries. Returns 0 as a safe default for numeric
+    data.
+
+    Args:
+        data: Dictionary to retrieve value from
+        key: Key to look up in the dictionary
+
+    Returns:
+        The value if key exists, 0 otherwise
+    """
     if key in data.keys():
         return data[key]
     return 0
 
 
 def get_random_member(team, last_choice=None):
-    """Randomly pick a team member and avoid picking the same person twice in a row"""
+    """Randomly select a team member for case assignment
+
+    Selects a random team member from the provided list, with logic to avoid
+    assigning to the same person consecutively when multiple team members are
+    available.
+
+    Args:
+        team: List of team member dictionaries
+        last_choice: Previously selected team member to avoid reselecting.
+            Defaults to None.
+
+    Returns:
+        dict: Randomly selected team member dictionary, or None if team is empty
+    """
 
     if len(team) > 1:
         if last_choice is not None:
@@ -56,7 +98,18 @@ def get_random_member(team, last_choice=None):
 
 
 def get_token(offline_token):
-    """get a portal access token"""
+    """Exchange offline token for Red Hat Portal access token
+
+    Uses the Red Hat SSO service to exchange a refresh token (offline token)
+    for a short-lived access token. See:
+    https://access.redhat.com/articles/3626371
+
+    Args:
+        offline_token: Red Hat offline/refresh token for authentication
+
+    Returns:
+        str: Bearer access token for Red Hat Portal API requests
+    """
     # https://access.redhat.com/articles/3626371
     data = {
         "grant_type": "refresh_token",
@@ -74,15 +127,17 @@ def get_token(offline_token):
 
 
 def read_config(file):
-    """
-    Takes a filename as input and reads the values into a dictionary.
-    file should be in the format of "key: value" pairs. no value will
-    simply set the key in the dictionary.
-    e.g.
-        debug
-        email : me@redhat.com, you@redhat.com
-        email: me@redhat.com, you@redhat.com
-        email:me@redhat.com, you@redhat.com
+    """Read configuration from a key-value file
+
+    Parses a configuration file with key-value pairs separated by colons.
+    Keys without values are set to True. Lines starting with # or ; are
+    treated as comments and ignored.
+
+    Args:
+        file: Path to configuration file
+
+    Returns:
+        dict: Configuration dictionary with parsed key-value pairs
     """
 
     cfg_dict = {}
@@ -101,7 +156,17 @@ def read_config(file):
 
 
 def read_env_config(keys):
-    """read configuration values from OS environment variables"""
+    """Read configuration values from environment variables
+
+    Retrieves configuration values from environment variables prefixed with
+    't5g_'. Only reads values for keys provided in the input list.
+
+    Args:
+        keys: List of configuration key names to look up (without t5g_ prefix)
+
+    Returns:
+        dict: Configuration dictionary with values from environment variables
+    """
     ecfg = {}
 
     for key in keys:
@@ -112,7 +177,21 @@ def read_env_config(keys):
 
 
 def set_cfg():
-    """generate the working config"""
+    """Generate complete configuration from defaults and environment variables
+
+    Creates the working configuration by combining default values with
+    environment variable overrides. Loads settings for Red Hat Portal API,
+    JIRA, email, Slack, PostgreSQL, and SAML authentication.
+
+    Returns:
+        dict: Complete configuration dictionary with all settings including:
+            - API credentials and endpoints (Portal, JIRA, Bugzilla)
+            - Email and Slack notification settings
+            - Team member assignments
+            - Database connection parameters
+            - RBAC and authentication settings
+            - Query and result limits
+    """
     # Set the default configuration values
     cfg = set_defaults()
 
@@ -174,7 +253,21 @@ def set_cfg():
 
 
 def set_defaults():
-    """set default configuration values"""
+    """Set default configuration values for the application
+
+    Defines default values for all configuration parameters including SMTP
+    settings, JIRA fields, team settings, API limits, and SLA thresholds.
+    These defaults can be overridden by environment variables.
+
+    Returns:
+        dict: Dictionary containing default configuration values for:
+            - Email settings (SMTP, from, to, subject)
+            - JIRA settings (server, project, component, board, etc.)
+            - Portal API field lists
+            - Slack settings
+            - API result limits
+            - SLA day thresholds by severity level
+    """
     defaults = {}
     defaults["smtp"] = "localhost"
     defaults["from"] = "dashboard@example.com"
@@ -224,7 +317,22 @@ def set_defaults():
 
 
 def slack_notify(ini, notification_content):
-    """notify the team of new cases via slack"""
+    """Send Slack notifications for new cases
+
+    Posts notifications to Slack channels based on case severity. High/urgent
+    severity cases (1-2) go to high_severity_slack_channel, others go to
+    low_severity_slack_channel. Mentions assignees using their Slack user ID
+    and posts case descriptions as threaded replies.
+
+    Args:
+        ini: Configuration dictionary containing slack_token, team info, and
+            channel settings
+        notification_content: Dictionary of card notifications, each containing
+            'body', 'assignee', 'severity', and 'description' keys
+
+    Returns:
+        None. Posts messages to Slack channels via API.
+    """
     logging.warning("Notifying team on slack")
     logging.warning(notification_content)
 
@@ -267,7 +375,20 @@ def slack_notify(ini, notification_content):
 
 
 def make_pie_dict(stats):
-    """get the code simplified"""
+    """Transform statistics into format suitable for pie chart rendering
+
+    Converts statistics dictionary into a simplified structure with separate
+    keys and values lists for by_severity and by_status categories, suitable
+    for chart libraries.
+
+    Args:
+        stats: Statistics dictionary containing 'by_severity' and 'by_status'
+            sub-dictionaries
+
+    Returns:
+        dict: Dictionary with 'by_severity' and 'by_status' keys, each
+            containing a tuple of (labels_list, values_list)
+    """
     return {
         "by_severity": (
             list(stats["by_severity"].keys()),
@@ -322,7 +443,19 @@ def format_date(the_date):
 
 
 def format_comment(comment):
-    """Format a JIRA comment for display"""
+    """Format a JIRA comment for HTML display with clickable links
+
+    Converts JIRA text formatting to HTML by:
+    - Converting plain URLs to clickable anchor tags
+    - Converting JIRA [text|url] link syntax to HTML anchor tags
+    - Setting links to open in new tabs (target='_blank')
+
+    Args:
+        comment: JIRA comment object with body attribute
+
+    Returns:
+        str: HTML-formatted comment body with clickable links
+    """
     body = comment.body
     body = re.sub(
         (

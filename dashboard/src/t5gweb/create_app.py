@@ -10,7 +10,22 @@ from .database import create_postgres_tables
 
 
 def create_app(test_config=None):
-    """factory functions to launch app"""
+    """Factory function to create and configure the Flask application
+
+    Creates a Flask application instance with all necessary configuration,
+    blueprints, database initialization, and Prometheus metrics. The app
+    can be configured either from environment variables and config files,
+    or from a test configuration dictionary.
+
+    Args:
+        test_config: Optional dictionary of configuration values for testing.
+            If None, loads configuration from environment and config.py.
+            Defaults to None.
+
+    Returns:
+        Flask: Configured Flask application instance with registered blueprints
+            and initialized extensions
+    """
     # create and configure the app
     app = Flask(__name__, instance_relative_config=True)
     app.config["SECRET_KEY"] = os.environ.get("secret_key")
