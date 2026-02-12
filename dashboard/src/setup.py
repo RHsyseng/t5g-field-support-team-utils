@@ -24,5 +24,7 @@ setup(
         # https://github.com/xmlsec/python-xmlsec/issues/320
         "xmlsec==1.3.14",
         "lxml==5.2.1",
+        "sqlalchemy==2.0.39",
+        "psycopg[binary]==3.2.9",
     ],
 )

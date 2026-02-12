@@ -1,12 +1,4 @@
-#! /usr/bin/python -W ignore
-
-"""
-This script takes a configuration file name as its only argument.
-Not passing a configuration file as an option will cause the script
-to use its default settings and any environmental settings.
-
-Setting set in the environment override the ones in the configuration file.
-"""
+"""libtelco5g: functions for t5gweb"""
 
 from __future__ import print_function
 
@@ -21,6 +13,8 @@ from urllib.parse import urlparse
 import redis
 import requests
 from jira import JIRA
+from jira.exceptions import JIRAError
+from slack_sdk import WebClient
 from t5gweb.utils import (
     email_notify,
     exists_or_zero,
@@ -56,7 +50,18 @@ status_map = {
 
 
 def jira_connection(cfg):
-    """initiate a connection to the JIRA server"""
+    """Initiate a connection to the JIRA server
+
+    Creates and returns an authenticated JIRA connection using token-based
+    authentication from the configuration.
+
+    Args:
+        cfg: Configuration dictionary containing 'server' (JIRA server URL)
+            and 'password' (authentication token)
+
+    Returns:
+        JIRA: Authenticated JIRA connection object
+    """
 
     logging.warning("attempting to connect to jira...")
     jira = JIRA(server=cfg["server"], token_auth=cfg["password"])
@@ -65,20 +70,22 @@ def jira_connection(cfg):
 
 
 def get_project_id(conn, name):
-    """Take a project name and return its id
-    conn    - Jira connection object
-    name    - project name
+    """Take a project name and return its JIRA project object
 
-    Returns Jira object.
-    Notable fields:
-        .components  - list of Jira objects
-            [<JIRA Component: name='ABC', id='12333847'>,...]
-        .description - string
-        .id          - numerical string
-        .key         - string
-            KNIECO
-        .name        - string
-            KNI Ecosystem
+    Retrieves a JIRA project object by name, which contains project metadata
+    including components, description, ID, key, and name.
+
+    Args:
+        conn: JIRA connection object
+        name: Project name to look up
+
+    Returns:
+        Project: JIRA project object with the following notable fields:
+            - components: List of JIRA component objects
+            - description: Project description string
+            - id: Numerical string identifier
+            - key: Project key string (e.g., 'KNIECO')
+            - name: Full project name (e.g., 'KNI Ecosystem')
     """
 
     project = conn.project(name)
@@ -87,15 +94,18 @@ def get_project_id(conn, name):
 
 
 def get_board_id(conn, name):
-    """Take a board name as input and return its id
-    conn    - Jira connection object
-    name    - board name
+    """Take a board name as input and return its JIRA board object
 
-    Returns Jira object.
-    Notable fields:
-        .id          - numerical string
-        .name        - string
-            KNI ECO Labs & Field
+    Retrieves a JIRA board object by name from the list of matching boards.
+
+    Args:
+        conn: JIRA connection object
+        name: Board name to search for
+
+    Returns:
+        Board: JIRA board object with the following notable fields:
+            - id: Numerical string identifier
+            - name: Board name (e.g., 'My Stuff To Do')
     """
 
     boards = conn.boards(name=name)
@@ -104,9 +114,18 @@ def get_board_id(conn, name):
 
 
 def get_previous_card(conn, cfg, case):
-    """Take a case number and return first card that has the case number in the summary
-    conn    - Jira connection object
-    Return previous owner jira username
+    """Find the first existing JIRA card associated with a case number
+
+    Searches for JIRA issues in the configured project that have the case
+    number in their summary field.
+
+    Args:
+        conn: JIRA connection object
+        cfg: Configuration dictionary containing project information
+        case: Case number to search for
+
+    Returns:
+        Issue: First matching JIRA issue object, or None if no match found
     """
     previous_issues_query = f"project = {cfg['project']} AND summary ~ '{case}'"
     previous_issues = conn.search_issues(previous_issues_query)
@@ -116,15 +135,19 @@ def get_previous_card(conn, cfg, case):
 
 
 def get_latest_sprint(conn, bid, sprintname):
-    """Take a board id and return the current sprint
-    conn    - Jira connection object
-    name    - board id
+    """Take a board id and return the current active sprint
 
-    Returns Jira object.
-    Notable fields:
-        .id          - numerical string
-        .name        - string
-            ECO Labs & Field Sprint 188
+    Retrieves the first active sprint for a given board.
+
+    Args:
+        conn: JIRA connection object
+        bid: Board ID to query
+        sprintname: Sprint name pattern (not currently used in implementation)
+
+    Returns:
+        Sprint: JIRA sprint object with the following notable fields:
+            - id: Numerical string identifier
+            - name: Sprint name (e.g., 'ECO Labs & Field Sprint 188')
     """
 
     sprints = conn.sprints(bid, state="active")
@@ -132,6 +155,19 @@ def get_latest_sprint(conn, bid, sprintname):
 
 
 def get_last_sprint(conn, bid, sprintname):
+    """Get the previous sprint based on current sprint number
+
+    Finds the sprint immediately preceding the current active sprint by
+    decrementing the sprint number from the current sprint name.
+
+    Args:
+        conn: JIRA connection object
+        bid: Board ID to query
+        sprintname: Sprint name pattern to match
+
+    Returns:
+        Sprint: JIRA sprint object for the previous sprint, or None if not found
+    """
     this_sprint = get_latest_sprint(conn, bid, sprintname)
     sprint_number = re.search(r"\d*$", this_sprint.name)[0]
     last_sprint_number = int(sprint_number) - 1
@@ -144,6 +180,20 @@ def get_last_sprint(conn, bid, sprintname):
 
 
 def get_sprint_summary(conn, bid, sprintname, team):
+    """Print summary of completed cards per team member for the last sprint
+
+    Queries JIRA for completed cards in the previous sprint and prints the
+    count of completed cards for each team member.
+
+    Args:
+        conn: JIRA connection object
+        bid: Board ID to query
+        sprintname: Sprint name pattern
+        team: List of team member dictionaries containing 'jira_user' and 'name'
+
+    Returns:
+        None. Prints completion statistics to stdout.
+    """
     last_sprint = get_last_sprint(conn, bid, sprintname)
     sid = last_sprint.id
 
@@ -163,6 +213,19 @@ def get_sprint_summary(conn, bid, sprintname, team):
 
 
 def get_card_summary():
+    """Generate summary counts of cards by status
+
+    Retrieves cached cards and counts how many are in each status category.
+
+    Returns:
+        dict: Dictionary with counts for each status:
+            - backlog: Count of cards in Backlog status
+            - debugging: Count of cards in Debugging status
+            - eng_working: Count of cards in Eng Working status
+            - backport: Count of cards in Backport status
+            - ready_to_close: Count of cards in Ready To Close status
+            - done: Count of cards in Done status
+    """
     cards = redis_get("cards")
     backlog = [card for card in cards if cards[card]["card_status"] == "Backlog"]
     debugging = [card for card in cards if cards[card]["card_status"] == "Debugging"]
@@ -186,9 +249,20 @@ def get_card_summary():
 
 
 def get_case_number(link, pfilter="cases"):
-    """Accepts RH Support Case URL and returns the case number
-    - https://access.redhat.com/support/cases/0123456
-    - https://access.redhat.com/support/cases/#/case/0123456
+    """Extract case number from Red Hat Support Case URL
+
+    Parses Red Hat support case URLs and extracts the case number from
+    various URL formats including fragment-based and path-based formats.
+
+    Args:
+        link: Red Hat support case URL (e.g.,
+            'https://access.redhat.com/support/cases/0123456' or
+            'https://access.redhat.com/support/cases/#/case/0123456')
+        pfilter: URL filter type, currently only 'cases' is supported.
+            Defaults to 'cases'.
+
+    Returns:
+        str: Case number if found, empty string otherwise
     """
     parsed_url = urlparse(link)
 
@@ -202,17 +276,22 @@ def get_case_number(link, pfilter="cases"):
 
 
 def add_watcher_to_case(cfg, case, username, token):
+    """Add a new watcher to a Red Hat support case
+
+    Makes a POST request to the Red Hat Portal API to add a user as a watcher
+    (notified user) on a support case.
+
+    Args:
+        cfg: Configuration dictionary containing 'redhat_api' endpoint
+        case: Case number to add watcher to
+        username: SSO username of the user to add as a watcher
+        token: Red Hat API authentication token
+
+    Returns:
+        bool: True if user was successfully added as watcher, False otherwise
     """
-    Add a new watcher to a Red Hat support case.
 
-    :param cfg: The configuration dictionary.
-    :param case: The case number.
-    :param username: The SSO username of the user to add as a watcher.
-    :param token: The Red Hat API token.
-
-    :return: True if the user was successfully added as a watcher, False otherwise.
-    """
-
+    logging.warning(f"Adding watcher {username} to case {case}")
     # Add the new watcher to the list of notified users
     payload = {"user": [{"ssoUsername": username}]}
 
@@ -235,206 +314,461 @@ def add_watcher_to_case(cfg, case, username, token):
 
 
 def create_cards(cfg, new_cases, action="none"):
-    """
-    cfg    - configuration
-    cases  - dictionary of all cases
-    needed - list of cases that need a card created
-    """
+    """Create JIRA cards for new support cases
 
+    Processes a list of new cases and creates corresponding JIRA cards,
+    assigns them to team members, adds watchers, and generates notifications.
+
+    Args:
+        cfg: Configuration dictionary containing JIRA settings, team info,
+            and notification settings
+        new_cases: List of case numbers that need JIRA cards created
+        action: Action to perform. Must be 'create' to actually create cards,
+            otherwise returns empty results. Defaults to 'none'.
+
+    Returns:
+        tuple: A 3-tuple containing:
+            - notification_content: Dictionary of notification messages keyed by
+              card key
+            - new_cards: Dictionary of created card data keyed by card key
+            - novel_cases: List of case numbers for which cards were created
+    """
+    if action != "create":
+        return {}, {}, []
+
+    # Setup connections and get prerequisites
+    context = _setup_card_creation_context(cfg)
+    cases = redis_get("cases")
+
+    # Filter cases that need cards
+    novel_cases = _filter_novel_cases(new_cases, context["created_cases"])
+
+    # Process each case
     new_cards = {}
     notification_content = {}
 
-    logging.warning("attempting to connect to jira...")
-    jira_conn = jira_connection(cfg)
-    board = get_board_id(jira_conn, cfg["board"])
-
-    # Obtain the authentication token for RedHat Api
-    token = get_token(cfg["offline_token"])
-
-    if cfg["sprintname"] and cfg["sprintname"] != "":
-        sprint = get_latest_sprint(jira_conn, board.id, cfg["sprintname"])
-    else:
-        raise ValueError("No sprintname is defined.")
-    created_cards = get_issues_in_sprint(cfg, sprint, jira_conn)
-
-    # Parse case numbers from JIRA titles
-    created_cases = [card["fields"]["summary"].split(":")[0] for card in created_cards]
-
-    cases = redis_get("cases")
-    novel_cases = []
-    for case in new_cases:
-        if case in created_cases:
-            logging.warning(f"Card already exists for {case}, moving on.")
-            continue
-        else:
-            novel_cases.append(case)
-        assignee = None
-        case_creation_date = datetime.datetime.strptime(
-            cases[case]["createdate"], "%Y-%m-%dT%H:%M:%SZ"
-        )
-        date_now = datetime.datetime.now(datetime.timezone.utc).replace(tzinfo=None)
-        if case_creation_date < date_now - datetime.timedelta(days=15):
-            logging.warning(
-                (
-                    "Case creation date more than 15 days ago,"
-                    "checking if it has previous owner of a jira card"
-                )
-            )
-            previous_issue = get_previous_card(jira_conn, cfg, case)
-            if previous_issue is not None:
-                # Prepare the bulk edit payload
-                logging.warning(
-                    f"Updating : {previous_issue.key} rather than creating a new card."
-                )
-                jira_conn.add_issues_to_sprint(sprint.id, [previous_issue.key])
-                jira_conn.transition_issue(previous_issue, "11")
-                jira_conn.add_comment(
-                    previous_issue,
-                    (
-                        f"Case {case} seems to have been reopened. The dashboard found"
-                        "this card linked to the case and reopened it automatically."
-                    ),
-                )
-                continue
-        if cfg["team"]:
-            for member in cfg["team"]:
-                for account in member["accounts"]:
-                    if account.lower() in cases[case]["account"].lower():
-                        assignee = member
-            if assignee is None:
-                last_choice = redis_get("last_choice")
-                assignee = get_random_member(cfg["team"], last_choice)
-                redis_set("last_choice", json.dumps(assignee))
-            assignee["displayName"] = assignee["name"]
-
-            # Check if the user wants to be notified
-            notifieduser = assignee.get("notifieduser", "true")
-            # Add the user as a watcher only if they want to be notified
-            if notifieduser == "true" and case:
-                logging.warning(
-                    f"Adding watcher {assignee['jira_user']} to case {case}"
-                )
-                add_watcher_to_case(cfg, case, assignee["jira_user"], token)
-            else:
-                logging.warning(
-                    f"Not adding watcher {assignee['jira_user']} to case {case}"
-                )
-
-        priority = portal2jira_sevs[cases[case]["severity"]]
-        full_description = (
-            "This card was automatically created from the Case Dashboard Sync Job.\r\n"
-            + "\r\n"
-            + "This card was created because it had a severity of "
-            + cases[case]["severity"]
-            + "\r\nThe account for the case is "
-            + cases[case]["account"]
-            + "\r\nThe case had an internal status of: "
-            + cases[case]["status"]
-            + "\r\n\r\n*Description:* \r\n\r\n"
-            + cases[case]["description"]
-            + "\r\n"
-        )
-        summary = case + ": " + cases[case]["problem"]
-        card_info = {
-            "project": {"key": cfg["project"]},
-            "issuetype": {"name": cfg["type"]},
-            "components": [{"name": cfg["component"]}],
-            "priority": {"name": priority},
-            "labels": cfg["labels"],
-            "summary": summary[:253] + ".." if len(summary) > 253 else summary,
-            "description": (
-                full_description[:253] + ".."
-                if len(full_description) > 253
-                else full_description
-            ),
-        }
-
-        if assignee:
-            card_info["assignee"] = {"name": assignee["jira_user"]}
-
-        logging.warning("A card needs created for case {}".format(case))
-        logging.warning(card_info)
-        if action == "create":
-            logging.warning("creating card for case {}".format(case))
-            new_card = jira_conn.create_issue(fields=card_info)
-            # Updating the card with the Release_Note_Text field.
-            new_card.update(fields={"customfield_12317313": "TRACK"})
-            logging.warning("created {}".format(new_card.key))
-            notification_content = generate_notification_content(
-                cfg, notification_content, assignee, new_card, case, cases
-            )
-
-            # Add newly create card to the sprint
-            if cfg["sprintname"] and cfg["sprintname"] != "":
-                logging.warning("moving card to sprint {}".format(sprint.id))
-                jira_conn.add_issues_to_sprint(sprint.id, [new_card.key])
-
-            # Move the card from backlog to the To Do column
-            if (
-                new_card.fields.status.name != "New"
-                and new_card.fields.status.name != "To Do"
-            ):
-                logging.warning(new_card.fields.status)
-                logging.warning('moving card from backlog to "To Do" column')
-                jira_conn.transition_issue(new_card.key, "To Do")
-
-            # Add links to case, etc
-            logging.warning("adding link to support case {}".format(case))
-            jira_conn.add_simple_link(
-                new_card.key,
-                {
-                    "url": "https://access.redhat.com/support/cases/" + case,
-                    "title": "Support Case",
-                },
-            )
-
-            bz = []
-            if "bug" in cases[case]:
-                bz = cases[case]["bug"]
-                logging.warning("adding link to BZ {}".format(cases[case]["bug"]))
-                jira_conn.add_simple_link(
-                    new_card.key,
-                    {
-                        "url": "https://bugzilla.redhat.com/show_bug.cgi?id="
-                        + cases[case]["bug"],
-                        "title": "BZ " + cases[case]["bug"],
-                    },
-                )
-
-            tags = []
-            if "tags" in cases[case]:
-                cases[case]["tags"]
-
-            new_cards[new_card.key] = {
-                "card_status": status_map[new_card.fields.status.name],
-                "card_created": new_card.fields.created,
-                "account": cases[case]["account"],
-                "summary": case + ": " + cases[case]["problem"],
-                "description": cases[case]["description"],
-                "comments": None,
-                "assignee": assignee,
-                "case_number": case,
-                "tags": tags,
-                "labels": cfg["labels"],
-                "bugzilla": bz,
-                "severity": re.search(r"[a-zA-Z]+", cases[case]["severity"]).group(),
-                "priority": new_card.fields.priority.name,
-                "case_status": cases[case]["status"],
-                "escalated": False,
-                "crit_sit": False,
-            }
+    for case in novel_cases:
+        result = _process_single_case(case, cases, context, cfg)
+        if result:
+            new_cards[result["card_key"]] = result["card_data"]
+            notification_content[result["card_key"]] = result["notification"]
 
     return notification_content, new_cards, novel_cases
 
 
-def generate_notification_content(
-    cfg, notification_content, assignee, new_card, case, cases
-):
+def _setup_card_creation_context(cfg):
+    """Setup all connections and get required data for card creation
+
+    Initializes JIRA connection, retrieves board and sprint information,
+    and gets list of already created cases.
+
+    Args:
+        cfg: Configuration dictionary containing JIRA connection parameters,
+            board name, sprint name, and API credentials
+
+    Returns:
+        dict: Context dictionary containing:
+            - jira_conn: Active JIRA connection object
+            - board: JIRA board object
+            - token: Red Hat API authentication token
+            - sprint: Current active sprint object
+            - created_cases: List of case numbers that already have cards
+
+    Raises:
+        ValueError: If no sprintname is defined in configuration
+    """
+    logging.warning("Setting up card creation context...")
+
+    jira_conn = jira_connection(cfg)
+    board = get_board_id(jira_conn, cfg["board"])
+    token = get_token(cfg["offline_token"])
+
+    if not cfg["sprintname"]:
+        raise ValueError("No sprintname is defined.")
+
+    sprint = get_latest_sprint(jira_conn, board.id, cfg["sprintname"])
+    created_cards = get_issues_in_sprint(cfg, sprint, jira_conn)
+    created_cases = [card["fields"]["summary"].split(":")[0] for card in created_cards]
+
+    return {
+        "jira_conn": jira_conn,
+        "board": board,
+        "token": token,
+        "sprint": sprint,
+        "created_cases": created_cases,
+    }
+
+
+def _filter_novel_cases(new_cases, created_cases):
+    """Filter out cases that already have cards
+
+    Compares the list of new cases against already created cases and returns
+    only those that don't have existing cards.
+
+    Args:
+        new_cases: List of case numbers that potentially need cards
+        created_cases: List of case numbers that already have JIRA cards
+
+    Returns:
+        list: Case numbers that need new cards created
+    """
+    novel_cases = []
+    for case in new_cases:
+        if case in created_cases:
+            logging.warning(f"Card already exists for {case}, moving on.")
+        else:
+            novel_cases.append(case)
+    return novel_cases
+
+
+def _notify_slack_error(cfg, case, error_msg):
+    """Send a Slack notification when JIRA card creation fails.
+
+    Posts an error message to the low severity Slack channel to alert the team
+    that a card could not be created for a case.
+
+    Args:
+        cfg: Configuration dictionary containing slack_token and channel settings
+        case: Case number that failed
+        error_msg: Error message describing the failure
+    """
+    if not cfg.get("slack_token") or not cfg.get("low_severity_slack_channel"):
+        logging.warning("Cannot notify Slack: missing token or channel config")
+        return
+
+    try:
+        client = WebClient(token=cfg["slack_token"])
+        message = (
+            f":warning: Failed to create JIRA card for case {case}\n"
+            f"Error: {error_msg[:200]}"  # Truncate long error messages
+        )
+        client.chat_postMessage(
+            channel=cfg["low_severity_slack_channel"],
+            text=message,
+        )
+    except Exception as slack_err:
+        logging.error(f"Failed to send Slack error notification: {slack_err}")
+
+
+def _process_single_case(case, cases, context, cfg):
+    """Process a single case and create its JIRA card
+
+    Handles the complete workflow for creating a JIRA card from a case,
+    including checking for old cases, assigning, adding watchers, creating
+    the card, and generating notifications.
+
+    Args:
+        case: Case number to process
+        cases: Dictionary of all case data
+        context: Context dictionary from _setup_card_creation_context
+        cfg: Configuration dictionary
+
+    Returns:
+        dict: Dictionary containing 'card_key', 'card_data', and 'notification'
+            if successful, None if case was handled by reopening existing card
+    """
+    # Handle old cases with potential previous cards
+    if _is_old_case(cases[case]):
+        if _handle_old_case(case, context, cfg):
+            return None  # Case was handled by reopening existing card
+
+    # Determine assignee
+    assignee = _determine_assignee(case, cases, cfg)
+
+    # Add watcher if needed
+    if assignee and assignee.get("notifieduser", "true") == "true":
+        add_watcher_to_case(cfg, case, assignee["jira_user"], context["token"])
+
+    # Create the card
+    card_info = _build_card_info(case, cases, cfg, assignee)
+    try:
+        new_card = _create_jira_card(card_info, context["jira_conn"])
+    except JIRAError as e:
+        logging.error(f"Failed to create JIRA card for case {case}: {e}")
+        _notify_slack_error(cfg, case, str(e))
+        return None
+
+    # Post-process the card
+    _post_process_card(new_card, case, cases, context, cfg)
+
+    # Generate notification content
+    notification = generate_notification_content(cfg, assignee, new_card, case, cases)
+
+    # Build card data for return
+    card_data = _build_card_data(new_card, case, cases, cfg, assignee)
+
+    return {
+        "card_key": new_card.key,
+        "card_data": card_data,
+        "notification": notification,
+    }
+
+
+def _is_old_case(case_data):
+    """Check if case is older than 15 days
+
+    Compares case creation date against current date to determine if case
+    is considered "old" (created more than 15 days ago).
+
+    Args:
+        case_data: Dictionary containing case information including 'createdate'
+
+    Returns:
+        bool: True if case is older than 15 days, False otherwise
+    """
+    case_creation_date = datetime.datetime.strptime(
+        case_data["createdate"], "%Y-%m-%dT%H:%M:%SZ"
+    )
+    date_now = datetime.datetime.now(datetime.timezone.utc).replace(tzinfo=None)
+    return case_creation_date < date_now - datetime.timedelta(days=15)
+
+
+def _handle_old_case(case, context, cfg):
+    """Handle old cases by checking for and reopening previous cards
+
+    Searches for existing JIRA cards associated with the case and reopens
+    them if found, rather than creating a new card.
+
+    Args:
+        case: Case number to check
+        context: Context dictionary containing JIRA connection and sprint info
+        cfg: Configuration dictionary
+
+    Returns:
+        bool: True if previous card was found and reopened, False otherwise
+    """
+    previous_issue = get_previous_card(context["jira_conn"], cfg, case)
+    if previous_issue:
+        logging.warning(
+            f"Updating: {previous_issue.key} rather than creating new card."
+        )
+        context["jira_conn"].add_issues_to_sprint(
+            context["sprint"].id, [previous_issue.key]
+        )
+        context["jira_conn"].transition_issue(previous_issue, "11")
+        context["jira_conn"].add_comment(
+            previous_issue,
+            f"Case {case} seems to have been reopened. The dashboard found "
+            "this card linked to the case and reopened it automatically.",
+        )
+        return True
+    return False
+
+
+def _determine_assignee(case, cases, cfg):
+    """Determine who should be assigned to the case
+
+    Matches case to team member based on account assignment. If no match is
+    found, assigns randomly to a team member using round-robin logic.
+
+    Args:
+        case: Case number to assign
+        cases: Dictionary of all case data
+        cfg: Configuration dictionary containing team member information
+
+    Returns:
+        dict: Team member dictionary with assignment info, or None if no team
+            configured
+    """
+    if not cfg["team"]:
+        return None
+
+    # Try to match by account
+    for member in cfg["team"]:
+        for account in member["accounts"]:
+            if account.lower() in cases[case]["account"].lower():
+                member["displayName"] = member["name"]
+                return member
+
+    # No match found, assign randomly
+    last_choice = redis_get("last_choice")
+    assignee = get_random_member(cfg["team"], last_choice)
+    redis_set("last_choice", json.dumps(assignee))
+    assignee["displayName"] = assignee["name"]
+    return assignee
+
+
+def _build_card_info(case, cases, cfg, assignee):
+    """Build the card info dictionary for JIRA card creation
+
+    Constructs the fields dictionary required to create a JIRA issue,
+    including project, type, components, priority, labels, summary,
+    description, and assignee.
+
+    Args:
+        case: Case number for the card
+        cases: Dictionary of all case data
+        cfg: Configuration dictionary with JIRA field defaults
+        assignee: Team member dictionary, or None if unassigned
+
+    Returns:
+        dict: JIRA issue fields dictionary ready for card creation
+    """
+    priority = portal2jira_sevs[cases[case]["severity"]]
+
+    severity = cases[case]["severity"]
+    account = cases[case]["account"]
+    status = cases[case]["status"]
+    description = cases[case]["description"]
+
+    full_description = (
+        "This card was automatically created from the Case Dashboard Sync Job.\r\n"
+        "\r\n"
+        f"This card was created because it had a severity of {severity}\r\n"
+        f"The account for the case is {account}\r\n"
+        f"The case had an internal status of: {status}\r\n"
+        "\r\n*Description:* \r\n\r\n"
+        f"{description}\r\n"
+    )
+
+    summary = f"{case}: {cases[case]['problem']}"
+
+    card_info = {
+        "project": {"key": cfg["project"]},
+        "issuetype": {"name": cfg["type"]},
+        "components": [{"name": cfg["component"]}],
+        "priority": {"name": priority},
+        "labels": cfg["labels"],
+        "summary": summary[:253] + ".." if len(summary) > 253 else summary,
+        "description": (
+            full_description[:253] + ".."
+            if len(full_description) > 253
+            else full_description
+        ),
+    }
+
+    if assignee:
+        card_info["assignee"] = {"name": assignee["jira_user"]}
+
+    return card_info
+
+
+def _create_jira_card(card_info, jira_conn):
+    """Create the JIRA card
+
+    Creates a new JIRA issue using the provided card information and sets
+    the ticket tracking field.
+
+    Args:
+        card_info: Dictionary containing JIRA issue fields
+        jira_conn: Active JIRA connection object
+
+    Returns:
+        Issue: Newly created JIRA issue object
+    """
+    logging.warning(f"Creating card for case {card_info['summary'].split(':')[0]}")
+    new_card = jira_conn.create_issue(fields=card_info)
+    new_card.update(fields={"customfield_12317313": "TRACK"})
+    logging.warning(f"Created {new_card.key}")
+    return new_card
+
+
+def _post_process_card(new_card, case, cases, context, cfg):
+    """Handle post-creation card processing: sprint, status, links
+
+    Performs post-creation steps including adding the card to the sprint,
+    updating status if needed, and adding support case and bugzilla links.
+
+    Args:
+        new_card: Newly created JIRA issue object
+        case: Case number associated with the card
+        cases: Dictionary of all case data
+        context: Context dictionary containing sprint information
+        cfg: Configuration dictionary
+    """
+    # Add to sprint
+    if cfg["sprintname"]:
+        logging.warning(f"Moving card to sprint {context['sprint'].id}")
+        context["jira_conn"].add_issues_to_sprint(context["sprint"].id, [new_card.key])
+
+    # Update status
+    if new_card.fields.status.name not in ["New", "To Do"]:
+        logging.warning('Moving card from backlog to "To Do" column')
+        context["jira_conn"].transition_issue(new_card.key, "To Do")
+
+    # Add links
+    _add_card_links(new_card, case, cases, context["jira_conn"])
+
+
+def _add_card_links(new_card, case, cases, jira_conn):
+    """Add support case and bugzilla links to the card
+
+    Adds web links to the JIRA card for the Red Hat support case and any
+    associated bugzilla bugs.
+
+    Args:
+        new_card: JIRA issue object to add links to
+        case: Case number to link
+        cases: Dictionary of all case data
+        jira_conn: Active JIRA connection object
+    """
+    # Support case link
+    logging.warning(f"Adding link to support case {case}")
+    jira_conn.add_simple_link(
+        new_card.key,
+        {
+            "url": f"https://access.redhat.com/support/cases/{case}",
+            "title": "Support Case",
+        },
+    )
+
+    # Bugzilla link if exists
+    if "bug" in cases[case]:
+        bug_id = cases[case]["bug"]
+        logging.warning(f"Adding link to BZ {bug_id}")
+        jira_conn.add_simple_link(
+            new_card.key,
+            {
+                "url": f"https://bugzilla.redhat.com/show_bug.cgi?id={bug_id}",
+                "title": f"BZ {bug_id}",
+            },
+        )
+
+
+def _build_card_data(new_card, case, cases, cfg, assignee):
+    """Build the card data dictionary for return
+
+    Constructs a standardized card data dictionary from the JIRA card and
+    case information.
+
+    Args:
+        new_card: Newly created JIRA issue object
+        case: Case number for the card
+        cases: Dictionary of all case data
+        cfg: Configuration dictionary
+        assignee: Team member dictionary
+
+    Returns:
+        dict: Complete card data dictionary with all relevant fields
+    """
+    tags = cases[case].get("tags", [])
+    bz = cases[case].get("bug", [])
+
+    return {
+        "card_status": status_map[new_card.fields.status.name],
+        "card_created": new_card.fields.created,
+        "account": cases[case]["account"],
+        "summary": f"{case}: {cases[case]['problem']}",
+        "description": cases[case]["description"],
+        "comments": None,
+        "assignee": assignee,
+        "case_number": case,
+        "tags": tags,
+        "labels": cfg["labels"],
+        "bugzilla": bz,
+        "severity": re.search(r"[a-zA-Z]+", cases[case]["severity"]).group(),
+        "priority": new_card.fields.priority.name,
+        "case_status": cases[case]["status"],
+        "escalated": False,
+        "crit_sit": False,
+    }
+
+
+def generate_notification_content(cfg, assignee, new_card, case, cases):
     """Generate notification message for email's and Slack
 
     Args:
         cfg (dict): Pre-configured settings
-        notification_content (dict): All pending notifications
         assignee (dict): Information about the card's assignee
         new_card (str): Name of created JIRA card
         case (str): ID of relevant case
@@ -447,8 +781,8 @@ def generate_notification_content(
         assignee_section = f"It is initially being tracked by {assignee['name']}."
     else:
         assignee_section = "It is not assigned to anyone."
-    notification_content[new_card] = {}
-    notification_content[new_card]["body"] = (
+    notification_content = {}
+    notification_content["body"] = (
         f"A JIRA issue ({cfg['server']}/browse/{new_card}) has been created"
         f" for a new case:\n"
         f"Case #: {case} (https://access.redhat.com/support/cases/{case})\n"
@@ -457,21 +791,28 @@ def generate_notification_content(
         f"Severity: {cases[case]['severity']}\n"
         f"{assignee_section}\n"
     )
-    notification_content[new_card]["severity"] = cases[case]["severity"]
-    notification_content[new_card][
-        "description"
-    ] = f"Description: {cases[case]['description']}\n"
-    notification_content[new_card]["assignee"] = assignee["name"] if assignee else None
-    notification_content[new_card]["full_message"] = (
-        notification_content[new_card]["body"]
+    notification_content["severity"] = cases[case]["severity"]
+    notification_content["description"] = f"Description: {cases[case]['description']}\n"
+    notification_content["assignee"] = assignee["name"] if assignee else None
+    notification_content["full_message"] = (
+        notification_content["body"]
         + "\n"
-        + notification_content[new_card]["description"]
+        + notification_content["description"]
         + "\n===========================================\n\n"
     )
     return notification_content
 
 
 def redis_set(key, value):
+    """Store a key-value pair in Redis cache
+
+    Connects to the Redis server and stores the provided value under the
+    specified key.
+
+    Args:
+        key: Redis key name
+        value: Value to store (should be JSON-serialized string for complex data)
+    """
     logging.warning("syncing {}..".format(key))
     r_cache = redis.Redis(host="redis")
     r_cache.mset({key: value})
@@ -479,6 +820,18 @@ def redis_set(key, value):
 
 
 def redis_get(key):
+    """Retrieve a value from Redis cache
+
+    Connects to the Redis server and retrieves the value for the specified
+    key. JSON-decodes the value if it exists.
+
+    Args:
+        key: Redis key name to retrieve
+
+    Returns:
+        dict or other: Deserialized value from Redis, or empty dict if key
+            doesn't exist or connection fails
+    """
     logging.warning("fetching {}..".format(key))
     r_cache = redis.Redis(host="redis")
     try:
@@ -496,6 +849,18 @@ def redis_get(key):
 
 
 def get_case_from_link(jira_conn, card):
+    """Extract case number from JIRA card's remote links
+
+    Searches through a JIRA card's remote links to find the support case link
+    and extracts the case number from it.
+
+    Args:
+        jira_conn: Active JIRA connection object
+        card: JIRA card key or object to search
+
+    Returns:
+        str: Case number if found, None otherwise
+    """
     links = jira_conn.remote_links(card)
     for link in links:
         t = jira_conn.remote_link(card, link)
@@ -507,7 +872,37 @@ def get_case_from_link(jira_conn, card):
 
 
 def generate_stats(account=None, engineer=None):
-    """generate some stats"""
+    """Generate comprehensive statistics from cached cards and cases
+
+    Analyzes cached card and case data to generate statistics including
+    counts by customer, engineer, severity, status, high priority cases,
+    escalations, open/closed case trends, and bug tracking metrics.
+
+    Args:
+        account: Optional account name to filter statistics. Defaults to None
+            (all accounts).
+        engineer: Optional engineer name to filter statistics. Defaults to None
+            (all engineers).
+
+    Returns:
+        dict: Statistics dictionary containing:
+            - by_customer: Dict of case counts per customer
+            - by_engineer: Dict of case counts per engineer
+            - by_severity: Dict of case counts per severity level
+            - by_status: Dict of case counts per status
+            - high_prio: Count of high/urgent severity cases
+            - escalated: Count of escalated cases
+            - open_cases: Total open cases count
+            - weekly_closed_cases: Cases closed in last 7 days
+            - weekly_opened_cases: Cases opened in last 7 days
+            - daily_closed_cases: Cases closed in last day
+            - daily_opened_cases: Cases opened in last day
+            - no_updates: Cases with no updates in last 7 days
+            - no_bzs: Cases without bugzilla or JIRA issues
+            - bugs: Dict with 'unique' and 'no_target' bug counts
+            - crit_sit: Count of critical situation cases
+            - total_escalations: Total escalated and crit_sit cases
+    """
 
     logging.warning("generating stats")
     start = time.time()
@@ -542,7 +937,11 @@ def generate_stats(account=None, engineer=None):
     today = datetime.date.today()
 
     customers = [cards[card]["account"] for card in cards]
-    engineers = [cards[card]["assignee"]["displayName"] for card in cards]
+    engineers = [
+        cards[card]["assignee"]["displayName"]
+        for card in cards
+        if cards[card]["assignee"]["displayName"] is not None
+    ]
     severities = [cards[card]["severity"] for card in cards]
     statuses = [cards[card]["case_status"] for card in cards]
 
@@ -575,7 +974,8 @@ def generate_stats(account=None, engineer=None):
 
         if status != "Closed":
             stats["by_customer"][account] += 1
-            stats["by_engineer"][engineer] += 1
+            if engineer is not None:
+                stats["by_engineer"][engineer] += 1
             stats["by_severity"][severity] += 1
             if severity == "High" or severity == "Urgent":
                 stats["high_prio"] += 1
@@ -649,6 +1049,19 @@ def is_bug_missing_target(item):
 
 
 def plot_stats():
+    """Prepare historical statistics data for plotting
+
+    Retrieves cached historical statistics and transforms them into x and y
+    value lists suitable for time-series plotting.
+
+    Returns:
+        tuple: A 2-tuple containing:
+            - x_values: List of date strings
+            - y_values: Dictionary of metric name to value lists, including:
+                escalated, open_cases, new_cases, closed_cases, no_updates,
+                no_bzs, bugs_unique, bugs_no_tgt, high_prio, crit_sit, and
+                total_escalations
+    """
     historical_stats = redis_get("stats")
     x_values = [day for day in historical_stats]
     y_values = {
@@ -786,6 +1199,18 @@ def generate_histogram_stats(account=None, engineer=None):
 
 
 def sync_priority(cfg):
+    """Synchronize JIRA card priorities with case severities
+
+    Finds cards where the JIRA priority doesn't match the case severity and
+    updates them to be in sync. Only processes non-Done cards.
+
+    Args:
+        cfg: Configuration dictionary containing JIRA connection parameters
+
+    Returns:
+        dict: Dictionary of out-of-sync cards that were updated, keyed by
+            card key
+    """
     cards = redis_get("cards")
     sev_map = {
         re.search(r"[a-zA-Z]+", k).group(): v for k, v in portal2jira_sevs.items()
@@ -833,6 +1258,15 @@ def get_issues_in_sprint(cfg, sprint, jira_conn, max_results=1000):
 
 
 def sync_portal_to_jira():
+    """Synchronize Red Hat Portal cases to JIRA by creating missing cards
+
+    Identifies cases from the Red Hat Portal that don't have corresponding
+    JIRA cards and creates them. Sends email and Slack notifications for
+    newly created cards. Includes safety check to prevent mass card creation.
+
+    Returns:
+        dict: Dictionary containing 'cards_created' count
+    """
     cfg = set_cfg()
 
     start = time.time()
@@ -890,6 +1324,10 @@ def sync_portal_to_jira():
 
 
 def main():
+    """Main entry point for the libtelco5g module
+
+    Currently a placeholder that prints the module name.
+    """
     print("libtelco5g")
 
 

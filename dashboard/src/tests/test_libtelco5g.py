@@ -1,12 +1,18 @@
 import pytest
-import t5gweb.libtelco5g as libtelco5g
+from t5gweb.libtelco5g import (
+    get_case_number,
+    is_bug_missing_target,
+    jira_connection,
+    redis_get,
+    redis_set,
+)
 
 
 def test_get_jira_connection(mocker):
     cfg = {"server": "http://example.com", "password": "your_token"}
     mock_jira = mocker.patch("t5gweb.libtelco5g.JIRA")
 
-    result = libtelco5g.jira_connection(cfg)
+    result = jira_connection(cfg)
 
     mock_jira.assert_called_once_with(server=cfg["server"], token_auth=cfg["password"])
     assert result == mock_jira.return_value
@@ -20,7 +26,7 @@ def mock_redis(mocker):
 def test_redis_set(mock_redis):
     key = "test_key"
     value = "test_value"
-    libtelco5g.redis_set(key, value)
+    redis_set(key, value)
 
     mock_redis.assert_called_once_with(host="redis")
     mock_redis.return_value.mset.assert_called_once_with({key: value})
@@ -33,7 +39,7 @@ def test_redis_set(mock_redis):
 def test_redis_get(key, value, expected_result, mock_redis):
     mock_redis.return_value.get.return_value = value
 
-    result = libtelco5g.redis_get(key)
+    result = redis_get(key)
 
     mock_redis.assert_called_once_with(host="redis")
     mock_redis.return_value.get.assert_called_once_with(key)
@@ -51,7 +57,7 @@ def test_redis_get(key, value, expected_result, mock_redis):
     ],
 )
 def test_get_case_number(link, pfilter, expected_case_number):
-    result = libtelco5g.get_case_number(link, pfilter)
+    result = get_case_number(link, pfilter)
     assert result == expected_case_number
 
 
@@ -67,5 +73,5 @@ def test_get_case_number(link, pfilter, expected_case_number):
     ],
 )
 def test_is_bug_missing_target(item, expected_result):
-    result = libtelco5g.is_bug_missing_target(item)
+    result = is_bug_missing_target(item)
     assert result == expected_result

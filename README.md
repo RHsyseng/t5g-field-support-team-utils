@@ -29,8 +29,8 @@ Prerequisites:
 
 ### Steps
 
-1. If you are interested in setting up the backend services, fill out `cfg/sample.env`
-with any relevant details.
+1. If you are interested in setting up the backend services, copy `cfg/sample.env` into `cfg/local.env` and fill out with your details.
+
 2. Run `cd dashboard` and `podman-compose up -d`
 
 After it's built, you can access the dashboard at <localhost:8080/home>, and the Flower
