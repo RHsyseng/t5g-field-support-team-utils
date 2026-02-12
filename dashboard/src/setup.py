@@ -12,7 +12,7 @@ setup(
         "Flask-Login==0.6.3",
         "flower==2.0.1",
         "gunicorn==23.0.0",
-        "jira==3.8.0",
+        "jira==3.10.5",
         "prometheus_flask_exporter==0.23.1",
         "python-bugzilla==3.3.0",
         "python3-saml==1.16.0",
