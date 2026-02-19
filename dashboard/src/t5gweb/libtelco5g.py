@@ -622,7 +622,7 @@ def _create_jira_card(card_info, jira_conn):
     """
     logging.warning(f"Creating card for case {card_info['summary'].split(':')[0]}")
     new_card = jira_conn.create_issue(fields=card_info)
-    new_card.update(fields={"customfield_12317313": "TRACK"})
+    new_card.update(fields={"customfield_12317313": "TRACK"})  # Release Note Text
     logging.warning(f"Created {new_card.key}")
     return new_card
 

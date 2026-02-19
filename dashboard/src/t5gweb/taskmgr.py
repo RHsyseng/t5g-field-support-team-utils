@@ -301,6 +301,7 @@ def tag_bz():
                     tagged = False
                     card = jira_conn.issue(issue["id"])
                     try:
+                        # RH Private Keywords custom field
                         private_keywords = card.fields.customfield_12323649
                     except AttributeError:
                         logging.warning(
@@ -321,6 +322,7 @@ def tag_bz():
                         if "Telco" not in new_keywords:
                             new_keywords.extend(["Telco", "Telco:Case"])
                             private_keywords_dict = {
+                                # RH Private Keywords custom field
                                 "customfield_12323649": [
                                     {"value": keyword} for keyword in new_keywords
                                 ]
@@ -333,6 +335,7 @@ def tag_bz():
                         elif "Telco:Case" not in new_keywords:
                             new_keywords.append("Telco:Case")
                             private_keywords_dict = {
+                                # RH Private Keywords custom field
                                 "customfield_12323649": [
                                     {"value": keyword} for keyword in new_keywords
                                 ]
@@ -346,6 +349,7 @@ def tag_bz():
 
                     if tagged is False:
                         try:
+                            # Internal Whiteboard custom field
                             internal_whiteboard = card.fields.customfield_12322040
                         except AttributeError:
                             logging.warning(
@@ -365,6 +369,7 @@ def tag_bz():
                                 "Telco Telco:Case " + internal_whiteboard
                             )
                             update = card.update(
+                                # Internal Whiteboard custom field
                                 customfield_12322040=internal_whiteboard
                             )
                             email_body["Script Tagged Internal Whiteboard"][
@@ -374,6 +379,7 @@ def tag_bz():
                             logging.warning("tagging Jira Bug:" + str(card))
                             internal_whiteboard = internal_whiteboard + " Telco:Case"
                             update = card.update(
+                                # Internal Whiteboard custom field
                                 customfield_12322040=internal_whiteboard
                             )
                             email_body["Script Tagged Internal Whiteboard"][
