@@ -1,4 +1,4 @@
-jira==3.8.0
+jira==3.10.5
 slack_sdk==3.34.0
 redis==5.2.1
 requests==2.32.3

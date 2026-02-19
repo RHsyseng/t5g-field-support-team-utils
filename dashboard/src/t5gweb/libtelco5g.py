@@ -13,6 +13,8 @@ from urllib.parse import urlparse
 import redis
 import requests
 from jira import JIRA
+from jira.exceptions import JIRAError
+from slack_sdk import WebClient
 from t5gweb.utils import (
     email_notify,
     exists_or_zero,
@@ -419,6 +421,35 @@ def _filter_novel_cases(new_cases, created_cases):
     return novel_cases
 
 
+def _notify_slack_error(cfg, case, error_msg):
+    """Send a Slack notification when JIRA card creation fails.
+
+    Posts an error message to the low severity Slack channel to alert the team
+    that a card could not be created for a case.
+
+    Args:
+        cfg: Configuration dictionary containing slack_token and channel settings
+        case: Case number that failed
+        error_msg: Error message describing the failure
+    """
+    if not cfg.get("slack_token") or not cfg.get("low_severity_slack_channel"):
+        logging.warning("Cannot notify Slack: missing token or channel config")
+        return
+
+    try:
+        client = WebClient(token=cfg["slack_token"])
+        message = (
+            f":warning: Failed to create JIRA card for case {case}\n"
+            f"Error: {error_msg[:200]}"  # Truncate long error messages
+        )
+        client.chat_postMessage(
+            channel=cfg["low_severity_slack_channel"],
+            text=message,
+        )
+    except Exception as slack_err:
+        logging.error(f"Failed to send Slack error notification: {slack_err}")
+
+
 def _process_single_case(case, cases, context, cfg):
     """Process a single case and create its JIRA card
 
@@ -450,7 +481,12 @@ def _process_single_case(case, cases, context, cfg):
 
     # Create the card
     card_info = _build_card_info(case, cases, cfg, assignee)
-    new_card = _create_jira_card(card_info, context["jira_conn"])
+    try:
+        new_card = _create_jira_card(card_info, context["jira_conn"])
+    except JIRAError as e:
+        logging.error(f"Failed to create JIRA card for case {case}: {e}")
+        _notify_slack_error(cfg, case, str(e))
+        return None
 
     # Post-process the card
     _post_process_card(new_card, case, cases, context, cfg)
