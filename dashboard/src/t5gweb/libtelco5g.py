@@ -62,7 +62,7 @@ def jira_connection(cfg):
     """
 
     logging.warning("attempting to connect to jira...")
-    jira = JIRA(server=cfg["server"], token_auth=cfg["password"])
+    jira = JIRA(server=cfg["server"], basic_auth=(cfg["username"], cfg["password"]))
 
     return jira
 

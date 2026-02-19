@@ -231,6 +231,7 @@ def set_cfg():
     cfg["board"] = os.environ.get("jira_board")
     cfg["jira_query"] = os.environ.get("jira_query")
     cfg["max_jira_results"] = os.environ.get("max_jira_results")
+    cfg["username"] = os.environ.get("jira_username")
     cfg["password"] = os.environ.get("jira_pass")
     cfg["labels"] = (
         os.environ.get("jira_labels").split(",")
