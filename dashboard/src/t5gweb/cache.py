@@ -450,8 +450,7 @@ def _get_assignee_info(issue):
     if issue.fields.assignee:
         assignee = {
             "displayName": issue.fields.assignee.displayName,
-            "key": issue.fields.assignee.key,
-            "name": issue.fields.assignee.name,
+            "accountId": issue.fields.assignee.accountId,
         }
     return assignee
 
@@ -476,8 +475,7 @@ def _get_contributor_info(issue):
             contributor.append(
                 {
                     "displayName": engineer.displayName,
-                    "key": engineer.key,
-                    "name": engineer.name,
+                    "accountId": engineer.accountId,
                 }
             )
     return contributor

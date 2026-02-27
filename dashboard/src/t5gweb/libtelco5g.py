@@ -638,7 +638,7 @@ def _build_card_info(case, cases, cfg, assignee):
     }
 
     if assignee:
-        card_info["assignee"] = {"name": assignee["jira_user"]}
+        card_info["assignee"] = {"accountId": assignee["jira_account_id"]}
 
     return card_info
 

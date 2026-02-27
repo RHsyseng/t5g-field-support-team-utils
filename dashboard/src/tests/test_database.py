@@ -28,19 +28,21 @@ def mock_jira_issue():
     mock_issue.fields.summary = "12345678: Test Summary"
     mock_issue.fields.priority.name = "High"
     mock_issue.fields.status.name = "In Progress"
-    mock_issue.fields.assignee.key = "testuser"
+    mock_issue.fields.assignee.key = (
+        "testuser"  # FIXME: Can use emailAddress or displayName
+    )
     mock_issue.fields.created = "2024-01-01T00:00:00.000+0000"
 
     # Mock comments
     mock_comment1 = Mock()
     mock_comment1.id = "comment-1"
-    mock_comment1.author.key = "author1"
+    mock_comment1.author.key = "author1"  # FIXME: Can use emailAddress or displayName
     mock_comment1.body = "Test comment 1"
     mock_comment1.updated = "2024-01-01T01:00:00.000+0000"
 
     mock_comment2 = Mock()
     mock_comment2.id = "comment-2"
-    mock_comment2.author.key = "author2"
+    mock_comment2.author.key = "author2"  # FIXME: Can use emailAddress or displayName
     mock_comment2.body = "Test comment 2"
     mock_comment2.updated = "2024-01-01T02:00:00.000+0000"
 
