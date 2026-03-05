@@ -446,11 +446,12 @@ def _get_assignee_info(issue):
         dict: Dictionary containing 'displayName', 'key', and 'name' fields.
             All values are None if no assignee is set.
     """
-    assignee = {"displayName": None, "key": None, "name": None}
+    assignee = {"displayName": None, "accountId": None, "emailAddress": None}
     if issue.fields.assignee:
         assignee = {
             "displayName": issue.fields.assignee.displayName,
             "accountId": issue.fields.assignee.accountId,
+            "emailAddress": issue.fields.assignee.emailAddress,
         }
     return assignee
 
@@ -476,6 +477,7 @@ def _get_contributor_info(issue):
                 {
                     "displayName": engineer.displayName,
                     "accountId": engineer.accountId,
+                    "emailAddress": engineer.emailAddress,
                 }
             )
     return contributor
