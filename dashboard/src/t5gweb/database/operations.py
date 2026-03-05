@@ -151,8 +151,7 @@ def load_jira_card_postgres(cases, case_number, issue):
                     ),
                     status=issue.fields.status.name,
                     assignee=(
-                        # FIXME: Can use emailAddress or displayName
-                        issue.fields.assignee.key
+                        issue.fields.assignee.displayName
                         if issue.fields.assignee
                         else None
                     ),
@@ -194,8 +193,7 @@ def load_jira_card_postgres(cases, case_number, issue):
                         jira_comment = JiraComment(
                             jira_comment_id=comment.id,
                             jira_card_id=issue.key,
-                            # FIXME: Can use emailAddress or displayName
-                            author=comment.author.key,
+                            author=comment.author.displayName,
                             body=body,
                             last_update_date=last_comment_update,
                         )
@@ -205,8 +203,7 @@ def load_jira_card_postgres(cases, case_number, issue):
                         updated_comment = JiraComment(
                             jira_comment_id=comment.id,
                             jira_card_id=issue.key,
-                            # FIXME: Can use emailAddress or displayName
-                            author=comment.author.key,
+                            author=comment.author.displayName,
                             body=body,
                             last_update_date=parser.parse(comment.updated),
                         )
