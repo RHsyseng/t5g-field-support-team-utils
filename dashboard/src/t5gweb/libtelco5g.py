@@ -538,7 +538,12 @@ def _determine_assignee(case, cases, cfg):
         return None
 
     # Try to match by account
-    for member in cfg["team"]:
+    team = [
+        member
+        for member in cfg["team"]
+        if member.get("active", "true").lower() == "true"
+    ]
+    for member in team:
         for account in member["accounts"]:
             if account.lower() in cases[case]["account"].lower():
                 member["displayName"] = member["name"]
@@ -546,7 +551,7 @@ def _determine_assignee(case, cases, cfg):
 
     # No match found, assign randomly
     last_choice = redis_get("last_choice")
-    assignee = get_random_member(cfg["team"], last_choice)
+    assignee = get_random_member(team, last_choice)
     redis_set("last_choice", json.dumps(assignee))
     assignee["displayName"] = assignee["name"]
     return assignee
