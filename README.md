@@ -45,7 +45,7 @@ If you want to add a new JS package, you'll need to add it to `package.json` and
 
 ### Using fake data
 
-You can run the dashboard without Red Hat Portal or Jira API credentials by using fake data. The app then loads cases, cards, bugs, and issues from a JSON file instead of live APIs, and populates the front end with this data.
+You can run the dashboard without Red Hat Portal or Jira API credentials by using fake data. The app then loads cases, cards, bugs, and issues from a JSON file instead of live APIs, and populates the frontend with this data.
 
 1. Enable it
 
@@ -54,9 +54,9 @@ You can run the dashboard without Red Hat Portal or Jira API credentials by usin
    fake_data=true
    ```
 
-2. Default data 
+2. Default data
 
-   The repo includes `dashboard/src/data/fake_data.json`. With `fake_data=true`, the `init-cache` step (run automatically when you bring up the stack with `podman-compose up -d`) loads this file into Redis, and the dashboard uses it.
+   The repository includes `dashboard/src/data/fake_data.json`. With `fake_data=true`, the `init-cache` step (run automatically when you bring up the stack with `podman-compose up -d`) loads this file into Redis, and the dashboard uses it.
 
 3. If the provided fake data is not satisfactory for your use case, you can regenerate fake data using our script:
 
