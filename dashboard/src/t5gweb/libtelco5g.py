@@ -128,7 +128,9 @@ def get_previous_card(conn, cfg, case):
         Issue: First matching JIRA issue object, or None if no match found
     """
     previous_issues_query = f"project = {cfg['project']} AND summary ~ '{case}'"
-    previous_issues = conn.search_issues(previous_issues_query)
+    previous_issues = conn.search_issues(
+        previous_issues_query, 0, cfg["max_jira_results"]
+    )
     if len(previous_issues) > 0:
         return previous_issues[0]
     return None
@@ -179,7 +181,7 @@ def get_last_sprint(conn, bid, sprintname):
             return b
 
 
-def get_sprint_summary(conn, bid, sprintname, team):
+def get_sprint_summary(conn, bid, sprintname, team, max_jira_results):
     """Print summary of completed cards per team member for the last sprint
 
     Queries JIRA for completed cards in the previous sprint and prints the
@@ -190,7 +192,7 @@ def get_sprint_summary(conn, bid, sprintname, team):
         bid: Board ID to query
         sprintname: Sprint name pattern
         team: List of team member dictionaries containing 'jira_user' and 'name'
-
+        max_jira_results: Maximum number of results to return from JIRA
     Returns:
         None. Prints completion statistics to stdout.
     """
@@ -207,7 +209,7 @@ def get_sprint_summary(conn, bid, sprintname, team):
             + str(user)
             + ' and status = "DONE"',
             0,
-            1000,
+            max_jira_results,
         ).iterable
         print("%s completed %d cards" % (member["name"], len(completed_cards)))
 
@@ -387,7 +389,9 @@ def _setup_card_creation_context(cfg):
         raise ValueError("No sprintname is defined.")
 
     sprint = get_latest_sprint(jira_conn, board.id, cfg["sprintname"])
-    created_cards = get_issues_in_sprint(cfg, sprint, jira_conn)
+    created_cards = get_issues_in_sprint(
+        cfg, sprint, jira_conn, cfg["max_jira_results"]
+    )
     created_cases = [card["fields"]["summary"].split(":")[0] for card in created_cards]
 
     return {
@@ -1235,7 +1239,7 @@ def sync_priority(cfg):
     return out_of_sync
 
 
-def get_issues_in_sprint(cfg, sprint, jira_conn, max_results=1000):
+def get_issues_in_sprint(cfg, sprint, jira_conn, max_results=False):
     """Get all issues in a specified sprint with specified labels
 
     Args:
@@ -1252,7 +1256,7 @@ def get_issues_in_sprint(cfg, sprint, jira_conn, max_results=1000):
         "sprint=" + str(sprint.id) + ' AND labels = "' + cfg["jira_query"] + '"'
     )
     cards = jira_conn.search_issues(
-        jql_str=jira_query, json_result=True, maxResults=max_results
+        jql_str=jira_query, json_result=True, maxResults=cfg["max_jira_results"]
     )
     return cards["issues"]
 

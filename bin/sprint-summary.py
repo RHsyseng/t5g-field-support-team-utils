@@ -88,7 +88,9 @@ def main():
         dpp.pprint(vars(sprint))
 
     print("\nFetching sprint summary")
-    get_sprint_summary(conn, board.id, cfg["sprintname"], cfg["team"])
+    get_sprint_summary(
+        conn, board.id, cfg["sprintname"], cfg["team"], cfg["max_jira_results"]
+    )
 
 
 if __name__ == "__main__":
