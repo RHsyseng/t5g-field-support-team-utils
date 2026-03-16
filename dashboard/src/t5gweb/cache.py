@@ -114,7 +114,7 @@ def get_escalations(cfg, cases):
     escalations = []
     for card in escalated_cards:
         issue = jira_conn.issue(card)
-        case = issue.fields.customfield_12313441  # SDFC Case Links in escalations proj.
+        case = issue.fields.customfield_10979  # SFDC Case Links in escalations proj.
         if case is not None:
             escalations.append(case)
     return escalations
