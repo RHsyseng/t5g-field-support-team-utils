@@ -389,7 +389,9 @@ def _setup_card_creation_context(cfg):
         raise ValueError("No sprintname is defined.")
 
     sprint = get_latest_sprint(jira_conn, board.id, cfg["sprintname"])
-    created_cards = get_issues_in_sprint(cfg, sprint, jira_conn)
+    created_cards = get_issues_in_sprint(
+        cfg, sprint, jira_conn, cfg["max_jira_results"]
+    )
     created_cases = [card["fields"]["summary"].split(":")[0] for card in created_cards]
 
     return {
