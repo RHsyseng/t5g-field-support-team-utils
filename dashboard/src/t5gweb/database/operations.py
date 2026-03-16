@@ -91,8 +91,7 @@ def load_jira_card_postgres(cases, case_number, issue):
             - fields.status: Status object
             - fields.assignee: Assignee object
             - fields.comment.comments: List of comment objects
-            - fields.customfield_10007: Sprint information
-
+            - fields.customfield_10020: Sprint information
     Returns:
         tuple: (card_processed: bool, card_comments: list) where card_processed
             indicates if card was successfully stored and card_comments contains
@@ -151,12 +150,14 @@ def load_jira_card_postgres(cases, case_number, issue):
                     ),
                     status=issue.fields.status.name,
                     assignee=(
-                        issue.fields.assignee.key if issue.fields.assignee else None
+                        issue.fields.assignee.displayName
+                        if issue.fields.assignee
+                        else None
                     ),
                     sprint=(
-                        str(issue.fields.customfield_10007[0])
-                        if hasattr(issue.fields, "customfield_10007")
-                        and issue.fields.customfield_10007
+                        str(issue.fields.customfield_10020[0].get("name"))
+                        if hasattr(issue.fields, "customfield_10020")
+                        and issue.fields.customfield_10020
                         else None
                     ),
                     severity=severity_int,
@@ -191,7 +192,7 @@ def load_jira_card_postgres(cases, case_number, issue):
                         jira_comment = JiraComment(
                             jira_comment_id=comment.id,
                             jira_card_id=issue.key,
-                            author=comment.author.key,
+                            author=comment.author.displayName,
                             body=body,
                             last_update_date=last_comment_update,
                         )
@@ -201,7 +202,7 @@ def load_jira_card_postgres(cases, case_number, issue):
                         updated_comment = JiraComment(
                             jira_comment_id=comment.id,
                             jira_card_id=issue.key,
-                            author=comment.author.key,
+                            author=comment.author.displayName,
                             body=body,
                             last_update_date=parser.parse(comment.updated),
                         )

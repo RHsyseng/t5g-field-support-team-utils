@@ -9,12 +9,18 @@ from t5gweb.libtelco5g import (
 
 
 def test_get_jira_connection(mocker):
-    cfg = {"server": "http://example.com", "password": "your_token"}
+    cfg = {
+        "server": "http://example.com",
+        "username": "test_user",
+        "password": "your_token",
+    }
     mock_jira = mocker.patch("t5gweb.libtelco5g.JIRA")
 
     result = jira_connection(cfg)
 
-    mock_jira.assert_called_once_with(server=cfg["server"], token_auth=cfg["password"])
+    mock_jira.assert_called_once_with(
+        server=cfg["server"], basic_auth=(cfg["username"], cfg["password"])
+    )
     assert result == mock_jira.return_value
 
 

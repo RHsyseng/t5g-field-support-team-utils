@@ -28,26 +28,26 @@ def mock_jira_issue():
     mock_issue.fields.summary = "12345678: Test Summary"
     mock_issue.fields.priority.name = "High"
     mock_issue.fields.status.name = "In Progress"
-    mock_issue.fields.assignee.key = "testuser"
+    mock_issue.fields.assignee.displayName = "Test User"
     mock_issue.fields.created = "2024-01-01T00:00:00.000+0000"
 
     # Mock comments
     mock_comment1 = Mock()
     mock_comment1.id = "comment-1"
-    mock_comment1.author.key = "author1"
+    mock_comment1.author.displayName = "Author One"
     mock_comment1.body = "Test comment 1"
     mock_comment1.updated = "2024-01-01T01:00:00.000+0000"
 
     mock_comment2 = Mock()
     mock_comment2.id = "comment-2"
-    mock_comment2.author.key = "author2"
+    mock_comment2.author.displayName = "Author Two"
     mock_comment2.body = "Test comment 2"
     mock_comment2.updated = "2024-01-01T02:00:00.000+0000"
 
     mock_issue.fields.comment.comments = [mock_comment1, mock_comment2]
 
     # Optional fields
-    mock_issue.fields.customfield_10007 = None  # sprint
+    mock_issue.fields.customfield_10020 = None  # sprint
 
     return mock_issue
 
@@ -269,14 +269,14 @@ class TestDatabaseOperations:
         assert len(loaded_cases) == 3
 
         # Verify specific case data
-        case_81381364 = (
-            test_db_session.query(Case).filter_by(case_number="81381364").first()
+        case_44632246 = (
+            test_db_session.query(Case).filter_by(case_number="44632246").first()
         )
-        assert case_81381364 is not None
-        assert case_81381364.owner == "Isa Escribano Barriga"
-        assert case_81381364.account == "Pepito Gil Vargas S.A."
-        assert case_81381364.severity == 3  # From "3 (Normal)"
-        assert case_81381364.status == "Closed"
+        assert case_44632246 is not None
+        assert case_44632246.owner == "Alejandro Almeida Ferreras"
+        assert case_44632246.account == "(주) 모두윈드코스메틱"
+        assert case_44632246.severity == 2  # From "2 (High)"
+        assert case_44632246.status == "Waiting on Customer"
 
     def test_load_jira_card_returns_correct_status(
         self, test_db_session, mock_jira_issue
@@ -345,7 +345,7 @@ class TestDataIntegrity:
         # Use the auto-fixture that patches db_config to use test database
 
         # Load same case data twice
-        single_case_raw = {"81381364": fake_data["cases"]["81381364"].copy()}
+        single_case_raw = {"44632246": fake_data["cases"]["44632246"].copy()}
         single_case = prepare_fake_data_with_missing_fields(single_case_raw)
 
         # First load

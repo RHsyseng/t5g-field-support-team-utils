@@ -25,8 +25,8 @@ def generate_fake_data(number_of_cases):
     engineers = [
         {
             "displayName": fake.name(),
-            "key": fake.user_name(),
-            "name": fake.user_name(),
+            "emailAddress": fake.safe_email(),
+            "accountId": fake.uuid4(),
         }
         for _ in range(5)
     ]
@@ -273,7 +273,7 @@ def generate_fake_card(fake, engineers, bugs, issues, case_number, case_details)
             "assignee": (
                 fake.random_element(engineers)
                 if fake.boolean(chance_of_getting_true=95)
-                else {"displayName": None, "key": None, "name": None}
+                else {"displayName": None, "accountId": None, "emailAddress": None}
             ),
             "bugzilla": bugs.get(case_number),
             "card_created": fake.date_time_this_decade().isoformat() + ".000+0000",
@@ -314,8 +314,8 @@ def generate_fake_card(fake, engineers, bugs, issues, case_number, case_details)
                 [
                     {
                         "displayName": fake.name(),
-                        "key": fake.user_name(),
-                        "name": fake.user_name(),
+                        "accountId": fake.uuid4(),
+                        "emailAddress": fake.safe_email(),
                     }
                     for _ in range(fake.random_int(0, 3))
                 ]

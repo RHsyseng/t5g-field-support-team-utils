@@ -64,7 +64,7 @@ def jira_connection(cfg):
     """
 
     logging.warning("attempting to connect to jira...")
-    jira = JIRA(server=cfg["server"], token_auth=cfg["password"])
+    jira = JIRA(server=cfg["server"], basic_auth=(cfg["username"], cfg["password"]))
 
     return jira
 
@@ -638,7 +638,7 @@ def _build_card_info(case, cases, cfg, assignee):
     }
 
     if assignee:
-        card_info["assignee"] = {"name": assignee["jira_user"]}
+        card_info["assignee"] = {"accountId": assignee["jira_account_id"]}
 
     return card_info
 
@@ -658,7 +658,7 @@ def _create_jira_card(card_info, jira_conn):
     """
     logging.warning(f"Creating card for case {card_info['summary'].split(':')[0]}")
     new_card = jira_conn.create_issue(fields=card_info)
-    new_card.update(fields={"customfield_12317313": "TRACK"})
+    new_card.update(fields={"customfield_10783": "TRACK"})  # Release Note Text
     logging.warning(f"Created {new_card.key}")
     return new_card
 

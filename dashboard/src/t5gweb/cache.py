@@ -446,12 +446,12 @@ def _get_assignee_info(issue):
         dict: Dictionary containing 'displayName', 'key', and 'name' fields.
             All values are None if no assignee is set.
     """
-    assignee = {"displayName": None, "key": None, "name": None}
+    assignee = {"displayName": None, "accountId": None, "emailAddress": None}
     if issue.fields.assignee:
         assignee = {
             "displayName": issue.fields.assignee.displayName,
-            "key": issue.fields.assignee.key,
-            "name": issue.fields.assignee.name,
+            "accountId": issue.fields.assignee.accountId,
+            "emailAddress": issue.fields.assignee.emailAddress,
         }
     return assignee
 
@@ -471,13 +471,13 @@ def _get_contributor_info(issue):
             'name' for each contributor. Empty list if no contributors.
     """
     contributor = []
-    if issue.fields.customfield_12315950:
-        for engineer in issue.fields.customfield_12315950:
+    if issue.fields.customfield_10466:  # Contributors custom field
+        for engineer in issue.fields.customfield_10466:  # Contributors custom field
             contributor.append(
                 {
                     "displayName": engineer.displayName,
-                    "key": engineer.key,
-                    "name": engineer.name,
+                    "accountId": engineer.accountId,
+                    "emailAddress": engineer.emailAddress,
                 }
             )
     return contributor
@@ -923,7 +923,7 @@ def _extract_qa_contact(bug):
         str: QA contact email address, or None if not set
     """
     try:
-        return bug.fields.customfield_12315948.emailAddress
+        return bug.fields.customfield_10470.emailAddress  # QA Contact custom field
     except AttributeError:
         return None
 
@@ -941,7 +941,7 @@ def _extract_jira_severity(bug):
         str: Severity value, or None if not set
     """
     try:
-        return bug.fields.customfield_12316142.value
+        return bug.fields.customfield_10840.value  # Severity custom field
     except AttributeError:
         return None
 
@@ -1028,7 +1028,7 @@ def _extract_private_keywords(bug):
         list: List of private keyword strings, or None if not set or empty
     """
     try:
-        private_keywords_raw = bug.fields.customfield_12323649
+        private_keywords_raw = bug.fields.customfield_10999  # RH Private Keywords
     except AttributeError:
         return None
 
