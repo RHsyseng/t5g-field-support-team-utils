@@ -155,7 +155,7 @@ def load_jira_card_postgres(cases, case_number, issue):
                         else None
                     ),
                     sprint=(
-                        str(issue.fields.customfield_10020[0].get("name"))
+                        str(issue.fields.customfield_10020[0])
                         if hasattr(issue.fields, "customfield_10020")
                         and issue.fields.customfield_10020
                         else None
