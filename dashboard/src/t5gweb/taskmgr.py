@@ -302,7 +302,7 @@ def tag_bz():
                     card = jira_conn.issue(issue["id"])
                     try:
                         # RH Private Keywords custom field
-                        private_keywords = card.fields.customfield_12323649
+                        private_keywords = card.fields.customfield_10999
                     except AttributeError:
                         logging.warning(
                             "No Private Keywords field for {}, skipping".format(
@@ -323,7 +323,7 @@ def tag_bz():
                             new_keywords.extend(["Telco", "Telco:Case"])
                             private_keywords_dict = {
                                 # RH Private Keywords custom field
-                                "customfield_12323649": [
+                                "customfield_10999": [
                                     {"value": keyword} for keyword in new_keywords
                                 ]
                             }
@@ -336,7 +336,7 @@ def tag_bz():
                             new_keywords.append("Telco:Case")
                             private_keywords_dict = {
                                 # RH Private Keywords custom field
-                                "customfield_12323649": [
+                                "customfield_10999": [
                                     {"value": keyword} for keyword in new_keywords
                                 ]
                             }
@@ -350,7 +350,7 @@ def tag_bz():
                     if tagged is False:
                         try:
                             # Internal Whiteboard custom field
-                            internal_whiteboard = card.fields.customfield_12322040
+                            internal_whiteboard = card.fields.customfield_11004
                         except AttributeError:
                             logging.warning(
                                 "No Internal Whiteboard field for {}, skipping".format(
@@ -370,7 +370,7 @@ def tag_bz():
                             )
                             update = card.update(
                                 # Internal Whiteboard custom field
-                                customfield_12322040=internal_whiteboard
+                                customfield_11004=internal_whiteboard
                             )
                             email_body["Script Tagged Internal Whiteboard"][
                                 "cards"
@@ -380,7 +380,7 @@ def tag_bz():
                             internal_whiteboard = internal_whiteboard + " Telco:Case"
                             update = card.update(
                                 # Internal Whiteboard custom field
-                                customfield_12322040=internal_whiteboard
+                                customfield_11004=internal_whiteboard
                             )
                             email_body["Script Tagged Internal Whiteboard"][
                                 "cards"

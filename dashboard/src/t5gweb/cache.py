@@ -471,8 +471,8 @@ def _get_contributor_info(issue):
             'name' for each contributor. Empty list if no contributors.
     """
     contributor = []
-    if issue.fields.customfield_12315950:  # Contributors custom field
-        for engineer in issue.fields.customfield_12315950:  # Contributors custom field
+    if issue.fields.customfield_10466:  # Contributors custom field
+        for engineer in issue.fields.customfield_10466:  # Contributors custom field
             contributor.append(
                 {
                     "displayName": engineer.displayName,
@@ -923,7 +923,7 @@ def _extract_qa_contact(bug):
         str: QA contact email address, or None if not set
     """
     try:
-        return bug.fields.customfield_12315948.emailAddress  # QA Contact custom field
+        return bug.fields.customfield_10470.emailAddress  # QA Contact custom field
     except AttributeError:
         return None
 
@@ -941,7 +941,7 @@ def _extract_jira_severity(bug):
         str: Severity value, or None if not set
     """
     try:
-        return bug.fields.customfield_12316142.value  # Severity custom field
+        return bug.fields.customfield_10840.value  # Severity custom field
     except AttributeError:
         return None
 
@@ -1028,7 +1028,7 @@ def _extract_private_keywords(bug):
         list: List of private keyword strings, or None if not set or empty
     """
     try:
-        private_keywords_raw = bug.fields.customfield_12323649  # RH Private Keywords
+        private_keywords_raw = bug.fields.customfield_10999  # RH Private Keywords
     except AttributeError:
         return None
 

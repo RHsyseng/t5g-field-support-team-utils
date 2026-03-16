@@ -47,7 +47,7 @@ def mock_jira_issue():
     mock_issue.fields.comment.comments = [mock_comment1, mock_comment2]
 
     # Optional fields
-    mock_issue.fields.customfield_10007 = None  # sprint
+    mock_issue.fields.customfield_10020 = None  # sprint
 
     return mock_issue
 

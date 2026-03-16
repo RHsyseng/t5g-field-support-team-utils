@@ -91,7 +91,7 @@ def load_jira_card_postgres(cases, case_number, issue):
             - fields.status: Status object
             - fields.assignee: Assignee object
             - fields.comment.comments: List of comment objects
-            - fields.customfield_10007: Sprint information  FIXME: need to update this
+            - fields.customfield_10020: Sprint information
     Returns:
         tuple: (card_processed: bool, card_comments: list) where card_processed
             indicates if card was successfully stored and card_comments contains
@@ -155,10 +155,9 @@ def load_jira_card_postgres(cases, case_number, issue):
                         else None
                     ),
                     sprint=(
-                        # FIXME: need to update this to get the sprint id
-                        str(issue.fields.customfield_10007[0])
-                        if hasattr(issue.fields, "customfield_10007")
-                        and issue.fields.customfield_10007
+                        str(issue.fields.customfield_10020[0].get("name"))
+                        if hasattr(issue.fields, "customfield_10020")
+                        and issue.fields.customfield_10020
                         else None
                     ),
                     severity=severity_int,
