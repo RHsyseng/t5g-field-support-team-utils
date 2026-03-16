@@ -230,7 +230,7 @@ def set_cfg():
     cfg["component"] = os.environ.get("jira_component")
     cfg["board"] = os.environ.get("jira_board")
     cfg["jira_query"] = os.environ.get("jira_query")
-    cfg["max_jira_results"] = os.environ.get("max_jira_results")
+    cfg["max_jira_results"] = False
     cfg["username"] = os.environ.get("jira_username")
     cfg["password"] = os.environ.get("jira_pass")
     cfg["labels"] = (
@@ -308,7 +308,7 @@ def set_defaults():
     defaults["slack_token"] = ""
     defaults["high_severity_slack_channel"] = ""
     defaults["low_severity_slack_channel"] = ""
-    defaults["max_jira_results"] = 1000
+    defaults["max_jira_results"] = False
     defaults["max_portal_results"] = 5000
     defaults["sla_settings"] = {
         "days": {"Urgent": 14, "High": 20, "Normal": 90, "Low": 180},
