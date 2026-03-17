@@ -436,6 +436,30 @@ def trends():
     )
 
 
+@BP.route("/table/trends")
+@login_required
+def table_view_trends():
+    """Display cards marked with the 'Trends' label in table format
+
+    Retrieves and displays JIRA cards that have been labeled with 'Trends',
+    typically used for tracking trending issues or patterns. Cards are
+    organized by account and status.
+
+    Returns:
+        str: Rendered HTML table template showing trending cards with SLA settings
+    """
+    cfg = set_cfg()
+    cards = redis_get("cards")
+    return render_template(
+        "ui/table.html",
+        now=redis_get("timestamp"),
+        new_comments=get_trending_cards(cards),
+        jira_server=cfg["server"],
+        page_title="trends",
+        sla_settings=cfg["sla_settings"],
+    )
+
+
 @BP.route("/table/")
 @login_required
 def table_view():
