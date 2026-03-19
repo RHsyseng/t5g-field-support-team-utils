@@ -5,12 +5,12 @@ from __future__ import print_function
 import datetime
 import json
 import logging
+import os
 import re
 import statistics
 import time
-import os
-from urllib.parse import urlparse
 import xmlrpc
+from urllib.parse import urlparse
 
 import bugzilla
 import redis
@@ -18,16 +18,10 @@ import requests
 from jira import JIRA
 from jira.exceptions import JIRAError
 from slack_sdk import WebClient
-from t5gweb.utils import (
-    email_notify,
-    exists_or_zero,
-    format_date,
-    get_random_member,
-    get_token,
-    make_headers,
-    set_cfg,
-    slack_notify,
-)
+
+from t5gweb.utils import (email_notify, exists_or_zero, format_date,
+                          get_random_member, get_token, make_headers, set_cfg,
+                          slack_notify)
 
 # for portal to jira mapping
 portal2jira_sevs = {
