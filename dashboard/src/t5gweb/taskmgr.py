@@ -225,7 +225,7 @@ def t_tag_bz():
     Task automatically retries up to 3 times with 30-second backoff on failure.
 
     Returns:
-        num_tagged: number of bugs or issues tagged
+        num_tagged: number of bugs and issues tagged
     """
     logging.warning("job: tag_bz")
     num_tagged = libtelco5g.tag_bz()
