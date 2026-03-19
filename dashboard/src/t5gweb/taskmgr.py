@@ -317,31 +317,19 @@ def tag_bz():
                     # Skip if Private Keywords are not enabled.
                     if not attribute_error:
                         if private_keywords is None:
-                            private_keywords = []
-                        new_keywords = [keyword.value for keyword in private_keywords]
+                            private_keywords = ""
+                        new_keywords = private_keywords
                         if "Telco" not in new_keywords:
-                            new_keywords.extend(["Telco", "Telco:Case"])
-                            private_keywords_dict = {
-                                # RH Private Keywords custom field
-                                "customfield_10999": [
-                                    {"value": keyword} for keyword in new_keywords
-                                ]
-                            }
+                            new_keywords += ",Telco,Telco:Case"
                             logging.warning("tagging Jira Bug:" + str(card))
-                            card.update(private_keywords_dict)
+                            card.update(fields={"customfield_10999":new_keywords})
                             email_body["Script Tagged Private Keywords"][
                                 "cards"
                             ].append(str(card))
                         elif "Telco:Case" not in new_keywords:
-                            new_keywords.append("Telco:Case")
-                            private_keywords_dict = {
-                                # RH Private Keywords custom field
-                                "customfield_10999": [
-                                    {"value": keyword} for keyword in new_keywords
-                                ]
-                            }
+                            new_keywords += ",Telco:Case"
                             logging.warning("tagging Jira Bug:" + str(card))
-                            card.update(private_keywords_dict)
+                            card.update(fields={"customfield_10999":new_keywords})
                             email_body["Script Tagged Private Keywords"][
                                 "cards"
                             ].append(str(card))
