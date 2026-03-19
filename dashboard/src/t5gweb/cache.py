@@ -113,8 +113,11 @@ def get_escalations(cfg, cases):
     escalated_cards = jira_conn.search_issues(jira_query, 0, max_cards).iterable
     escalations = []
     for card in escalated_cards:
-        issue = jira_conn.issue(card)
-        case = issue.fields.customfield_10979  # SFDC Case Links in escalations proj.
+        # Use expand to decrypt the restricted custom fields
+        issue = jira_conn.issue(card, expand="renderedFields")
+        case = (
+            issue.renderedFields.customfield_10979
+        )  # SFDC Case Links in escalations proj.
         if case is not None:
             escalations.append(case)
     return escalations
