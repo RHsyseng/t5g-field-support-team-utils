@@ -221,7 +221,7 @@ def cache_data(data_type):
 
 
 @mgr.task(autoretry_for=(Exception,), max_retries=3, retry_backoff=30)
-def tag_bz():
+def t_tag_bz():
     """Celery task to tag Bugzilla and JIRA bugs with Telco keywords
 
     Task automatically retries up to 3 times with 30-second backoff on failure.
