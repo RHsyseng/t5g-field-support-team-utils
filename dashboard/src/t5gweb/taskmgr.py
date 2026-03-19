@@ -3,15 +3,12 @@
 import json
 import logging
 import os
-import xmlrpc
-
-import bugzilla
 import redis
-import t5gweb.cache as cache
-import t5gweb.libtelco5g as libtelco5g
 from celery import Celery
 from celery.schedules import crontab
-from t5gweb.utils import email_notify, set_cfg
+import t5gweb.cache as cache
+import t5gweb.libtelco5g as libtelco5g
+from t5gweb.utils import set_cfg
 
 mgr = Celery("t5gweb", broker="redis://redis:6379/0", backend="redis://redis:6379/0")
 
@@ -69,7 +66,7 @@ def setup_scheduled_tasks(sender, **kwargs):
         if "telco5g" in cfg["query"]:
             sender.add_periodic_task(
                 crontab(hour="*/24", minute="33"),  # once a day + 33 for randomness
-                tag_bz.s(),
+                t_tag_bz.s(),
                 name="tag_bz",
             )
     else:

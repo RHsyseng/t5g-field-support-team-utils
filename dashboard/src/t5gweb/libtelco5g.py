@@ -8,7 +8,9 @@ import logging
 import re
 import statistics
 import time
+import os
 from urllib.parse import urlparse
+import xmlrpc
 
 import bugzilla
 import redis
