@@ -10,6 +10,7 @@ import xmlrpc
 import bugzilla
 import requests
 from jira.exceptions import JIRAError
+
 from t5gweb import libtelco5g
 from t5gweb.database import load_cases_postgres, load_jira_card_postgres
 from t5gweb.utils import format_comment, format_date, make_headers
@@ -110,14 +111,15 @@ def get_escalations(cfg, cases):
         f'"{escalations_label}" AND status != "Closed"'
     )
 
-    escalated_cards = jira_conn.search_issues(jira_query, 0, max_cards).iterable
+    # Use expand to decrypt the restricted custom fields
+    # Custom field: SFDC Case Links in escalations proj.
+    escalated_cards = jira_conn.search_issues(
+        jira_query, 0, max_cards, fields=["customfield_10979"], expand="renderedFields"
+    ).iterable
     escalations = []
     for card in escalated_cards:
-        # Use expand to decrypt the restricted custom fields
-        issue = jira_conn.issue(card, expand="renderedFields")
-        case = (
-            issue.renderedFields.customfield_10979
-        )  # SFDC Case Links in escalations proj.
+        # Custom field: SFDC Case Links in escalations proj.
+        case = card.renderedFields.customfield_10979
         if case is not None:
             escalations.append(case)
     return escalations
