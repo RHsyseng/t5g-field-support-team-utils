@@ -65,12 +65,11 @@ def setup_scheduled_tasks(sender, **kwargs):
         )
 
         # tag telco5g bugzillas and JIRAs with 'Telco' and/or 'Telco:Case'
-        if "telco5g" in cfg["query"]:
-            sender.add_periodic_task(
-                crontab(hour="*/24", minute="33"),  # once a day + 33 for randomness
-                t_tag_bz.s(),
-                name="tag_bz",
-            )
+        sender.add_periodic_task(
+            crontab(hour="*/24", minute="33"),  # once a day + 33 for randomness
+            t_tag_bz.s(),
+            name="tag_bz",
+        )
     else:
         logging.warning("Read only - Not making changes to Jira boards.")
 
