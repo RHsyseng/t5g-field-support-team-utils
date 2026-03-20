@@ -18,6 +18,7 @@ import requests
 from jira import JIRA
 from jira.exceptions import JIRAError
 from slack_sdk import WebClient
+
 from t5gweb.utils import (
     email_notify,
     exists_or_zero,
