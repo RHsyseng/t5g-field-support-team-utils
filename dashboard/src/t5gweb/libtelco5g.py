@@ -5,11 +5,14 @@ from __future__ import print_function
 import datetime
 import json
 import logging
+import os
 import re
 import statistics
 import time
+import xmlrpc
 from urllib.parse import urlparse
 
+import bugzilla
 import redis
 import requests
 from jira import JIRA
@@ -1325,6 +1328,182 @@ def sync_portal_to_jira():
     end = time.time()
     logging.warning("synced to jira in {} seconds".format(end - start))
     return response
+
+
+def tag_bz():
+    """Function to tag Bugzilla and JIRA bugs with Telco keywords
+
+    Telco5g-specific task that tags bugs and JIRA issues with 'Telco' and
+    'Telco:Case' keywords in the internal whiteboard or private keywords
+    fields. Only runs if jira_query is 'field'. Sends email summary of
+    tagging actions.
+
+    For Bugzilla bugs, updates the internal_whiteboard field.
+    For JIRA bugs, updates the Private Keywords (customfield_10999) field
+    or falls back to Internal Whiteboard (customfield_11004) if Private
+    Keywords is not available.
+
+    Returns:
+        num_tagged: number of bugs or issues tagged
+    """
+
+    cfg = set_cfg()
+    if cfg["jira_query"] != "field":
+        logging.warning("bz tagging not enabled for {}".format(cfg["jira_query"]))
+        return
+
+    logging.warning("getting bugzillas")
+    bz_url = "bugzilla.redhat.com"
+    bz_api = bugzilla.Bugzilla(bz_url, api_key=cfg["bz_key"])
+    cases = redis_get("cases")
+    bugs = redis_get("bugs")
+    issues = redis_get("issues")
+    jira_conn = jira_connection(cfg)
+    email_body = {
+        "Cards with No Private Keywords Field": {"cards": []},
+        "Script Tagged Private Keywords": {"cards": []},
+        "Cards with No Internal Whiteboard Field": {"cards": []},
+        "Script Tagged Internal Whiteboard": {"cards": []},
+        "Non-Bug Cards Linked to Cases, Not Tagged": {"cards": []},
+    }
+
+    num_tagged = 0
+
+    logging.warning("tagging bugzillas")
+    for case in bugs:
+        if case in cases:
+            for bug in bugs[case]:
+                try:
+                    bz = bz_api.getbug(bug["bugzillaNumber"])
+                except xmlrpc.client.Fault:
+                    logging.warning(
+                        "error: {} is restricted".format(bug["bugzillaNumber"])
+                    )
+                    bz = None
+                if bz:
+                    update = None
+                    if "telco" not in bz.internal_whiteboard.lower():
+                        update = bz_api.build_update(
+                            internal_whiteboard="Telco Telco:Case "
+                            + bz.internal_whiteboard,
+                            minor_update=True,
+                        )
+                    elif "telco:case" not in bz.internal_whiteboard.lower():
+                        update = bz_api.build_update(
+                            internal_whiteboard=bz.internal_whiteboard + " Telco:Case",
+                            minor_update=True,
+                        )
+                    if update:
+                        logging.warning("tagging BZ:" + str(bz.id))
+                        try:
+                            bz_api.update_bugs([bz.id], update)
+                            num_tagged += 1
+                        except xmlrpc.client.Fault:
+                            logging.warning("Tried and failed to tag " + str(bz.id))
+                            continue
+    logging.warning("tagging Jira Bugs")
+    for case in issues:
+        if case in cases:
+            for issue in issues[case]:
+                if issue["jira_type"] == "Bug":
+                    attribute_error = False
+                    tagged = False
+                    card = jira_conn.issue(issue["id"], expand="renderedFields")
+                    try:
+                        # RH Private Keywords custom field
+                        private_keywords = card.renderedFields.customfield_10999
+                    except AttributeError:
+                        logging.warning(
+                            "No Private Keywords field for {}, skipping".format(
+                                str(card)
+                            )
+                        )
+                        attribute_error = True
+                        email_body["Cards with No Private Keywords Field"][
+                            "cards"
+                        ].append(str(card))
+
+                    # Skip if Private Keywords are not enabled.
+                    if not attribute_error:
+                        if private_keywords is None:
+                            private_keywords = ""
+                        new_keywords = private_keywords
+                        if "Telco" not in new_keywords:
+                            new_keywords += ",Telco,Telco:Case"
+                            logging.warning("tagging Jira Bug:" + str(card))
+                            card.update(fields={"customfield_10999": new_keywords})
+                            num_tagged += 1
+                            email_body["Script Tagged Private Keywords"][
+                                "cards"
+                            ].append(str(card))
+                        elif "Telco:Case" not in new_keywords:
+                            new_keywords += ",Telco:Case"
+                            logging.warning("tagging Jira Bug:" + str(card))
+                            card.update(fields={"customfield_10999": new_keywords})
+                            num_tagged += 1
+                            email_body["Script Tagged Private Keywords"][
+                                "cards"
+                            ].append(str(card))
+                        tagged = True
+
+                    if tagged is False:
+                        try:
+                            # Internal Whiteboard custom field
+                            internal_whiteboard = card.renderedFields.customfield_11004
+                        except AttributeError:
+                            logging.warning(
+                                "No Internal Whiteboard field for {}, skipping".format(
+                                    str(card)
+                                )
+                            )
+                            email_body["Cards with No Internal Whiteboard Field"][
+                                "cards"
+                            ].append(str(card))
+                            continue
+                        if internal_whiteboard is None:
+                            internal_whiteboard = ""
+                        if "telco" not in internal_whiteboard.lower():
+                            logging.warning("tagging Jira Bug:" + str(card))
+                            internal_whiteboard = (
+                                "Telco Telco:Case " + internal_whiteboard
+                            )
+                            update = card.update(
+                                # Internal Whiteboard custom field
+                                customfield_11004=internal_whiteboard
+                            )
+                            num_tagged += 1
+                            email_body["Script Tagged Internal Whiteboard"][
+                                "cards"
+                            ].append(str(card))
+                        elif "telco:case" not in internal_whiteboard.lower():
+                            logging.warning("tagging Jira Bug:" + str(card))
+                            internal_whiteboard = internal_whiteboard + " Telco:Case"
+                            update = card.update(
+                                # Internal Whiteboard custom field
+                                customfield_11004=internal_whiteboard
+                            )
+                            num_tagged += 1
+                            email_body["Script Tagged Internal Whiteboard"][
+                                "cards"
+                            ].append(str(card))
+                else:
+                    email_body["Non-Bug Cards Linked to Cases, Not Tagged"][
+                        "cards"
+                    ].append(issue["id"])
+
+    for category in email_body:
+        message = f"{category}:\n"
+        if email_body[category]["cards"]:
+            for card in email_body[category]["cards"]:
+                message += f"   - {card}\n"
+        else:
+            message += "   - No cards in this category\n"
+        email_body[category]["full_message"] = message
+    cfg["to"] = os.environ.get("bug_email")
+    cfg["subject"] = "Summary: Jira Bug Tagging"
+    email_notify(cfg, email_body)
+
+    return num_tagged
 
 
 def main():
