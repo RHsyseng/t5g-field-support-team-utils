@@ -1,7 +1,10 @@
 """API endpoints for t5gweb"""
 
 import json
+import logging
+import os
 
+import requests as http_requests
 from flask import Blueprint, jsonify, request
 from flask_login import login_required
 from t5gweb.cache import (
@@ -15,6 +18,8 @@ from t5gweb.cache import (
 )
 from t5gweb.libtelco5g import generate_stats, redis_get, redis_set, sync_portal_to_jira
 from t5gweb.utils import set_cfg
+
+log = logging.getLogger(__name__)
 
 BP = Blueprint("api", __name__, url_prefix="/api")
 
@@ -151,3 +156,52 @@ def show_stats():
     """Generate and return current statistics in JSON format."""
     stats = generate_stats()
     return jsonify(stats)
+
+
+def _ai_api_url():
+    return os.environ.get("AI_AGENTS_API_URL", "http://localhost:8081")
+
+
+def _ai_proxy(method, path, **kwargs):
+    url = f"{_ai_api_url()}{path}"
+    try:
+        resp = getattr(http_requests, method)(url, timeout=30, **kwargs)
+        return jsonify(resp.json()), resp.status_code
+    except http_requests.ConnectionError:
+        log.warning("AI Agents API unreachable at %s", url)
+        return jsonify({"error": "AI Agents service unavailable"}), 502
+    except http_requests.Timeout:
+        return jsonify({"error": "AI Agents service timeout"}), 504
+
+
+@BP.route("/ai/report/case/<string:case_number>")
+@login_required
+def ai_report_by_case(case_number):
+    return _ai_proxy("get", f"/report/case/{case_number}")
+
+
+@BP.route("/ai/analyze/<string:case_number>", methods=["POST"])
+@login_required
+def ai_analyze(case_number):
+    force = request.args.get("force", "false").lower() == "true"
+    return _ai_proxy("post", f"/analyze/{case_number}", params={"force": force})
+
+
+@BP.route("/ai/status/<string:task_id>")
+@login_required
+def ai_status(task_id):
+    return _ai_proxy("get", f"/status/{task_id}")
+
+
+@BP.route("/ai/logs/<string:analysis_id>")
+@login_required
+def ai_logs(analysis_id):
+    return _ai_proxy("get", f"/logs/{analysis_id}")
+
+
+@BP.route("/ai/feedback/<string:analysis_id>", methods=["GET", "POST"])
+@login_required
+def ai_feedback(analysis_id):
+    if request.method == "POST":
+        return _ai_proxy("post", f"/feedback/{analysis_id}", json=request.get_json())
+    return _ai_proxy("get", f"/feedback/{analysis_id}")
