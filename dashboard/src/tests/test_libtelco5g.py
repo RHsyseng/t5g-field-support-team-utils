@@ -1,5 +1,7 @@
 import pytest
+
 from t5gweb.libtelco5g import (
+    _assign_cases_batch,
     get_case_number,
     is_bug_missing_target,
     jira_connection,
@@ -81,3 +83,115 @@ def test_get_case_number(link, pfilter, expected_case_number):
 def test_is_bug_missing_target(item, expected_result):
     result = is_bug_missing_target(item)
     assert result == expected_result
+
+
+# --- _assign_cases_batch tests ---
+
+
+@pytest.fixture
+def team():
+    return [
+        {
+            "name": "Alice",
+            "jira_account_id": "a1",
+            "jira_user": "alice",
+            "accounts": ["Acme"],
+            "active": "true",
+        },
+        {
+            "name": "Bob",
+            "jira_account_id": "b1",
+            "jira_user": "bob",
+            "accounts": ["Globex"],
+            "active": "true",
+        },
+        {
+            "name": "Carol",
+            "jira_account_id": "c1",
+            "jira_user": "carol",
+            "accounts": [],
+            "active": "true",
+        },
+    ]
+
+
+@pytest.fixture
+def cases():
+    return {
+        "001": {"account": "Acme Corp"},
+        "002": {"account": "Acme Corp"},
+        "003": {"account": "Globex Inc"},
+        "004": {"account": "Unknown LLC"},
+        "005": {"account": "Another Co"},
+        "006": {"account": "Yet Another"},
+    }
+
+
+def test_multiple_cases_same_account_go_to_same_engineer(team, cases):
+    # 001 and 002 are both Acme — both must land on Alice
+    cfg = {"team": team}
+    result = _assign_cases_batch(["001", "002"], cases, cfg)
+
+    assert result["001"]["jira_account_id"] == "a1"
+    assert result["002"]["jira_account_id"] == "a1"
+
+
+def test_account_assigned_engineers_excluded_when_cases_lte_team(team, cases):
+    # 3 cases <= 3 engineers: 001->Alice, 003->Bob, 004 must go to Carol (not Alice/Bob)
+    cfg = {"team": team}
+    result = _assign_cases_batch(["001", "003", "004"], cases, cfg)
+
+    assert result["001"]["jira_account_id"] == "a1"
+    assert result["003"]["jira_account_id"] == "b1"
+    assert result["004"]["jira_account_id"] == "c1"
+
+
+def test_multiple_account_cases_still_exclude_their_engineers(team, cases):
+    # 4 cases, 3 engineers: 001+002->Alice, 003->Bob, 1 unmatched case (004)
+    # 1 unmatched <= 3 team size, so account-assigned engineers are excluded —
+    # 004 must go to Carol (the only non-account-assigned engineer)
+    cfg = {"team": team}
+    result = _assign_cases_batch(["001", "002", "003", "004"], cases, cfg)
+
+    assert result["001"]["jira_account_id"] == "a1"
+    assert result["002"]["jira_account_id"] == "a1"
+    assert result["003"]["jira_account_id"] == "b1"
+    assert result["004"]["jira_account_id"] == "c1"
+
+
+def test_account_assigned_engineers_excluded_even_with_multiple_account_cases(
+    team, cases
+):
+    # 3 cases <= 3 engineers: 001+002 both go to Alice via account,
+    # 004 is unmatched — pool must exclude Alice, so Carol gets it
+    cfg = {"team": team}
+    result = _assign_cases_batch(["001", "002", "004"], cases, cfg)
+
+    assert result["001"]["jira_account_id"] == "a1"
+    assert result["002"]["jira_account_id"] == "a1"
+    assert result["004"]["jira_account_id"] in {"b1", "c1"}
+
+
+def test_overflow_reuses_all_engineers(team, cases):
+    # 6 cases, 3 engineers — must cycle, all engineers used
+    cfg = {"team": team}
+    result = _assign_cases_batch(["001", "002", "003", "004", "005", "006"], cases, cfg)
+
+    assert len(result) == 6
+    assigned_ids = {a["jira_account_id"] for a in result.values()}
+    assert assigned_ids == {"a1", "b1", "c1"}
+
+
+def test_no_team_returns_none_for_all_cases(cases):
+    cfg = {"team": []}
+    result = _assign_cases_batch(["004", "005"], cases, cfg)
+
+    assert result == {"004": None, "005": None}
+
+
+def test_displayname_always_set(team, cases):
+    cfg = {"team": team}
+    result = _assign_cases_batch(["001", "002", "004"], cases, cfg)
+
+    for assignee in result.values():
+        assert assignee["displayName"] == assignee["name"]

@@ -6,6 +6,7 @@ import datetime
 import json
 import logging
 import os
+import random
 import re
 import statistics
 import time
@@ -23,7 +24,6 @@ from t5gweb.utils import (
     email_notify,
     exists_or_zero,
     format_date,
-    get_random_member,
     get_token,
     make_headers,
     set_cfg,
@@ -348,13 +348,14 @@ def create_cards(cfg, new_cases, action="none"):
 
     # Filter cases that need cards
     novel_cases = _filter_novel_cases(new_cases, context["created_cases"])
+    assignments = _assign_cases_batch(novel_cases, cases, cfg)
 
     # Process each case
     new_cards = {}
     notification_content = {}
 
     for case in novel_cases:
-        result = _process_single_case(case, cases, context, cfg)
+        result = _process_single_case(case, cases, context, cfg, assignments[case])
         if result:
             new_cards[result["card_key"]] = result["card_data"]
             notification_content[result["card_key"]] = result["notification"]
@@ -458,7 +459,7 @@ def _notify_slack_error(cfg, case, error_msg):
         logging.error(f"Failed to send Slack error notification: {slack_err}")
 
 
-def _process_single_case(case, cases, context, cfg):
+def _process_single_case(case, cases, context, cfg, assignee):
     """Process a single case and create its JIRA card
 
     Handles the complete workflow for creating a JIRA card from a case,
@@ -470,6 +471,8 @@ def _process_single_case(case, cases, context, cfg):
         cases: Dictionary of all case data
         context: Context dictionary from _setup_card_creation_context
         cfg: Configuration dictionary
+        assignee: Pre-determined team member dict from _assign_cases_batch,
+            or None if no team is configured
 
     Returns:
         dict: Dictionary containing 'card_key', 'card_data', and 'notification'
@@ -479,9 +482,6 @@ def _process_single_case(case, cases, context, cfg):
     if _is_old_case(cases[case]):
         if _handle_old_case(case, context, cfg):
             return None  # Case was handled by reopening existing card
-
-    # Determine assignee
-    assignee = _determine_assignee(case, cases, cfg)
 
     # Add watcher if needed
     if assignee and assignee.get("notifieduser", "true") == "true":
@@ -546,7 +546,10 @@ def _handle_old_case(case, context, cfg):
         bool: True if previous card was found and reopened, False otherwise
     """
     previous_issue = get_previous_card(context["jira_conn"], cfg, case)
-    if previous_issue:
+
+    read_only = os.getenv("READ_ONLY", "false") == "true"
+
+    if previous_issue and not read_only:
         logging.warning(
             f"Updating: {previous_issue.key} rather than creating new card."
         )
@@ -563,42 +566,75 @@ def _handle_old_case(case, context, cfg):
     return False
 
 
-def _determine_assignee(case, cases, cfg):
-    """Determine who should be assigned to the case
+def _assign_cases_batch(novel_cases, cases, cfg):
+    """Assign all new cases to engineers in one pass.
 
-    Matches case to team member based on account assignment. If no match is
-    found, assigns randomly to a team member using round-robin logic.
+    Account-matched cases are assigned first. For the remaining unmatched cases:
+    - If total cases <= team size, account-assigned engineers are excluded from
+      the round-robin pool and each remaining engineer gets at most one case.
+    - If total cases > team size, all engineers are eligible (account-assigned
+      ones included) and the pool cycles as needed.
 
     Args:
-        case: Case number to assign
+        novel_cases: Ordered list of case numbers to assign
         cases: Dictionary of all case data
         cfg: Configuration dictionary containing team member information
 
     Returns:
-        dict: Team member dictionary with assignment info, or None if no team
-            configured
+        dict: Mapping of case number -> team member dict (or None if no team)
     """
     if not cfg["team"]:
-        return None
+        return {case: None for case in novel_cases}
 
-    # Try to match by account
-    team = [
-        member
-        for member in cfg["team"]
-        if member.get("active", "true").lower() == "true"
-    ]
-    for member in team:
-        for account in member["accounts"]:
-            if account.lower() in cases[case]["account"].lower():
-                member["displayName"] = member["name"]
-                return member
+    team = [m for m in cfg["team"] if m.get("active", "true").lower() == "true"]
+    assignments = {}
+    unmatched = []
+    account_assigned_ids = set()
 
-    # No match found, assign randomly
-    last_choice = redis_get("last_choice")
-    assignee = get_random_member(team, last_choice)
-    redis_set("last_choice", json.dumps(assignee))
-    assignee["displayName"] = assignee["name"]
-    return assignee
+    for case in novel_cases:
+        matched = next(
+            (
+                m
+                for m in team
+                if any(
+                    acct.lower() in cases[case]["account"].lower()
+                    for acct in m["accounts"]
+                )
+            ),
+            None,
+        )
+        if matched:
+            member = dict(matched)
+            member["displayName"] = member["name"]
+            assignments[case] = member
+            account_assigned_ids.add(matched["jira_account_id"])
+        else:
+            unmatched.append(case)
+
+    if not unmatched:
+        return assignments
+
+    if len(unmatched) <= len(team):
+        # Fewer unmatched cases than engineers — exclude account-assigned ones
+        # so no engineer gets more than one case in this batch
+        available = [
+            m for m in team if m["jira_account_id"] not in account_assigned_ids
+        ]
+    else:
+        available = team
+
+    pool = random.sample(available, len(available))
+
+    # If unmatched cases fit within the pool, no engineer gets a second case
+    if len(unmatched) <= len(pool):
+        pool = pool[: len(unmatched)]
+
+    for i, case in enumerate(unmatched):
+        member = dict(pool[i % len(pool)])
+        member["displayName"] = member["name"]
+        assignments[case] = member
+
+    return assignments
 
 
 def _build_card_info(case, cases, cfg, assignee):
