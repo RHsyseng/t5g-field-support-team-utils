@@ -226,3 +226,23 @@ span.anchor {
   color: black !important;
 }
 
+/* AI Agent view */
+#agent-search-bar {
+  max-width: 500px;
+}
+
+#raw-json {
+  font-size: 0.85em;
+  white-space: pre-wrap;
+  word-break: break-word;
+}
+
+#thinking-log-collapse .table td {
+  font-size: 0.85em;
+}
+
+#report-container .card-header {
+  font-size: 0.95em;
+  padding: 0.5rem 1rem;
+}
+
