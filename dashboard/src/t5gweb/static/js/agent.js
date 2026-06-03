@@ -14,6 +14,9 @@ $(document).ready(function () {
   $('#run-analysis-btn').click(function () { triggerAnalysis(false) })
   $('#feedback-up').click(function () { submitFeedback('up') })
   $('#feedback-down').click(function () { submitFeedback('down') })
+
+  // Check for ongoing analysis from previous session
+  resumeOngoingAnalysis()
 })
 
 function showAlert (msg, type) {
@@ -75,7 +78,7 @@ function renderReport (data) {
   if (data.rounds_executed) meta += ' | ' + data.rounds_executed + ' round(s)'
   $('#report-meta').text(meta)
 
-  $('#hypothesis-body').text((report.analysis || {}).root_cause_hypothesis || 'N/A')
+  $('#hypothesis-body').html(markdownToHtml((report.analysis || {}).root_cause_hypothesis || 'N/A'))
 
   renderDomainTags(report)
   renderRecommendations(report)
@@ -124,7 +127,7 @@ function renderRecommendations (report) {
   if (recs.length === 0) { $('#recommendations-card').addClass('d-none'); return }
   $('#recommendations-card').removeClass('d-none')
   var html = recs.map(function (r) {
-    return '<tr><td>' + escapeHtml(r.action) + '</td>' +
+    return '<tr><td>' + markdownToHtml(r.action) + '</td>' +
       '<td><code>' + escapeHtml(r.command || '') + '</code></td>' +
       '<td><span class="badge ' + riskBadgeClass(r.risk) + '">' + escapeHtml(r.risk || 'safe') + '</span></td></tr>'
   }).join('')
@@ -136,10 +139,11 @@ function renderSimilarCases (report) {
   if (cases.length === 0) { $('#similar-cases-card').addClass('d-none'); return }
   $('#similar-cases-card').removeClass('d-none')
   var html = cases.map(function (c) {
-    return '<tr><td>' + escapeHtml(c.case_number) + '</td>' +
+    var caseLink = '<a href="https://access.redhat.com/support/cases/' + escapeHtml(c.case_number) + '" target="_blank">' + escapeHtml(c.case_number) + '</a>'
+    return '<tr><td>' + caseLink + '</td>' +
       '<td>' + (c.similarity ? (c.similarity * 100).toFixed(0) + '%' : '') + '</td>' +
       '<td><span class="badge ' + relevanceBadgeClass(c.relevance) + '">' + escapeHtml(c.relevance || '') + '</span></td>' +
-      '<td>' + escapeHtml(c.resolution_summary || c.applicability || '') + '</td></tr>'
+      '<td>' + markdownToHtml(c.resolution_summary || c.applicability || '') + '</td></tr>'
   }).join('')
   $('#similar-cases-tbody').html(html)
 }
@@ -269,6 +273,12 @@ function triggerAnalysis (force) {
     success: function (data) {
       if (data.task_id) {
         $('#analysis-status-text').text('Task queued. Polling for completion...')
+        // Save to sessionStorage for resume on page reload
+        sessionStorage.setItem('activeAnalysis', JSON.stringify({
+          task_id: data.task_id,
+          case_number: currentCaseNumber,
+          started_at: Date.now()
+        }))
         pollStatus(data.task_id)
       }
     },
@@ -289,26 +299,42 @@ function pollStatus (taskId) {
     method: 'GET',
     dataType: 'json',
     success: function (data) {
-      $('#analysis-status-text').text('State: ' + data.state)
+      var statusText = 'State: ' + data.state
+      if (data.state === 'PENDING') {
+        statusText = 'Queued, waiting for worker...'
+      } else if (data.state === 'STARTED') {
+        statusText = 'Running AI analysis (this takes 2-4 minutes)...'
+      }
+      $('#analysis-status-text').text(statusText)
+
       if (data.state === 'SUCCESS') {
+        sessionStorage.removeItem('activeAnalysis') // Clear on success
         $('#analysis-progress').addClass('d-none')
         searchCase()
       } else if (data.state === 'FAILURE') {
+        sessionStorage.removeItem('activeAnalysis') // Clear on failure
         $('#analysis-progress').addClass('d-none')
         showAlert('Analysis failed: ' + (data.error || 'Unknown error'), 'danger')
       } else {
         setTimeout(function () { pollStatus(taskId) }, 3000)
       }
     },
-    error: function () {
-      setTimeout(function () { pollStatus(taskId) }, 5000)
+    error: function (xhr) {
+      // If task not found (404), clear storage - task expired
+      if (xhr.status === 404) {
+        sessionStorage.removeItem('activeAnalysis')
+        $('#analysis-progress').addClass('d-none')
+        showAlert('Analysis task expired. Please run a new analysis.', 'warning')
+      } else {
+        setTimeout(function () { pollStatus(taskId) }, 5000)
+      }
     }
   })
 }
 
 function loadThinkingLog () {
   if (!currentAnalysisId) return
-  $('#thinking-log-tbody').html('<tr><td colspan="5" class="text-center">Loading...</td></tr>')
+  $('#thinking-log-tbody').html('<tr><td colspan="7" class="text-center">Loading...</td></tr>')
 
   $.ajax({
     url: '/api/ai/logs/' + encodeURIComponent(currentAnalysisId),
@@ -316,23 +342,35 @@ function loadThinkingLog () {
     dataType: 'json',
     success: function (logs) {
       if (!logs || logs.length === 0) {
-        $('#thinking-log-tbody').html('<tr><td colspan="5" class="text-muted text-center">No log entries</td></tr>')
+        $('#thinking-log-tbody').html('<tr><td colspan="7" class="text-muted text-center">No log entries</td></tr>')
         return
       }
       var html = logs.map(function (l) {
         var round = l.round !== undefined ? l.round : (l.step_number !== undefined ? l.step_number : '')
+        var tokensIn = l.input_tokens != null ? formatNumber(l.input_tokens) : ''
+        var tokensOut = l.output_tokens != null ? formatNumber(l.output_tokens) : ''
+        var tokensInClass = l.input_tokens != null ? '' : 'text-muted'
+        var tokensOutClass = l.output_tokens != null ? '' : 'text-muted'
+
         return '<tr><td>' + round + '</td>' +
           '<td>' + escapeHtml(l.agent_name || '') + '</td>' +
           '<td><span class="badge bg-secondary">' + escapeHtml(l.action_type || '') + '</span></td>' +
           '<td><small>' + escapeHtml(l.detail || '') + '</small></td>' +
-          '<td>' + (l.duration_ms != null ? l.duration_ms + 'ms' : '') + '</td></tr>'
+          '<td>' + (l.duration_ms != null ? l.duration_ms + 'ms' : '') + '</td>' +
+          '<td class="' + tokensInClass + '">' + tokensIn + '</td>' +
+          '<td class="' + tokensOutClass + '">' + tokensOut + '</td></tr>'
       }).join('')
       $('#thinking-log-tbody').html(html)
     },
     error: function () {
-      $('#thinking-log-tbody').html('<tr><td colspan="5" class="text-muted text-center">Could not load thinking log</td></tr>')
+      $('#thinking-log-tbody').html('<tr><td colspan="7" class="text-muted text-center">Could not load thinking log</td></tr>')
     }
   })
+}
+
+function formatNumber (num) {
+  if (num == null) return ''
+  return num.toLocaleString()
 }
 
 function submitFeedback (vote) {
@@ -358,6 +396,36 @@ function submitFeedback (vote) {
       $('#feedback-status').text('Failed to submit feedback')
     }
   })
+}
+
+function resumeOngoingAnalysis () {
+  var stored = sessionStorage.getItem('activeAnalysis')
+  if (!stored) return
+
+  try {
+    var data = JSON.parse(stored)
+    var ageHours = (Date.now() - data.started_at) / (1000 * 60 * 60)
+
+    // Ignore if older than 2 hours (likely expired)
+    if (ageHours > 2) {
+      sessionStorage.removeItem('activeAnalysis')
+      return
+    }
+
+    // Resume the analysis
+    currentCaseNumber = data.case_number
+    $('#case-number-input').val(data.case_number)
+    $('#no-report').addClass('d-none')
+    $('#report-container').addClass('d-none')
+    $('#analysis-progress').removeClass('d-none')
+    $('#analysis-status-text').text('Resuming analysis...')
+
+    // Start polling
+    pollStatus(data.task_id)
+  } catch (e) {
+    // Invalid JSON, clear it
+    sessionStorage.removeItem('activeAnalysis')
+  }
 }
 
 function statusBadgeClass (status) {
@@ -393,4 +461,32 @@ function escapeHtml (str) {
   var div = document.createElement('div')
   div.appendChild(document.createTextNode(str))
   return div.innerHTML
+}
+
+function markdownToHtml (markdown) {
+  if (!markdown) return ''
+
+  // Escape HTML first
+  var html = escapeHtml(markdown)
+
+  // Convert markdown to HTML
+  // Bold **text**
+  html = html.replace(/\*\*(.+?)\*\*/g, '<strong>$1</strong>')
+  // Italic *text*
+  html = html.replace(/\*(.+?)\*/g, '<em>$1</em>')
+  // Code `code`
+  html = html.replace(/`(.+?)`/g, '<code>$1</code>')
+  // Line breaks
+  html = html.replace(/\n/g, '<br>')
+
+  // Headers
+  html = html.replace(/^### (.+)$/gm, '<h5>$1</h5>')
+  html = html.replace(/^## (.+)$/gm, '<h4>$1</h4>')
+  html = html.replace(/^# (.+)$/gm, '<h3>$1</h3>')
+
+  // Bullet lists (simple version)
+  html = html.replace(/^- (.+)$/gm, '<li>$1</li>')
+  html = html.replace(/(<li>.*<\/li>)/s, '<ul>$1</ul>')
+
+  return html
 }
