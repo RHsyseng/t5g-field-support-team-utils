@@ -102,7 +102,6 @@ def load_comments_postgres(case_number, case_created_date, api_comments):
             return
 
         for api_comment in api_comments:
-            comment_id = api_comment.get("id")
             author = api_comment.get("createdBy", "unknown")
             body = api_comment.get("commentBody", "")
             commented_at_str = api_comment.get("createdDate")
