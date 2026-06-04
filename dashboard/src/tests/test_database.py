@@ -11,6 +11,7 @@ from unittest.mock import Mock, patch
 
 import pytest
 from dateutil import parser
+
 from t5gweb.database import (
     Case,
     Comment,
@@ -364,7 +365,9 @@ class TestLoadCommentsPostgres:
         case_created_date = parser.parse("2024-01-01T00:00:00Z")
         load_comments_postgres("12345678", case_created_date, api_comments)
 
-        comments = test_db_session.query(Comment).filter_by(case_number="12345678").all()
+        comments = (
+            test_db_session.query(Comment).filter_by(case_number="12345678").all()
+        )
         assert len(comments) == 2
         assert {c.author for c in comments} == {"engineer1", "engineer2"}
 
@@ -385,7 +388,9 @@ class TestLoadCommentsPostgres:
         load_comments_postgres("12345678", case_created_date, api_comments)
         load_comments_postgres("12345678", case_created_date, api_comments)
 
-        comments = test_db_session.query(Comment).filter_by(case_number="12345678").all()
+        comments = (
+            test_db_session.query(Comment).filter_by(case_number="12345678").all()
+        )
         assert len(comments) == 1
 
     def test_load_comments_skips_missing_case(self, test_db_session):
