@@ -1,5 +1,6 @@
 import pytest
-from t5gweb.utils import exists_or_zero, get_random_member, set_defaults
+
+from t5gweb.utils import exists_or_zero, set_defaults
 
 
 @pytest.mark.parametrize(
@@ -14,38 +15,6 @@ from t5gweb.utils import exists_or_zero, get_random_member, set_defaults
 def test_exists_or_zero(data, key, expected):
     data_point = exists_or_zero(data, key)
     assert data_point == expected
-
-
-@pytest.fixture
-def sample_team():
-    return ["Alice", "Bob", "Charlie", "David"]
-
-
-def test_get_random_member_basic(sample_team):
-    result = get_random_member(sample_team)
-    assert result in sample_team
-
-
-def test_get_random_member_avoid_same_person_twice(sample_team):
-    first_choice = get_random_member(sample_team)
-    second_choice = get_random_member(sample_team, last_choice=first_choice)
-
-    assert first_choice in sample_team
-    assert second_choice in sample_team
-    assert first_choice != second_choice
-
-
-def test_get_random_member_single_member():
-    team = ["Alice"]
-    result = get_random_member(team)
-    assert result == "Alice"
-
-
-def test_get_random_member_empty_team_with_warning(caplog):
-    team = []
-    result = get_random_member(team)
-    assert result is None
-    assert "No team variable is available, cannot assign case." in caplog.text
 
 
 def test_set_default():

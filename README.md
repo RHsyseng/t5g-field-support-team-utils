@@ -20,7 +20,8 @@ set up a development environment.
 
 Note: If you are only interested in the frontend, you can comment out everything in
 `docker-compose.yml` under the "Backend" header, except for the "volumes" section at
-the bottom.
+the bottom. In this use case, it may be helpful to populate the frontend with fake
+data. See [Using fake data](#using-fake-data) for steps.
 
 Prerequisites:
 
@@ -42,6 +43,41 @@ Another volume is created for `/srv/t5gweb/static/node_modules/`. Without this v
 
 If you want to add a new JS package, you'll need to add it to `package.json` and `package-lock.json` , which are located in `dashboard/src/t5gweb/static/`. Then you need to remove the relevant volume (`podman volume rm dashboard_dashboard-ui_<HASH>`) and rebuild the image.
 
+### Using fake data
+
+You can run the dashboard without Red Hat Portal or Jira API credentials by using fake data. The app then loads cases, cards, bugs, and issues from a JSON file instead of live APIs, and populates the frontend with this data.
+
+1. Enable it
+
+   In `cfg/local.env` (from `cfg/sample.env`), set:
+   ```bash
+   fake_data=true
+   ```
+
+2. Default data
+
+   The repository includes `dashboard/src/data/fake_data.json`. With `fake_data=true`, the `init-cache` step (run automatically when you bring up the stack with `podman-compose up -d`) loads this file into Redis, and the dashboard uses it.
+
+3. If the provided fake data is not satisfactory for your use case, you can regenerate fake data using our script:
+
+   From the repository root:
+   ```bash
+   python bin/generate_fake_data.py [-n NUMBER_OF_CASES] [-o OUTPUT_PATH]
+   ```
+   - `-n` — number of fake cases to generate (default: 10).
+   - `-o` — output JSON path (default: `dashboard/src/data/fake_data.json`).
+
+   Example: generate 50 cases and overwrite the default file:
+   ```bash
+   python bin/generate_fake_data.py -n 50
+   ```
+
+4. Reload after regenerating
+   After changing `fake_data.json`, load it into Redis by running the init-cache service once, e.g.:
+   ```bash
+   cd dashboard && podman-compose run --rm init-cache
+   ```
+   (With docker-compose, use `docker-compose` instead of `podman-compose`.)
 
 Please see our [CONTRIBUTING.md](https://github.com/RHsyseng/t5g-field-support-team-utils/blob/main/CONTRIBUTING.md) for further development help.
 ## CI

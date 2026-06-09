@@ -5,6 +5,7 @@ import re
 from datetime import datetime, timezone
 
 from dateutil import parser
+
 from t5gweb.utils import format_comment
 
 from .models import Case, JiraCard, JiraComment

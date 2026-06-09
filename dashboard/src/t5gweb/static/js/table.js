@@ -1,6 +1,33 @@
 // Declare JQuery and browser globals for StandardJS linting
 /* globals $, history */ // eslint-disable-line no-redeclare
 
+const caseSeverityLevel = { Urgent: 4, High: 3, Normal: 2, Low: 1 }
+const jiraSeverityLevel = { Critical: 4, Important: 3, Moderate: 2, Low: 1, Informational: 0 }
+
+/**
+ * Compare Jira issue severity to case severity. Returns CSS classes and tooltip
+ * when they differ; stronger highlight when Jira severity is lower.
+ * @param {string|null} jiraSeverity - Jira custom field severity
+ * @param {string|null} caseSeverity - Case/portal severity
+ * @returns {{ cssClass: string, title: string }} Safe for use in HTML title attribute
+ */
+function severityMismatchAttrs (jiraSeverity, caseSeverity) {
+  const sevAttrs = { cssClass: '', title: '' }
+  const jiraLevel = jiraSeverity != null ? jiraSeverityLevel[jiraSeverity] : null
+  const caseLevel = caseSeverity != null ? caseSeverityLevel[caseSeverity] : null
+  if (jiraLevel == null || caseLevel == null || jiraLevel === caseLevel) {
+    return sevAttrs
+  }
+  if (jiraLevel < caseLevel) {
+    sevAttrs.cssClass = 'bg-danger text-white fw-bold'
+    sevAttrs.title = 'Jira severity is lower than case severity'
+  } else {
+    sevAttrs.cssClass = 'bg-warning text-dark fw-bold'
+    sevAttrs.title = 'Jira severity is higher than case severity'
+  }
+  return sevAttrs
+}
+
 // Insert Bugzilla Info and Comments into Child Rows
 function format (data) {
   let result = "<div class='card p-3'>"
@@ -47,6 +74,8 @@ function format (data) {
       const priorityNum = telcoPriority
         ? telcoPriority.charAt(telcoPriority.length - 1)
         : 0
+      const jiraSev = data.issues[issue].jira_severity
+      const sevAttrs = severityMismatchAttrs(jiraSev, data.severity)
       result +=
         '<tr><td><a href="' +
         data.issues[issue].url +
@@ -58,10 +87,8 @@ function format (data) {
         (data.issues[issue].priority != null
           ? data.issues[issue].priority
           : '---') +
-        '</td><td>' +
-        (data.issues[issue].jira_severity != null
-          ? data.issues[issue].jira_severity
-          : '---') +
+        `</td><td class="${sevAttrs.cssClass}" title="${sevAttrs.title}">` +
+        (jiraSev != null ? jiraSev : '---') +
         `</td><td class="telco-priority-${priorityNum}">` +
         (data.issues[issue].private_keywords != null
           ? data.issues[issue].private_keywords.find((str) =>

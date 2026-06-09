@@ -4,7 +4,6 @@ import datetime
 import json
 import logging
 import os
-import random
 import re
 import smtplib
 from email.message import EmailMessage
@@ -66,35 +65,6 @@ def exists_or_zero(data, key):
     if key in data.keys():
         return data[key]
     return 0
-
-
-def get_random_member(team, last_choice=None):
-    """Randomly select a team member for case assignment
-
-    Selects a random team member from the provided list, with logic to avoid
-    assigning to the same person consecutively when multiple team members are
-    available.
-
-    Args:
-        team: List of team member dictionaries
-        last_choice: Previously selected team member to avoid reselecting.
-            Defaults to None.
-
-    Returns:
-        dict: Randomly selected team member dictionary, or None if team is empty
-    """
-
-    if len(team) > 1:
-        if last_choice is not None:
-            team = [member for member in team if member != last_choice]
-        current_choice = random.choice(team)
-    elif len(team) == 1:
-        current_choice = team[0]
-    else:
-        logging.warning("No team variable is available, cannot assign case.")
-        current_choice = None
-
-    return current_choice
 
 
 def get_token(offline_token):
