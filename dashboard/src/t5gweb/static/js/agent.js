@@ -3,6 +3,8 @@
 var currentAnalysisId = null
 var currentCaseNumber = null
 var showingRaw = false
+var pollErrorCount = 0
+var MAX_POLL_ERRORS = 5
 
 $(document).ready(function () {
   $('#search-btn').click(searchCase)
@@ -258,6 +260,7 @@ function toggleView () {
 function triggerAnalysis (force) {
   if (!currentCaseNumber) return
   hideAlert()
+  pollErrorCount = 0
   $('#no-report').addClass('d-none')
   $('#report-container').addClass('d-none')
   $('#analysis-progress').removeClass('d-none')
@@ -299,6 +302,7 @@ function pollStatus (taskId) {
     method: 'GET',
     dataType: 'json',
     success: function (data) {
+      pollErrorCount = 0
       var statusText = 'State: ' + data.state
       if (data.state === 'PENDING') {
         statusText = 'Queued, waiting for worker...'
@@ -308,11 +312,11 @@ function pollStatus (taskId) {
       $('#analysis-status-text').text(statusText)
 
       if (data.state === 'SUCCESS') {
-        sessionStorage.removeItem('activeAnalysis') // Clear on success
+        sessionStorage.removeItem('activeAnalysis')
         $('#analysis-progress').addClass('d-none')
         searchCase()
       } else if (data.state === 'FAILURE') {
-        sessionStorage.removeItem('activeAnalysis') // Clear on failure
+        sessionStorage.removeItem('activeAnalysis')
         $('#analysis-progress').addClass('d-none')
         showAlert('Analysis failed: ' + (data.error || 'Unknown error'), 'danger')
       } else {
@@ -320,12 +324,14 @@ function pollStatus (taskId) {
       }
     },
     error: function (xhr) {
-      // If task not found (404), clear storage - task expired
-      if (xhr.status === 404) {
+      pollErrorCount++
+      if (pollErrorCount >= MAX_POLL_ERRORS) {
+        pollErrorCount = 0
         sessionStorage.removeItem('activeAnalysis')
         $('#analysis-progress').addClass('d-none')
-        showAlert('Analysis task expired. Please run a new analysis.', 'warning')
+        showAlert('Lost contact with analysis task after multiple retries. Please run a new analysis.', 'warning')
       } else {
+        $('#analysis-status-text').text('Connection issue, retrying... (' + pollErrorCount + '/' + MAX_POLL_ERRORS + ')')
         setTimeout(function () { pollStatus(taskId) }, 5000)
       }
     }
