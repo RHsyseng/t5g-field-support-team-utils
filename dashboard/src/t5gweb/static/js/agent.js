@@ -307,7 +307,7 @@ function pollStatus (taskId) {
       if (data.state === 'PENDING') {
         statusText = 'Queued, waiting for worker...'
       } else if (data.state === 'STARTED') {
-        statusText = 'Running AI analysis (this takes 2-4 minutes)...'
+        statusText = 'Running AI analysis...'
       }
       $('#analysis-status-text').text(statusText)
 
