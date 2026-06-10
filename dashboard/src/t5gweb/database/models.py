@@ -1,10 +1,9 @@
 """SQLAlchemy database models"""
 
-from datetime import date, datetime
+from datetime import datetime
 from typing import List, Optional
 
 from sqlalchemy import (
-    Date,
     DateTime,
     ForeignKey,
     ForeignKeyConstraint,
@@ -92,7 +91,7 @@ class Comment(Base):
 
     author: Mapped[str] = mapped_column(String, nullable=False)
     comment_text: Mapped[str] = mapped_column(Text, nullable=False)
-    commented_at: Mapped[date] = mapped_column(Date, nullable=False)
+    commented_at: Mapped[datetime] = mapped_column(DateTime, nullable=False)
 
     __table_args__ = (
         ForeignKeyConstraint(

@@ -115,7 +115,7 @@ def load_comments_postgres(case_number, case_created_date, api_comments):
                 .filter_by(
                     case_number=case_number,
                     author=author,
-                    commented_at=commented_at.date(),
+                    commented_at=commented_at,
                 )
                 .first()
             )
@@ -125,7 +125,7 @@ def load_comments_postgres(case_number, case_created_date, api_comments):
                     created_date=case_created_date,
                     author=author,
                     comment_text=body,
-                    commented_at=commented_at.date(),
+                    commented_at=commented_at,
                 )
                 session.add(comment)
 

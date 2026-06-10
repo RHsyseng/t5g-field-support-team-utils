@@ -393,6 +393,36 @@ class TestLoadCommentsPostgres:
         )
         assert len(comments) == 1
 
+    def test_load_comments_same_author_same_day_different_times(self, test_db_session):
+        case_data = create_test_case_data()
+        load_cases_postgres(case_data)
+
+        api_comments = [
+            {
+                "id": "abc1",
+                "createdBy": "engineer1",
+                "commentBody": "Morning comment",
+                "createdDate": "2024-01-01T09:00:00Z",
+            },
+            {
+                "id": "abc2",
+                "createdBy": "engineer1",
+                "commentBody": "Afternoon comment",
+                "createdDate": "2024-01-01T15:30:00Z",
+            },
+        ]
+        case_created_date = parser.parse("2024-01-01T00:00:00Z")
+        load_comments_postgres("12345678", case_created_date, api_comments)
+
+        comments = (
+            test_db_session.query(Comment).filter_by(case_number="12345678").all()
+        )
+        assert len(comments) == 2
+        assert {c.comment_text for c in comments} == {
+            "Morning comment",
+            "Afternoon comment",
+        }
+
     def test_load_comments_skips_missing_case(self, test_db_session):
         api_comments = [
             {
