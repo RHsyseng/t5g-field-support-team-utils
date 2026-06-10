@@ -8,7 +8,7 @@ from dateutil import parser
 
 from t5gweb.utils import format_comment
 
-from .models import Case, JiraCard, JiraComment
+from .models import Case, Comment, JiraCard, JiraComment
 from .session import db_config
 
 
@@ -72,6 +72,69 @@ def load_cases_postgres(cases):
     finally:
         session.close()
         logging.warning("Loaded cases to Postgres")
+
+
+def load_comments_postgres(case_number, case_created_date, api_comments):
+    """Load or update Portal case comments in PostgreSQL.
+
+    Args:
+        case_number: The case number these comments belong to.
+        case_created_date: Parsed datetime of the case's creation date (for the
+            composite FK to the cases table).
+        api_comments: List of comment dicts from the Portal API, each containing
+            at minimum 'createdBy', 'commentBody', and 'createdDate'.
+    """
+    if not api_comments:
+        return
+
+    session = db_config.SessionLocal()
+    try:
+        existing_case = (
+            session.query(Case)
+            .filter_by(case_number=case_number, created_date=case_created_date)
+            .first()
+        )
+        if existing_case is None:
+            logging.warning(
+                "Cannot load comments for %s - case not found in database",
+                case_number,
+            )
+            return
+
+        for api_comment in api_comments:
+            author = api_comment.get("createdBy", "unknown")
+            body = api_comment.get("commentBody", "")
+            commented_at_str = api_comment.get("createdDate")
+            if not commented_at_str:
+                continue
+
+            commented_at = parser.parse(commented_at_str)
+
+            existing = (
+                session.query(Comment)
+                .filter_by(
+                    case_number=case_number,
+                    author=author,
+                    commented_at=commented_at,
+                )
+                .first()
+            )
+            if existing is None:
+                comment = Comment(
+                    case_number=case_number,
+                    created_date=case_created_date,
+                    author=author,
+                    comment_text=body,
+                    commented_at=commented_at,
+                )
+                session.add(comment)
+
+        session.commit()
+    except Exception as e:
+        session.rollback()
+        logging.error("Failed to load comments for case %s: %s", case_number, e)
+    finally:
+        session.close()
 
 
 def load_jira_card_postgres(cases, case_number, issue):

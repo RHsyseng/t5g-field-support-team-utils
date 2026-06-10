@@ -12,7 +12,11 @@ import requests
 from jira.exceptions import JIRAError
 
 from t5gweb import libtelco5g
-from t5gweb.database import load_cases_postgres, load_jira_card_postgres
+from t5gweb.database import (
+    load_cases_postgres,
+    load_comments_postgres,
+    load_jira_card_postgres,
+)
 from t5gweb.utils import format_comment, format_date, make_headers
 
 
@@ -618,11 +622,12 @@ def get_case_details(cfg):
                 headers = make_headers(token)
                 r_case = requests.get(case_endpoint, headers=headers)
 
-            crit_sit = r_case.json().get("critSit", False)
-            group_name = r_case.json().get("groupName", None)
-            notified_users = r_case.json().get("notifiedUsers", [])
-            relief_at = r_case.json().get("reliefAt", None)
-            resolved_at = r_case.json().get("resolvedAt", None)
+            case_json = r_case.json()
+            crit_sit = case_json.get("critSit", False)
+            group_name = case_json.get("groupName", None)
+            notified_users = case_json.get("notifiedUsers", [])
+            relief_at = case_json.get("reliefAt", None)
+            resolved_at = case_json.get("resolvedAt", None)
 
             case_details[case] = {
                 "crit_sit": crit_sit,
@@ -632,7 +637,15 @@ def get_case_details(cfg):
                 "resolved_at": resolved_at,
             }
             if "bug" in cases[case]:
-                bz_dict[case] = r_case.json()["bugzillas"]
+                bz_dict[case] = case_json["bugzillas"]
+
+            api_comments = case_json.get("comments", [])
+            if api_comments:
+                try:
+                    case_created_date = format_date(cases[case]["createdate"])
+                    load_comments_postgres(case, case_created_date, api_comments)
+                except Exception as e:
+                    logging.error("Failed to load comments for case %s: %s", case, e)
 
     libtelco5g.redis_set("details", json.dumps(case_details))
     libtelco5g.redis_set("case_bz", json.dumps(bz_dict))

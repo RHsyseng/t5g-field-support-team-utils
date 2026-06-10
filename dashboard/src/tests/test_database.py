@@ -11,11 +11,14 @@ from unittest.mock import Mock, patch
 
 import pytest
 from dateutil import parser
+
 from t5gweb.database import (
     Case,
+    Comment,
     JiraCard,
     JiraComment,
     load_cases_postgres,
+    load_comments_postgres,
     load_jira_card_postgres,
 )
 
@@ -335,6 +338,153 @@ class TestDatabaseOperations:
             test_db_session.query(JiraComment).filter_by(jira_card_id="TEST-123").all()
         )
         assert len(comments) == 2
+
+
+class TestLoadCommentsPostgres:
+    """Test load_comments_postgres operation"""
+
+    def test_load_comments_creates_records(self, test_db_session):
+        case_data = create_test_case_data()
+        load_cases_postgres(case_data)
+
+        api_comments = [
+            {
+                "id": "abc1",
+                "createdBy": "engineer1",
+                "commentBody": "First comment",
+                "createdDate": "2024-01-01T10:00:00Z",
+            },
+            {
+                "id": "abc2",
+                "createdBy": "engineer2",
+                "commentBody": "Second comment",
+                "createdDate": "2024-01-02T14:30:00Z",
+            },
+        ]
+
+        case_created_date = parser.parse("2024-01-01T00:00:00Z")
+        load_comments_postgres("12345678", case_created_date, api_comments)
+
+        comments = (
+            test_db_session.query(Comment).filter_by(case_number="12345678").all()
+        )
+        assert len(comments) == 2
+        assert {c.author for c in comments} == {"engineer1", "engineer2"}
+
+    def test_load_comments_skips_duplicates(self, test_db_session):
+        case_data = create_test_case_data()
+        load_cases_postgres(case_data)
+
+        api_comments = [
+            {
+                "id": "abc1",
+                "createdBy": "engineer1",
+                "commentBody": "Same comment",
+                "createdDate": "2024-01-01T10:00:00Z",
+            },
+        ]
+        case_created_date = parser.parse("2024-01-01T00:00:00Z")
+
+        load_comments_postgres("12345678", case_created_date, api_comments)
+        load_comments_postgres("12345678", case_created_date, api_comments)
+
+        comments = (
+            test_db_session.query(Comment).filter_by(case_number="12345678").all()
+        )
+        assert len(comments) == 1
+
+    def test_load_comments_same_author_same_day_different_times(self, test_db_session):
+        case_data = create_test_case_data()
+        load_cases_postgres(case_data)
+
+        api_comments = [
+            {
+                "id": "abc1",
+                "createdBy": "engineer1",
+                "commentBody": "Morning comment",
+                "createdDate": "2024-01-01T09:00:00Z",
+            },
+            {
+                "id": "abc2",
+                "createdBy": "engineer1",
+                "commentBody": "Afternoon comment",
+                "createdDate": "2024-01-01T15:30:00Z",
+            },
+        ]
+        case_created_date = parser.parse("2024-01-01T00:00:00Z")
+        load_comments_postgres("12345678", case_created_date, api_comments)
+
+        comments = (
+            test_db_session.query(Comment).filter_by(case_number="12345678").all()
+        )
+        assert len(comments) == 2
+        assert {c.comment_text for c in comments} == {
+            "Morning comment",
+            "Afternoon comment",
+        }
+
+    def test_load_comments_skips_missing_case(self, test_db_session):
+        api_comments = [
+            {
+                "id": "abc1",
+                "createdBy": "engineer1",
+                "commentBody": "Orphan comment",
+                "createdDate": "2024-01-01T10:00:00Z",
+            },
+        ]
+        case_created_date = parser.parse("2024-01-01T00:00:00Z")
+
+        load_comments_postgres("99999999", case_created_date, api_comments)
+
+        comments = test_db_session.query(Comment).all()
+        assert len(comments) == 0
+
+    def test_load_comments_skips_empty_list(self, test_db_session):
+        case_data = create_test_case_data()
+        load_cases_postgres(case_data)
+        case_created_date = parser.parse("2024-01-01T00:00:00Z")
+
+        load_comments_postgres("12345678", case_created_date, [])
+
+        comments = test_db_session.query(Comment).all()
+        assert len(comments) == 0
+
+    def test_load_comments_skips_missing_date(self, test_db_session):
+        case_data = create_test_case_data()
+        load_cases_postgres(case_data)
+
+        api_comments = [
+            {
+                "id": "abc1",
+                "createdBy": "engineer1",
+                "commentBody": "No date comment",
+            },
+        ]
+        case_created_date = parser.parse("2024-01-01T00:00:00Z")
+
+        load_comments_postgres("12345678", case_created_date, api_comments)
+
+        comments = test_db_session.query(Comment).all()
+        assert len(comments) == 0
+
+    def test_load_comments_relationship_to_case(self, test_db_session):
+        case_data = create_test_case_data()
+        load_cases_postgres(case_data)
+
+        api_comments = [
+            {
+                "id": "abc1",
+                "createdBy": "engineer1",
+                "commentBody": "Related comment",
+                "createdDate": "2024-01-01T10:00:00Z",
+            },
+        ]
+        case_created_date = parser.parse("2024-01-01T00:00:00Z")
+        load_comments_postgres("12345678", case_created_date, api_comments)
+
+        case = test_db_session.query(Case).filter_by(case_number="12345678").first()
+        assert len(case.comments) == 1
+        assert case.comments[0].author == "engineer1"
 
 
 class TestDataIntegrity:
