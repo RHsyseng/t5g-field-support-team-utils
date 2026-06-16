@@ -92,6 +92,8 @@ function renderReport (data) {
   renderDegraded(report)
   renderWarnings(report)
   renderAttachments(report)
+  renderMgValidation(data.must_gather_validation)
+  renderSosValidation(data.sos_report_validation)
 
   $('#raw-json').text(JSON.stringify(data, null, 2))
 
@@ -242,6 +244,85 @@ function renderAttachments (report) {
       '<td>' + escapeHtml(a.status || '') + '</td></tr>'
   }).join('')
   $('#attachments-tbody').html(html)
+}
+
+function renderValidationCard (validation, cardId, bodyId, cmdLabel) {
+  if (!validation || !validation.validated) {
+    $(cardId).addClass('d-none')
+    return
+  }
+  $(cardId).removeClass('d-none')
+
+  var decisionClass = 'bg-secondary'
+  if (validation.decision === 'confirmed') decisionClass = 'bg-success'
+  else if (validation.decision === 'refuted') decisionClass = 'bg-danger'
+  else if (validation.decision === 'inconclusive') decisionClass = 'bg-warning text-dark'
+
+  var html = '<div class="mb-3">'
+  html += '<span class="badge ' + decisionClass + ' me-2">' + escapeHtml(validation.decision) + '</span>'
+  if (validation.confidence != null) {
+    html += '<span class="badge bg-info me-2">Confidence: ' + (validation.confidence * 100).toFixed(0) + '%</span>'
+  }
+  if (validation.round) {
+    html += '<span class="badge bg-secondary">Round ' + validation.round + '</span>'
+  }
+  html += '</div>'
+
+  if (validation.reasoning) {
+    html += '<p>' + markdownToHtml(validation.reasoning) + '</p>'
+  }
+
+  if (validation.filename) {
+    html += '<p class="text-muted mb-2"><small>Archive: ' + escapeHtml(validation.filename)
+    if (validation.size_mb) html += ' (' + validation.size_mb.toFixed(1) + ' MB)'
+    html += '</small></p>'
+  }
+
+  var cmds = validation.commands_executed || []
+  if (cmds.length > 0) {
+    html += '<div class="accordion" id="' + bodyId + '-accordion">'
+    cmds.forEach(function (cmd, idx) {
+      var statusIcon = '?'
+      var statusClass = 'text-secondary'
+      if (cmd.status === 'success') { statusIcon = '✓'; statusClass = 'text-success' }
+      else if (cmd.status === 'empty') { statusIcon = '○'; statusClass = 'text-muted' }
+      else if (cmd.status === 'timeout') { statusIcon = '⏱'; statusClass = 'text-warning' }
+      else if (cmd.status === 'error' || cmd.status === 'omc_error') { statusIcon = '✗'; statusClass = 'text-danger' }
+
+      var cmdText = cmd.command || cmd.original_command || 'N/A'
+      var collapseId = bodyId + '-cmd-' + idx
+
+      html += '<div class="accordion-item">'
+      html += '<h2 class="accordion-header">'
+      html += '<button class="accordion-button collapsed py-2" type="button" data-bs-toggle="collapse" data-bs-target="#' + collapseId + '">'
+      html += '<span class="' + statusClass + ' me-2">' + statusIcon + '</span> '
+      html += '<code class="me-2">' + escapeHtml(cmdText) + '</code> '
+      if (cmd.duration_ms) html += '<small class="text-muted">' + cmd.duration_ms + 'ms</small>'
+      html += '</button></h2>'
+      html += '<div id="' + collapseId + '" class="accordion-collapse collapse">'
+      html += '<div class="accordion-body">'
+      if (cmd.stdout) {
+        html += '<pre class="bg-light p-2 border rounded" style="max-height:300px;overflow:auto;font-size:0.85em">' + escapeHtml(cmd.stdout) + '</pre>'
+      } else {
+        html += '<p class="text-muted">(no output)</p>'
+      }
+      if (cmd.stderr) {
+        html += '<pre class="bg-light p-2 border rounded text-danger" style="max-height:150px;overflow:auto;font-size:0.85em">' + escapeHtml(cmd.stderr) + '</pre>'
+      }
+      html += '</div></div></div>'
+    })
+    html += '</div>'
+  }
+
+  $(bodyId).html(html)
+}
+
+function renderMgValidation (validation) {
+  renderValidationCard(validation, '#mg-validation-card', '#mg-validation-body', 'OMC')
+}
+
+function renderSosValidation (validation) {
+  renderValidationCard(validation, '#sos-validation-card', '#sos-validation-body', 'Command')
 }
 
 function toggleView () {
