@@ -1,4 +1,4 @@
-/* global $ */
+/* global $, sessionStorage */
 
 let currentAnalysisId = null
 let currentCaseNumber = null
@@ -314,10 +314,15 @@ function _renderCommandAccordion (cmds, prefix, startIdx) {
   cmds.forEach(function (cmd, idx) {
     let statusIcon = '?'
     let statusClass = 'text-secondary'
-    if (cmd.status === 'success') { statusIcon = '✓'; statusClass = 'text-success' }
-    else if (cmd.status === 'empty') { statusIcon = '○'; statusClass = 'text-muted' }
-    else if (cmd.status === 'timeout') { statusIcon = '⏱'; statusClass = 'text-warning' }
-    else if (cmd.status === 'error' || cmd.status === 'omc_error') { statusIcon = '✗'; statusClass = 'text-danger' }
+    if (cmd.status === 'success') {
+      statusIcon = '✓'; statusClass = 'text-success'
+    } else if (cmd.status === 'empty') {
+      statusIcon = '○'; statusClass = 'text-muted'
+    } else if (cmd.status === 'timeout') {
+      statusIcon = '⏱'; statusClass = 'text-warning'
+    } else if (cmd.status === 'error' || cmd.status === 'omc_error') {
+      statusIcon = '✗'; statusClass = 'text-danger'
+    }
 
     const cmdText = cmd.command || cmd.original_command || 'N/A'
     const collapseId = 'val-' + prefix + '-cmd-' + (startIdx + idx)
