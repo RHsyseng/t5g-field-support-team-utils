@@ -1,4 +1,4 @@
-/* global $, sessionStorage */
+/* global $, sessionStorage */ // eslint-disable-line no-redeclare
 
 let currentAnalysisId = null
 let currentCaseNumber = null
