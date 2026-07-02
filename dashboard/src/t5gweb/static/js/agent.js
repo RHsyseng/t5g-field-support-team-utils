@@ -1,10 +1,10 @@
-/* global $, bootstrap */
+/* global $ */
 
-var currentAnalysisId = null
-var currentCaseNumber = null
-var showingRaw = false
-var pollErrorCount = 0
-var MAX_POLL_ERRORS = 5
+let currentAnalysisId = null
+let currentCaseNumber = null
+let showingRaw = false
+let pollErrorCount = 0
+const MAX_POLL_ERRORS = 5
 
 $(document).ready(function () {
   $('#search-btn').click(searchCase)
@@ -33,7 +33,7 @@ function hideAlert () {
 }
 
 function searchCase () {
-  var caseNum = $('#case-number-input').val().trim()
+  const caseNum = $('#case-number-input').val().trim()
   if (!caseNum) return
   currentCaseNumber = caseNum
   hideAlert()
@@ -63,18 +63,18 @@ function searchCase () {
 
 function renderReport (data) {
   currentAnalysisId = data.id
-  var report = data.full_report || {}
+  const report = data.full_report || {}
 
-  var statusBadge = $('#report-status-badge')
+  const statusBadge = $('#report-status-badge')
   statusBadge.text(data.status || 'unknown')
   statusBadge.attr('class', 'badge ' + statusBadgeClass(data.status))
 
-  var confidence = (report.analysis || {}).confidence || 'unknown'
-  var confBadge = $('#report-confidence-badge')
+  const confidence = (report.analysis || {}).confidence || 'unknown'
+  const confBadge = $('#report-confidence-badge')
   confBadge.text('Confidence: ' + confidence)
   confBadge.attr('class', 'badge ' + confidenceBadgeClass(confidence))
 
-  var meta = 'Case ' + data.case_number
+  let meta = 'Case ' + data.case_number
   if (data.timestamp) meta += ' | ' + new Date(data.timestamp).toLocaleString()
   if (data.model_id) meta += ' | ' + data.model_id
   if (data.rounds_executed) meta += ' | ' + data.rounds_executed + ' round(s)'
@@ -113,23 +113,23 @@ function renderReport (data) {
 }
 
 function renderDomainTags (report) {
-  var tags = ((report.analysis || {}).domain_tags || [])
+  const tags = ((report.analysis || {}).domain_tags || [])
   if (tags.length === 0) {
     $('#domain-tags-card').addClass('d-none')
     return
   }
   $('#domain-tags-card').removeClass('d-none')
-  var html = tags.map(function (t) {
+  const html = tags.map(function (t) {
     return '<span class="badge bg-secondary me-1">' + escapeHtml(t) + '</span>'
   }).join('')
   $('#domain-tags-body').html(html)
 }
 
 function renderRecommendations (report) {
-  var recs = report.recommendations || []
+  const recs = report.recommendations || []
   if (recs.length === 0) { $('#recommendations-card').addClass('d-none'); return }
   $('#recommendations-card').removeClass('d-none')
-  var html = recs.map(function (r) {
+  const html = recs.map(function (r) {
     return '<tr><td>' + markdownToHtml(r.action) + '</td>' +
       '<td><code>' + escapeHtml(r.command || '') + '</code></td>' +
       '<td><span class="badge ' + riskBadgeClass(r.risk) + '">' + escapeHtml(r.risk || 'safe') + '</span></td></tr>'
@@ -138,11 +138,11 @@ function renderRecommendations (report) {
 }
 
 function renderSimilarCases (report) {
-  var cases = report.similar_cases || []
+  const cases = report.similar_cases || []
   if (cases.length === 0) { $('#similar-cases-card').addClass('d-none'); return }
   $('#similar-cases-card').removeClass('d-none')
-  var html = cases.map(function (c) {
-    var caseLink = '<a href="https://access.redhat.com/support/cases/' + escapeHtml(c.case_number) + '" target="_blank">' + escapeHtml(c.case_number) + '</a>'
+  const html = cases.map(function (c) {
+    const caseLink = '<a href="https://access.redhat.com/support/cases/' + escapeHtml(c.case_number) + '" target="_blank">' + escapeHtml(c.case_number) + '</a>'
     return '<tr><td>' + caseLink + '</td>' +
       '<td>' + (c.similarity ? (c.similarity * 100).toFixed(0) + '%' : '') + '</td>' +
       '<td><span class="badge ' + relevanceBadgeClass(c.relevance) + '">' + escapeHtml(c.relevance || '') + '</span></td>' +
@@ -152,11 +152,11 @@ function renderSimilarCases (report) {
 }
 
 function renderJiras (report) {
-  var jiras = report.engineering_jiras || []
+  const jiras = report.engineering_jiras || []
   if (jiras.length === 0) { $('#jiras-card').addClass('d-none'); return }
   $('#jiras-card').removeClass('d-none')
-  var html = jiras.map(function (j) {
-    var keyHtml = j.url
+  const html = jiras.map(function (j) {
+    const keyHtml = j.url
       ? '<a href="' + escapeHtml(j.url) + '" target="_blank">' + escapeHtml(j.key) + '</a>'
       : escapeHtml(j.key)
     return '<tr><td>' + keyHtml + '</td>' +
@@ -169,11 +169,11 @@ function renderJiras (report) {
 }
 
 function renderKB (report) {
-  var refs = report.kb_references || []
+  const refs = report.kb_references || []
   if (refs.length === 0) { $('#kb-card').addClass('d-none'); return }
   $('#kb-card').removeClass('d-none')
-  var html = refs.map(function (r) {
-    var titleHtml = r.url
+  const html = refs.map(function (r) {
+    const titleHtml = r.url
       ? '<a href="' + escapeHtml(r.url) + '" target="_blank">' + escapeHtml(r.title) + '</a>'
       : escapeHtml(r.title)
     return '<tr><td>' + titleHtml + '</td>' +
@@ -184,25 +184,25 @@ function renderKB (report) {
 }
 
 function renderQuestions (report) {
-  var qs = report.clarifying_questions || []
+  const qs = report.clarifying_questions || []
   if (qs.length === 0) { $('#questions-card').addClass('d-none'); return }
   $('#questions-card').removeClass('d-none')
-  var html = qs.map(function (q) { return '<li>' + escapeHtml(q) + '</li>' }).join('')
+  const html = qs.map(function (q) { return '<li>' + escapeHtml(q) + '</li>' }).join('')
   $('#questions-list').html(html)
 }
 
 function renderAgentSummaries (report) {
-  var summaries = report.agent_summaries || {}
-  var agents = report.agents_consulted || []
+  const summaries = report.agent_summaries || {}
+  const agents = report.agents_consulted || []
   if (agents.length === 0 && Object.keys(summaries).length === 0) {
     $('#agents-card').addClass('d-none')
     return
   }
   $('#agents-card').removeClass('d-none')
-  var html = ''
-  var keys = Object.keys(summaries).length > 0 ? Object.keys(summaries) : agents
+  let html = ''
+  const keys = Object.keys(summaries).length > 0 ? Object.keys(summaries) : agents
   keys.forEach(function (name) {
-    var s = summaries[name] || {}
+    const s = summaries[name] || {}
     html += '<div class="mb-2"><strong>' + escapeHtml(name) + '</strong>'
     if (s.status) html += ' <span class="badge bg-secondary">' + escapeHtml(s.status) + '</span>'
     if (s.confidence) html += ' <span class="badge bg-info">' + (s.confidence * 100).toFixed(0) + '%</span>'
@@ -213,10 +213,10 @@ function renderAgentSummaries (report) {
 }
 
 function renderDegraded (report) {
-  var steps = report.degraded_steps || []
+  const steps = report.degraded_steps || []
   if (steps.length === 0) { $('#degraded-card').addClass('d-none'); return }
   $('#degraded-card').removeClass('d-none')
-  var html = steps.map(function (d) {
+  const html = steps.map(function (d) {
     return '<tr><td>' + escapeHtml(d.step) + '</td>' +
       '<td>' + escapeHtml(d.reason) + '</td>' +
       '<td>' + escapeHtml(d.impact) + '</td></tr>'
@@ -225,18 +225,18 @@ function renderDegraded (report) {
 }
 
 function renderWarnings (report) {
-  var warns = report.context_warnings || []
+  const warns = report.context_warnings || []
   if (warns.length === 0) { $('#warnings-card').addClass('d-none'); return }
   $('#warnings-card').removeClass('d-none')
-  var html = warns.map(function (w) { return '<li>' + escapeHtml(w) + '</li>' }).join('')
+  const html = warns.map(function (w) { return '<li>' + escapeHtml(w) + '</li>' }).join('')
   $('#warnings-list').html(html)
 }
 
 function renderAttachments (report) {
-  var atts = report.attachments_reviewed || []
+  const atts = report.attachments_reviewed || []
   if (atts.length === 0) { $('#attachments-card').addClass('d-none'); return }
   $('#attachments-card').removeClass('d-none')
-  var html = atts.map(function (a) {
+  const html = atts.map(function (a) {
     return '<tr><td>' + escapeHtml(a.file_name) + '</td>' +
       '<td>' + escapeHtml(a.file_type || '') + '</td>' +
       '<td>' + (a.size_kb || '') + '</td>' +
@@ -246,8 +246,8 @@ function renderAttachments (report) {
 }
 
 function renderValidation (mgValidation, sosValidation) {
-  var mgActive = mgValidation && mgValidation.validated
-  var sosActive = sosValidation && sosValidation.validated
+  const mgActive = mgValidation && mgValidation.validated
+  const sosActive = sosValidation && sosValidation.validated
 
   if (!mgActive && !sosActive) {
     $('#validation-card').addClass('d-none')
@@ -255,13 +255,13 @@ function renderValidation (mgValidation, sosValidation) {
   }
   $('#validation-card').removeClass('d-none')
 
-  var primary = mgActive ? mgValidation : sosValidation
-  var decisionClass = 'bg-secondary'
+  const primary = mgActive ? mgValidation : sosValidation
+  let decisionClass = 'bg-secondary'
   if (primary.decision === 'confirmed') decisionClass = 'bg-success'
   else if (primary.decision === 'refuted') decisionClass = 'bg-danger'
   else if (primary.decision === 'inconclusive') decisionClass = 'bg-warning text-dark'
 
-  var html = '<div class="mb-3">'
+  let html = '<div class="mb-3">'
   html += '<span class="badge ' + decisionClass + ' me-2">' + escapeHtml(primary.decision) + '</span>'
   if (primary.confidence != null) {
     html += '<span class="badge bg-info me-2">Confidence: ' + (primary.confidence * 100).toFixed(0) + '%</span>'
@@ -275,10 +275,10 @@ function renderValidation (mgValidation, sosValidation) {
     html += '<p>' + markdownToHtml(primary.reasoning) + '</p>'
   }
 
-  var cmdIndex = 0
+  let cmdIndex = 0
 
   if (mgActive) {
-    var mgCmds = mgValidation.commands_executed || []
+    const mgCmds = mgValidation.commands_executed || []
     if (mgCmds.length > 0) {
       html += '<h6 class="mt-3">Must-Gather Commands'
       if (mgValidation.filename) {
@@ -293,7 +293,7 @@ function renderValidation (mgValidation, sosValidation) {
   }
 
   if (sosActive) {
-    var sosCmds = sosValidation.commands_executed || []
+    const sosCmds = sosValidation.commands_executed || []
     if (sosCmds.length > 0) {
       html += '<h6 class="mt-3">Sos-Report Commands'
       if (sosValidation.filename) {
@@ -310,17 +310,17 @@ function renderValidation (mgValidation, sosValidation) {
 }
 
 function _renderCommandAccordion (cmds, prefix, startIdx) {
-  var html = '<div class="accordion mb-2" id="val-' + prefix + '-accordion">'
+  let html = '<div class="accordion mb-2" id="val-' + prefix + '-accordion">'
   cmds.forEach(function (cmd, idx) {
-    var statusIcon = '?'
-    var statusClass = 'text-secondary'
+    let statusIcon = '?'
+    let statusClass = 'text-secondary'
     if (cmd.status === 'success') { statusIcon = '✓'; statusClass = 'text-success' }
     else if (cmd.status === 'empty') { statusIcon = '○'; statusClass = 'text-muted' }
     else if (cmd.status === 'timeout') { statusIcon = '⏱'; statusClass = 'text-warning' }
     else if (cmd.status === 'error' || cmd.status === 'omc_error') { statusIcon = '✗'; statusClass = 'text-danger' }
 
-    var cmdText = cmd.command || cmd.original_command || 'N/A'
-    var collapseId = 'val-' + prefix + '-cmd-' + (startIdx + idx)
+    const cmdText = cmd.command || cmd.original_command || 'N/A'
+    const collapseId = 'val-' + prefix + '-cmd-' + (startIdx + idx)
 
     html += '<div class="accordion-item">'
     html += '<h2 class="accordion-header">'
@@ -367,11 +367,11 @@ function triggerAnalysis (force) {
   $('#analysis-progress').removeClass('d-none')
   $('#analysis-status-text').text('Queuing analysis...')
 
-  var url = '/api/ai/analyze/' + encodeURIComponent(currentCaseNumber)
+  let url = '/api/ai/analyze/' + encodeURIComponent(currentCaseNumber)
   if (force) url += '?force=true'
 
   $.ajax({
-    url: url,
+    url,
     method: 'POST',
     dataType: 'json',
     success: function (data) {
@@ -404,7 +404,7 @@ function pollStatus (taskId) {
     dataType: 'json',
     success: function (data) {
       pollErrorCount = 0
-      var statusText = 'State: ' + data.state
+      let statusText = 'State: ' + data.state
       if (data.state === 'PENDING') {
         statusText = 'Queued, waiting for worker...'
       } else if (data.state === 'STARTED') {
@@ -424,7 +424,7 @@ function pollStatus (taskId) {
         setTimeout(function () { pollStatus(taskId) }, 3000)
       }
     },
-    error: function (xhr) {
+    error: function () {
       pollErrorCount++
       if (pollErrorCount >= MAX_POLL_ERRORS) {
         pollErrorCount = 0
@@ -452,12 +452,12 @@ function loadThinkingLog () {
         $('#thinking-log-tbody').html('<tr><td colspan="7" class="text-muted text-center">No log entries</td></tr>')
         return
       }
-      var html = logs.map(function (l) {
-        var round = l.round !== undefined ? l.round : (l.step_number !== undefined ? l.step_number : '')
-        var tokensIn = l.input_tokens != null ? formatNumber(l.input_tokens) : ''
-        var tokensOut = l.output_tokens != null ? formatNumber(l.output_tokens) : ''
-        var tokensInClass = l.input_tokens != null ? '' : 'text-muted'
-        var tokensOutClass = l.output_tokens != null ? '' : 'text-muted'
+      const html = logs.map(function (l) {
+        const round = l.round !== undefined ? l.round : (l.step_number !== undefined ? l.step_number : '')
+        const tokensIn = l.input_tokens != null ? formatNumber(l.input_tokens) : ''
+        const tokensOut = l.output_tokens != null ? formatNumber(l.output_tokens) : ''
+        const tokensInClass = l.input_tokens != null ? '' : 'text-muted'
+        const tokensOutClass = l.output_tokens != null ? '' : 'text-muted'
 
         return '<tr><td>' + round + '</td>' +
           '<td>' + escapeHtml(l.agent_name || '') + '</td>' +
@@ -487,7 +487,7 @@ function submitFeedback (vote) {
     url: '/api/ai/feedback/' + encodeURIComponent(currentAnalysisId),
     method: 'POST',
     contentType: 'application/json',
-    data: JSON.stringify({ vote: vote }),
+    data: JSON.stringify({ vote }),
     dataType: 'json',
     success: function () {
       $('#feedback-status').text('Feedback submitted!')
@@ -506,12 +506,12 @@ function submitFeedback (vote) {
 }
 
 function resumeOngoingAnalysis () {
-  var stored = sessionStorage.getItem('activeAnalysis')
+  const stored = sessionStorage.getItem('activeAnalysis')
   if (!stored) return
 
   try {
-    var data = JSON.parse(stored)
-    var ageHours = (Date.now() - data.started_at) / (1000 * 60 * 60)
+    const data = JSON.parse(stored)
+    const ageHours = (Date.now() - data.started_at) / (1000 * 60 * 60)
 
     // Ignore if older than 2 hours (likely expired)
     if (ageHours > 2) {
@@ -565,7 +565,7 @@ function relevanceBadgeClass (relevance) {
 
 function escapeHtml (str) {
   if (!str) return ''
-  var div = document.createElement('div')
+  const div = document.createElement('div')
   div.appendChild(document.createTextNode(str))
   return div.innerHTML
 }
@@ -574,7 +574,7 @@ function markdownToHtml (markdown) {
   if (!markdown) return ''
 
   // Escape HTML first
-  var html = escapeHtml(markdown)
+  let html = escapeHtml(markdown)
 
   // Convert markdown to HTML
   // Bold **text**

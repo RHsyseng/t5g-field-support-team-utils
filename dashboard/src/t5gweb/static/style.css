@@ -234,7 +234,7 @@ span.anchor {
 #raw-json {
   font-size: 0.85em;
   white-space: pre-wrap;
-  word-break: break-word;
+  overflow-wrap: break-word;
 }
 
 #thinking-log-collapse .table td {
