@@ -35,6 +35,10 @@ function hideAlert () {
 function searchCase () {
   const caseNum = $('#case-number-input').val().trim()
   if (!caseNum) return
+  if (!/^[0-9]{8}$/.test(caseNum)) {
+    showAlert('Case number must be exactly 8 digits (e.g. 03252981)', 'warning')
+    return
+  }
   currentCaseNumber = caseNum
   hideAlert()
   $('#report-container').addClass('d-none')

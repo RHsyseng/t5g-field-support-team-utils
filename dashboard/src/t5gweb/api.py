@@ -3,6 +3,7 @@
 import json
 import logging
 import os
+import re
 
 import requests as http_requests
 from flask import Blueprint, jsonify, request
@@ -175,15 +176,27 @@ def _ai_proxy(method, path, **kwargs):
         return jsonify({"error": "AI Agents service timeout"}), 504
 
 
+def _validate_case_number(case_number):
+    if not re.fullmatch(r"[0-9]{8}", case_number):
+        return jsonify({"error": "Case number must be exactly 8 digits"}), 400
+    return None
+
+
 @BP.route("/ai/report/case/<string:case_number>")
 @login_required
 def ai_report_by_case(case_number):
+    err = _validate_case_number(case_number)
+    if err:
+        return err
     return _ai_proxy("get", f"/report/case/{case_number}")
 
 
 @BP.route("/ai/analyze/<string:case_number>", methods=["POST"])
 @login_required
 def ai_analyze(case_number):
+    err = _validate_case_number(case_number)
+    if err:
+        return err
     force = request.args.get("force", "false").lower() == "true"
     return _ai_proxy("post", f"/analyze/{case_number}", params={"force": force})
 
