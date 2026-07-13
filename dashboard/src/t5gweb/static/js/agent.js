@@ -90,6 +90,7 @@ function renderReport (data) {
   renderRecommendations(report)
   renderSimilarCases(report)
   renderJiras(report)
+  renderCaseResolution(report)
   renderKB(report)
   renderQuestions(report)
   renderAgentSummaries(report)
@@ -170,6 +171,27 @@ function renderJiras (report) {
       '<td>' + escapeHtml((j.fix_versions || []).join(', ')) + '</td></tr>'
   }).join('')
   $('#jiras-tbody').html(html)
+}
+
+function renderCaseResolution (report) {
+  const resolution = report.case_resolution || null
+  if (!resolution) {
+    $('#case-resolution-card').addClass('d-none')
+    return
+  }
+  $('#case-resolution-card').removeClass('d-none')
+
+  const statusBadge = $('#case-resolution-status-badge')
+  statusBadge.text(resolution.status || 'unknown')
+
+  let badgeClass = 'bg-secondary'
+  if (resolution.status === 'in_progress') badgeClass = 'bg-primary'
+  else if (resolution.status === 'completed') badgeClass = 'bg-success'
+  statusBadge.attr('class', 'badge ms-2 ' + badgeClass)
+
+  $('#case-resolution-message').text(resolution.message || 'No message')
+  $('#code-findings-count').text(resolution.code_findings_count || 0)
+  $('#proposed-fixes-count').text(resolution.proposed_fixes_count || 0)
 }
 
 function renderKB (report) {
