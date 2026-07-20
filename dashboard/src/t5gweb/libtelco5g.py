@@ -1260,6 +1260,12 @@ def sync_priority(cfg):
         dict: Dictionary of out-of-sync cards that were updated, keyed by
             card key
     """
+    read_only = os.getenv("READ_ONLY", "false") == "true"
+
+    if read_only:
+        logging.warning("ReadOnly mode is active - skipping priority sync")
+        return {}
+
     cards = redis_get("cards")
     jira_conn = jira_connection(cfg)
 
