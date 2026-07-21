@@ -290,3 +290,85 @@ span.anchor {
   }
 }
 
+/* Code Graph / Engineering Resolution */
+.confidence-bar {
+  height: 6px;
+  background-color: #e9ecef;
+  border-radius: 3px;
+  overflow: hidden;
+  display: inline-block;
+  vertical-align: middle;
+}
+
+.confidence-bar-fill {
+  height: 100%;
+  border-radius: 3px;
+}
+
+.confidence-bar-fill.bg-success {
+  background-color: #198754;
+}
+
+.confidence-bar-fill.bg-warning {
+  background-color: #ffc107;
+}
+
+.confidence-bar-fill.bg-danger {
+  background-color: #dc3545;
+}
+
+.code-finding-item .accordion-button {
+  align-items: flex-start;
+}
+
+.code-finding-item .accordion-button:not(.collapsed) {
+  background-color: #f8f9fa;
+}
+
+.code-snippet {
+  max-height: 320px;
+  overflow: auto;
+  font-size: 0.85em;
+  white-space: pre-wrap;
+  word-break: break-word;
+}
+
+.call-chain {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 0.15rem;
+}
+
+.code-graph-timeline .timeline-item {
+  position: relative;
+  padding: 0.65rem 0.75rem 0.65rem 1.25rem;
+  border-left: 3px solid #0d6efd;
+  margin-left: 0.35rem;
+  margin-bottom: 0.5rem;
+  background: #f8f9fa;
+  border-radius: 0 0.375rem 0.375rem 0;
+}
+
+.code-graph-timeline .timeline-item:last-child {
+  margin-bottom: 0;
+}
+
+.code-graph-timeline .timeline-warn {
+  border-left-color: #ffc107;
+  background: #fff8e1;
+}
+
+.code-graph-timeline .timeline-skip {
+  border-left-color: #adb5bd;
+  background: #f1f3f5;
+}
+
+.code-graph-timeline .timeline-query {
+  border-left-color: #0d6efd;
+}
+
+#version-alignment-banner {
+  border-left: 4px solid #ffc107;
+}
+

@@ -103,30 +103,6 @@
                             </div>
                         </div>
 
-                        <div class="card mb-3" id="case-resolution-card">
-                            <div class="card-header">
-                                <strong>Case Resolution</strong>
-                                <span class="badge bg-secondary ms-2" id="case-resolution-status-badge"></span>
-                            </div>
-                            <div class="card-body">
-                                <p class="lead mb-3" id="case-resolution-message"></p>
-                                <div class="row">
-                                    <div class="col-md-6">
-                                        <div class="metric-card">
-                                            <span class="metric-label">Code Findings</span>
-                                            <span class="metric-value" id="code-findings-count">0</span>
-                                        </div>
-                                    </div>
-                                    <div class="col-md-6">
-                                        <div class="metric-card">
-                                            <span class="metric-label">Proposed Fixes</span>
-                                            <span class="metric-value" id="proposed-fixes-count">0</span>
-                                        </div>
-                                    </div>
-                                </div>
-                            </div>
-                        </div>
-
                         <div class="card mb-3" id="kb-card">
                             <div class="card-header"><strong>KB References</strong></div>
                             <div class="card-body p-0">
@@ -153,6 +129,65 @@
                         <div class="card mb-3" id="agents-card">
                             <div class="card-header"><strong>Agent Summaries</strong></div>
                             <div class="card-body" id="agents-body"></div>
+                        </div>
+
+                        <div class="card mb-3" id="case-resolution-card">
+                            <div class="card-header">
+                                <strong>Case Resolution</strong>
+                                <span class="badge bg-secondary ms-2" id="case-resolution-status-badge"></span>
+                            </div>
+                            <div class="card-body">
+                                <p class="lead mb-3" id="case-resolution-message"></p>
+                                <div class="row">
+                                    <div class="col-md-6">
+                                        <div class="metric-card">
+                                            <span class="metric-label">Code Findings</span>
+                                            <span class="metric-value" id="code-findings-count">0</span>
+                                        </div>
+                                    </div>
+                                    <div class="col-md-6">
+                                        <div class="metric-card">
+                                            <span class="metric-label">Proposed Fixes</span>
+                                            <span class="metric-value" id="proposed-fixes-count">0</span>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+
+                        <div id="version-alignment-banner" class="alert alert-warning d-none" role="alert"></div>
+
+                        <div class="card mb-3 d-none" id="engineering-resolution-card">
+                            <div class="card-header d-flex flex-wrap align-items-center gap-2">
+                                <strong>Engineering Resolution</strong>
+                                <span class="badge" id="eng-res-status-badge"></span>
+                                <span class="badge bg-info" id="eng-res-findings-pill"></span>
+                                <span class="badge" id="eng-res-correlation-badge"></span>
+                            </div>
+                            <div class="card-body">
+                                <div id="eng-res-context" class="mb-3"></div>
+
+                                <div class="d-flex flex-wrap align-items-center gap-2 mb-3" id="code-findings-filters">
+                                    <label class="form-label mb-0 small text-muted" for="code-findings-sort">Sort</label>
+                                    <select class="form-select form-select-sm w-auto" id="code-findings-sort" aria-label="Sort code findings">
+                                        <option value="confidence-desc" selected>Confidence (high → low)</option>
+                                        <option value="confidence-asc">Confidence (low → high)</option>
+                                        <option value="repo">Repository</option>
+                                        <option value="query">Query type</option>
+                                    </select>
+                                    <label class="form-label mb-0 small text-muted" for="code-findings-repo-filter">Repo</label>
+                                    <select class="form-select form-select-sm w-auto" id="code-findings-repo-filter" aria-label="Filter by repository">
+                                        <option value="">All repos</option>
+                                    </select>
+                                    <label class="form-label mb-0 small text-muted" for="code-findings-query-filter">Query</label>
+                                    <select class="form-select form-select-sm w-auto" id="code-findings-query-filter" aria-label="Filter by query type">
+                                        <option value="">All queries</option>
+                                    </select>
+                                </div>
+
+                                <div class="accordion" id="code-findings-accordion"></div>
+                                <p id="code-findings-empty" class="text-muted mb-0 d-none">No findings match the current filters.</p>
+                            </div>
                         </div>
 
                         <div class="card mb-3" id="degraded-card">
@@ -206,9 +241,13 @@
                     </div>
 
                     <div class="mt-3 mb-3" id="thinking-log-section">
-                        <button class="btn btn-sm btn-outline-secondary" type="button"
+                        <button class="btn btn-sm btn-outline-secondary me-2" type="button"
                                 data-bs-toggle="collapse" data-bs-target="#thinking-log-collapse">
                             Thinking Log
+                        </button>
+                        <button class="btn btn-sm btn-outline-secondary d-none" type="button" id="code-graph-timeline-btn"
+                                data-bs-toggle="collapse" data-bs-target="#code-graph-timeline-collapse">
+                            Code Graph Investigation
                         </button>
                         <div class="collapse mt-2" id="thinking-log-collapse">
                             <div class="card card-body p-0">
@@ -226,6 +265,12 @@
                                     </thead>
                                     <tbody id="thinking-log-tbody"></tbody>
                                 </table>
+                            </div>
+                        </div>
+                        <div class="collapse mt-2" id="code-graph-timeline-collapse">
+                            <div class="card card-body">
+                                <ul class="code-graph-timeline list-unstyled mb-0" id="code-graph-timeline"></ul>
+                                <p id="code-graph-timeline-empty" class="text-muted mb-0 d-none">No code graph investigation steps logged.</p>
                             </div>
                         </div>
                     </div>

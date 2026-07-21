@@ -1,10 +1,14 @@
-/* global $, sessionStorage */ // eslint-disable-line no-redeclare
+/* global $, sessionStorage, bootstrap */ // eslint-disable-line no-redeclare
 
 let currentAnalysisId = null
 let currentCaseNumber = null
 let showingRaw = false
 let pollErrorCount = 0
+let cachedCodeFindings = []
+let cachedFindingCount = 0
 const MAX_POLL_ERRORS = 5
+const JIRA_SERVER = 'https://issues.redhat.com'
+const VERSION_ALIGNMENT_RE = /indexed at|version alignment|customer on|may not match/i
 
 $(document).ready(function () {
   $('#search-btn').click(searchCase)
@@ -16,9 +20,27 @@ $(document).ready(function () {
   $('#run-analysis-btn').click(function () { triggerAnalysis(false) })
   $('#feedback-up').click(function () { submitFeedback('up') })
   $('#feedback-down').click(function () { submitFeedback('down') })
+  $('#code-findings-sort, #code-findings-repo-filter, #code-findings-query-filter').on('change', function () {
+    renderCodeFindingsList()
+  })
+  $(document).on('click', '.similar-case-ref', function (e) {
+    e.preventDefault()
+    const caseNum = $(this).data('case')
+    if (!caseNum) return
+    $('#case-number-input').val(String(caseNum))
+    searchCase()
+  })
 
   // Check for ongoing analysis from previous session
   resumeOngoingAnalysis()
+
+  // Support deep-link: /agent?case=03252981
+  const params = new URLSearchParams(window.location.search)
+  const caseParam = params.get('case')
+  if (caseParam && !sessionStorage.getItem('activeAnalysis')) {
+    $('#case-number-input').val(caseParam)
+    searchCase()
+  }
 })
 
 function showAlert (msg, type) {
@@ -68,6 +90,8 @@ function searchCase () {
 function renderReport (data) {
   currentAnalysisId = data.id
   const report = data.full_report || {}
+  cachedCodeFindings = []
+  cachedFindingCount = 0
 
   const statusBadge = $('#report-status-badge')
   statusBadge.text(data.status || 'unknown')
@@ -91,6 +115,8 @@ function renderReport (data) {
   renderSimilarCases(report)
   renderJiras(report)
   renderCaseResolution(report)
+  renderEngineeringResolution(report)
+  renderVersionAlignmentWarning(report)
   renderKB(report)
   renderQuestions(report)
   renderAgentSummaries(report)
@@ -185,13 +211,374 @@ function renderCaseResolution (report) {
   statusBadge.text(resolution.status || 'unknown')
 
   let badgeClass = 'bg-secondary'
-  if (resolution.status === 'in_progress') badgeClass = 'bg-primary'
-  else if (resolution.status === 'completed') badgeClass = 'bg-success'
+  if (resolution.status === 'in_progress' || resolution.status === 'pending') badgeClass = 'bg-primary'
+  else if (resolution.status === 'completed' || resolution.status === 'found') badgeClass = 'bg-success'
   statusBadge.attr('class', 'badge ms-2 ' + badgeClass)
 
   $('#case-resolution-message').text(resolution.message || 'No message')
   $('#code-findings-count').text(resolution.code_findings_count || 0)
   $('#proposed-fixes-count').text(resolution.proposed_fixes_count || 0)
+}
+
+function getCodeFindings (report) {
+  const resolution = report.case_resolution || {}
+  if (Array.isArray(resolution.code_findings) && resolution.code_findings.length > 0) {
+    return resolution.code_findings
+  }
+  if (Array.isArray(report.code_findings) && report.code_findings.length > 0) {
+    return report.code_findings
+  }
+  return []
+}
+
+function renderEngineeringResolution (report) {
+  const resolution = report.case_resolution || {}
+  const findings = getCodeFindings(report)
+  const count = resolution.code_findings_count != null
+    ? resolution.code_findings_count
+    : findings.length
+  const show = count > 0 || resolution.status === 'found' || findings.length > 0
+
+  cachedCodeFindings = findings
+  cachedFindingCount = count
+
+  if (!show) {
+    $('#engineering-resolution-card').addClass('d-none')
+    return
+  }
+
+  $('#engineering-resolution-card').removeClass('d-none')
+
+  const hasFindings = count > 0 || findings.length > 0 || resolution.status === 'found'
+  const statusBadge = $('#eng-res-status-badge')
+  statusBadge.text(hasFindings ? 'Code Findings' : 'No Code Findings')
+  statusBadge.attr('class', 'badge ' + (hasFindings ? 'bg-success' : 'bg-secondary'))
+
+  $('#eng-res-findings-pill').text(count + ' finding' + (count === 1 ? '' : 's'))
+
+  const ctx = report.engineering_resolution_context || {}
+  const corr = ctx.correlation_confidence || ''
+  const corrBadge = $('#eng-res-correlation-badge')
+  if (corr) {
+    corrBadge.removeClass('d-none')
+      .text('Correlation: ' + corr)
+      .attr('class', 'badge ' + confidenceBadgeClass(corr))
+  } else {
+    corrBadge.addClass('d-none').text('')
+  }
+
+  renderEngineeringContext(ctx)
+  populateCodeFindingFilters(findings)
+  renderCodeFindingsList()
+}
+
+function renderEngineeringContext (ctx) {
+  if (!ctx || (!ctx.components_searched && !ctx.jira_fix_status && !ctx.similar_case_refs && !ctx.correlation_confidence)) {
+    $('#eng-res-context').addClass('d-none').html('')
+    return
+  }
+  $('#eng-res-context').removeClass('d-none')
+
+  let html = ''
+
+  const components = ctx.components_searched || []
+  if (components.length > 0) {
+    html += '<div class="mb-2"><span class="text-muted small me-2">Components Searched</span>'
+    html += components.map(function (c) {
+      return '<span class="badge bg-light text-dark border me-1">' + escapeHtml(c) + '</span>'
+    }).join('')
+    html += '</div>'
+  }
+
+  if (ctx.jira_fix_status) {
+    html += '<div class="mb-2"><span class="text-muted small me-2">Jira Fix Status</span>'
+    html += '<span>' + linkJiraKeysInText(ctx.jira_fix_status) + '</span></div>'
+  }
+
+  const similar = ctx.similar_case_refs || []
+  if (similar.length > 0) {
+    html += '<div class="mb-2"><span class="text-muted small me-2">Similar Cases</span>'
+    html += similar.map(function (ref) {
+      const caseNum = String(ref).replace(/\D/g, '')
+      if (caseNum.length === 8) {
+        return '<a href="/agent?case=' + encodeURIComponent(caseNum) + '" class="badge bg-primary text-decoration-none me-1 similar-case-ref" data-case="' + escapeHtml(caseNum) + '">' + escapeHtml(String(ref)) + '</a>'
+      }
+      return '<span class="badge bg-secondary me-1">' + escapeHtml(String(ref)) + '</span>'
+    }).join('')
+    html += '</div>'
+  }
+
+  if (ctx.correlation_confidence) {
+    html += '<div class="mb-0"><span class="text-muted small me-2">Overall Confidence</span>'
+    html += '<span class="badge ' + confidenceBadgeClass(ctx.correlation_confidence) + '">' +
+      escapeHtml(ctx.correlation_confidence) + '</span></div>'
+  }
+
+  $('#eng-res-context').html(html)
+}
+
+function populateCodeFindingFilters (findings) {
+  const repos = []
+  const queries = []
+  findings.forEach(function (f) {
+    if (f.repo && repos.indexOf(f.repo) === -1) repos.push(f.repo)
+    if (f.query_used && queries.indexOf(f.query_used) === -1) queries.push(f.query_used)
+  })
+  repos.sort()
+  queries.sort()
+
+  const repoSelect = $('#code-findings-repo-filter')
+  const querySelect = $('#code-findings-query-filter')
+  const currentRepo = repoSelect.val() || ''
+  const currentQuery = querySelect.val() || ''
+
+  repoSelect.html('<option value="">All repos</option>' + repos.map(function (r) {
+    return '<option value="' + escapeHtml(r) + '">' + escapeHtml(r) + '</option>'
+  }).join(''))
+  querySelect.html('<option value="">All queries</option>' + queries.map(function (q) {
+    return '<option value="' + escapeHtml(q) + '">' + escapeHtml(q) + '</option>'
+  }).join(''))
+
+  if (repos.indexOf(currentRepo) !== -1) repoSelect.val(currentRepo)
+  if (queries.indexOf(currentQuery) !== -1) querySelect.val(currentQuery)
+}
+
+function renderCodeFindingsList () {
+  let findings = cachedCodeFindings.slice()
+  const sortMode = $('#code-findings-sort').val() || 'confidence-desc'
+  const repoFilter = $('#code-findings-repo-filter').val() || ''
+  const queryFilter = $('#code-findings-query-filter').val() || ''
+
+  if (repoFilter) {
+    findings = findings.filter(function (f) { return f.repo === repoFilter })
+  }
+  if (queryFilter) {
+    findings = findings.filter(function (f) { return f.query_used === queryFilter })
+  }
+
+  findings.sort(function (a, b) {
+    if (sortMode === 'confidence-asc') {
+      return (a.confidence || 0) - (b.confidence || 0)
+    }
+    if (sortMode === 'repo') {
+      return String(a.repo || '').localeCompare(String(b.repo || '')) ||
+        (b.confidence || 0) - (a.confidence || 0)
+    }
+    if (sortMode === 'query') {
+      return String(a.query_used || '').localeCompare(String(b.query_used || '')) ||
+        (b.confidence || 0) - (a.confidence || 0)
+    }
+    // confidence-desc (default)
+    return (b.confidence || 0) - (a.confidence || 0)
+  })
+
+  if (findings.length === 0) {
+    $('#code-findings-accordion').html('')
+    if (cachedCodeFindings.length === 0) {
+      $('#code-findings-filters').addClass('d-none')
+      $('#code-findings-empty').addClass('d-none')
+    } else {
+      $('#code-findings-filters').removeClass('d-none')
+      $('#code-findings-empty').removeClass('d-none')
+    }
+    return
+  }
+
+  $('#code-findings-filters').removeClass('d-none')
+  $('#code-findings-empty').addClass('d-none')
+  $('#code-findings-accordion').html(findings.map(function (f, idx) {
+    return renderCodeFindingItem(f, idx)
+  }).join(''))
+
+  // Re-init tooltips for newly rendered elements
+  const tooltipTriggerList = [].slice.call(document.querySelectorAll('#code-findings-accordion [data-bs-toggle="tooltip"]'))
+  tooltipTriggerList.forEach(function (el) {
+    // eslint-disable-next-line no-new
+    new bootstrap.Tooltip(el)
+  })
+}
+
+function renderCodeFindingItem (finding, idx) {
+  const conf = typeof finding.confidence === 'number' ? finding.confidence : 0
+  const pct = Math.round(conf * 100)
+  const confClass = numericConfidenceClass(conf)
+  const collapseId = 'code-finding-' + idx
+  const symbol = finding.symbol || finding.qualified_name || 'unknown'
+  const repo = finding.repo || 'unknown'
+  const filePath = finding.file_path || ''
+  const locationHtml = buildCodeLocationHtml(finding, symbol, repo, filePath)
+  const relevance = finding.relevance || ''
+  const snippet = finding.snippet || ''
+  const lang = detectSnippetLanguage(filePath, snippet)
+  const callChain = finding.call_chain || []
+  const histHint = finding.historical_fix_hint || ''
+  const recency = finding.change_recency || ''
+  const queryUsed = finding.query_used || ''
+
+  let html = '<div class="accordion-item code-finding-item">'
+  html += '<h2 class="accordion-header">'
+  html += '<button class="accordion-button collapsed py-2" type="button" data-bs-toggle="collapse" data-bs-target="#' + collapseId + '">'
+  html += '<div class="w-100 pe-3">'
+  html += '<div class="d-flex flex-wrap align-items-center gap-2 mb-1">'
+  html += '<strong>' + locationHtml + '</strong>'
+  html += '<span class="badge ' + confClass + '">' + pct + '%</span>'
+  html += '<div class="confidence-bar flex-grow-1" style="max-width:120px" title="Confidence ' + pct + '%">'
+  html += '<div class="confidence-bar-fill ' + numericConfidenceBarClass(conf) + '" style="width:' + pct + '%"></div></div>'
+  if (queryUsed) html += '<span class="badge bg-light text-dark border">' + escapeHtml(queryUsed) + '</span>'
+  html += '</div>'
+  if (relevance) {
+    html += '<div class="small text-muted text-truncate">' + escapeHtml(relevance) + '</div>'
+  }
+  html += '</div></button></h2>'
+
+  html += '<div id="' + collapseId + '" class="accordion-collapse collapse" data-bs-parent="#code-findings-accordion">'
+  html += '<div class="accordion-body">'
+
+  if (finding.qualified_name) {
+    html += '<p class="small mb-2"><span class="text-muted">Qualified name:</span> <code>' +
+      escapeHtml(finding.qualified_name) + '</code></p>'
+  }
+
+  if (relevance) {
+    html += '<p class="mb-3">' + escapeHtml(relevance) + '</p>'
+  }
+
+  if (snippet) {
+    html += '<pre class="code-snippet bg-light p-2 border rounded mb-3"><code class="language-' + lang + '">' +
+      escapeHtml(snippet) + '</code></pre>'
+  }
+
+  if (callChain.length > 0) {
+    html += '<div class="mb-3"><span class="text-muted small d-block mb-1">Call chain</span>'
+    html += '<nav aria-label="Call chain" class="call-chain">'
+    html += callChain.map(function (step, i) {
+      const sep = i < callChain.length - 1 ? '<span class="call-chain-sep text-muted mx-1">→</span>' : ''
+      return '<span class="badge bg-light text-dark border">' + escapeHtml(step) + '</span>' + sep
+    }).join('')
+    html += '</nav></div>'
+  }
+
+  if (histHint) {
+    html += '<div class="mb-2"><span class="text-muted small me-2">Historical fix</span>'
+    html += linkJiraKeysInText(histHint) + '</div>'
+  }
+
+  if (recency) {
+    html += '<div class="mb-0"><span class="text-muted small me-2">Change recency</span>'
+    html += '<span class="badge bg-warning text-dark" title="Recent commit activity">' +
+      escapeHtml(recency) + '</span></div>'
+  }
+
+  html += '</div></div></div>'
+  return html
+}
+
+function buildCodeLocationHtml (finding, symbol, repo, filePath) {
+  const label = '<code>' + escapeHtml(symbol) + '</code> in <strong>' + escapeHtml(repo) + '</strong>' +
+    (filePath ? ' at <code>' + escapeHtml(filePath) + '</code>' : '')
+  const href = buildGitHubFileUrl(finding)
+  if (href) {
+    return '<a href="' + escapeHtml(href) + '" target="_blank" rel="noopener noreferrer" ' +
+      'onclick="event.stopPropagation()">' + label + '</a>'
+  }
+  return label
+}
+
+function buildGitHubFileUrl (finding) {
+  const direct = finding.git_url || finding.repo_url || finding.html_url
+  if (!direct) return ''
+  // Already a file/blob URL
+  if (/\/blob\//.test(direct) || /\.(go|py|js|ts|java|rs|c|h)$/.test(direct)) {
+    return direct
+  }
+  // Repo root + file path
+  if (finding.file_path) {
+    const base = direct.replace(/\.git$/, '').replace(/\/$/, '')
+    const ref = finding.ref || finding.branch || 'main'
+    return base + '/blob/' + ref + '/' + finding.file_path.replace(/^\//, '')
+  }
+  return direct
+}
+
+function detectSnippetLanguage (filePath, snippet) {
+  const path = (filePath || '').toLowerCase()
+  if (path.endsWith('.go')) return 'go'
+  if (path.endsWith('.py')) return 'python'
+  if (path.endsWith('.js') || path.endsWith('.ts')) return 'javascript'
+  if (path.endsWith('.java')) return 'java'
+  if (path.endsWith('.rs')) return 'rust'
+  if (/^\s*package\s+\w+/.test(snippet || '') || /\bfunc\s+\w+\s*\(/.test(snippet || '')) return 'go'
+  if (/^\s*(def|class|import)\s+/.test(snippet || '')) return 'python'
+  return 'text'
+}
+
+function numericConfidenceClass (conf) {
+  if (conf >= 0.75) return 'bg-success'
+  if (conf >= 0.5) return 'bg-warning text-dark'
+  return 'bg-danger'
+}
+
+function numericConfidenceBarClass (conf) {
+  if (conf >= 0.75) return 'bg-success'
+  if (conf >= 0.5) return 'bg-warning'
+  return 'bg-danger'
+}
+
+function linkJiraKeysInText (text) {
+  if (!text) return ''
+  const escaped = escapeHtml(text)
+  return escaped.replace(/\b((?:OCPBUGS|RHEL)-\d+)\b/g, function (match) {
+    return '<a href="' + JIRA_SERVER + '/browse/' + match + '" target="_blank" rel="noopener noreferrer">' +
+      match + '</a>'
+  })
+}
+
+function renderVersionAlignmentWarning (report) {
+  const messages = collectVersionAlignmentMessages(report)
+  const banner = $('#version-alignment-banner')
+  if (messages.length === 0) {
+    banner.addClass('d-none').text('')
+    return
+  }
+  banner.removeClass('d-none').html(
+    '<strong>Version alignment:</strong> ' + escapeHtml(messages[0]) +
+    (messages.length > 1
+      ? '<ul class="mb-0 mt-2">' + messages.slice(1).map(function (m) {
+        return '<li>' + escapeHtml(m) + '</li>'
+      }).join('') + '</ul>'
+      : '')
+  )
+}
+
+function collectVersionAlignmentMessages (report) {
+  const messages = []
+  const seen = {}
+
+  function add (msg) {
+    if (!msg || seen[msg] || !VERSION_ALIGNMENT_RE.test(msg)) return
+    seen[msg] = true
+    messages.push(msg)
+  }
+
+  const resolution = report.case_resolution || {}
+  add(resolution.message)
+  add(resolution.version_alignment_warning)
+  add(resolution.version_warning)
+
+  const ctx = report.engineering_resolution_context || {}
+  add(ctx.version_alignment_warning)
+  add(ctx.version_warning)
+
+  ;(report.context_warnings || []).forEach(add)
+  ;(report.warnings || []).forEach(add)
+
+  const summaries = report.agent_summaries || {}
+  const cga = summaries.code_graph_agent || {}
+  add(cga.key_finding)
+  add(cga.skip_reason)
+  add(cga.warning)
+
+  return messages
 }
 
 function renderKB (report) {
@@ -227,8 +614,14 @@ function renderAgentSummaries (report) {
   $('#agents-card').removeClass('d-none')
   let html = ''
   const keys = Object.keys(summaries).length > 0 ? Object.keys(summaries) : agents
+  const findingCount = cachedFindingCount || getCodeFindings(report).length
+
   keys.forEach(function (name) {
     const s = summaries[name] || {}
+    if (name === 'code_graph_agent') {
+      html += renderCodeGraphAgentSummary(s, findingCount)
+      return
+    }
     html += '<div class="mb-2"><strong>' + escapeHtml(name) + '</strong>'
     if (s.status) html += ' <span class="badge bg-secondary">' + escapeHtml(s.status) + '</span>'
     if (s.confidence) html += ' <span class="badge bg-info">' + (s.confidence * 100).toFixed(0) + '%</span>'
@@ -236,6 +629,46 @@ function renderAgentSummaries (report) {
     html += '</div>'
   })
   $('#agents-body').html(html)
+
+  const tooltipTriggerList = [].slice.call(document.querySelectorAll('#agents-body [data-bs-toggle="tooltip"]'))
+  tooltipTriggerList.forEach(function (el) {
+    // eslint-disable-next-line no-new
+    new bootstrap.Tooltip(el)
+  })
+}
+
+function renderCodeGraphAgentSummary (s, findingCount) {
+  const status = s.status || ''
+  const skipReason = s.skip_reason || s.key_finding || ''
+  const count = findingCount || 0
+  let html = '<div class="mb-2 agent-summary-row">'
+  html += '<strong>code_graph_agent</strong>'
+  if (status) {
+    html += ' <span class="badge ' + agentStatusBadgeClass(status) + '">' + escapeHtml(status) + '</span>'
+  }
+  if (typeof s.confidence === 'number') {
+    html += ' <span class="badge bg-info">' + (s.confidence * 100).toFixed(0) + '%</span>'
+  }
+  if (status === 'found_relevant' && count > 0) {
+    html += ' <span class="badge bg-success">' + count + ' finding' +
+      (count === 1 ? '' : 's') + '</span>'
+  }
+  if ((status === 'not_applicable' || status === 'unavailable') && skipReason) {
+    html += ' <span class="text-muted small" data-bs-toggle="tooltip" data-bs-placement="top" title="' +
+      escapeHtml(skipReason) + '">(skipped)</span>'
+  } else if (s.key_finding) {
+    html += '<br><small>' + escapeHtml(s.key_finding) + '</small>'
+  }
+  html += '</div>'
+  return html
+}
+
+function agentStatusBadgeClass (status) {
+  if (status === 'found_relevant') return 'bg-success'
+  if (status === 'partial_match') return 'bg-warning text-dark'
+  if (status === 'no_results') return 'bg-secondary'
+  if (status === 'not_applicable' || status === 'unavailable') return 'bg-light text-dark border'
+  return 'bg-secondary'
 }
 
 function renderDegraded (report) {
@@ -473,6 +906,9 @@ function pollStatus (taskId) {
 function loadThinkingLog () {
   if (!currentAnalysisId) return
   $('#thinking-log-tbody').html('<tr><td colspan="7" class="text-center">Loading...</td></tr>')
+  $('#code-graph-timeline-btn').addClass('d-none')
+  $('#code-graph-timeline').html('')
+  $('#code-graph-timeline-empty').addClass('d-none')
 
   $.ajax({
     url: '/api/ai/logs/' + encodeURIComponent(currentAnalysisId),
@@ -489,21 +925,70 @@ function loadThinkingLog () {
         const tokensOut = l.output_tokens != null ? formatNumber(l.output_tokens) : ''
         const tokensInClass = l.input_tokens != null ? '' : 'text-muted'
         const tokensOutClass = l.output_tokens != null ? '' : 'text-muted'
+        const rowClass = l.agent_name === 'code_graph_agent' ? ' class="table-light"' : ''
 
-        return '<tr><td>' + round + '</td>' +
+        return '<tr' + rowClass + '><td>' + round + '</td>' +
           '<td>' + escapeHtml(l.agent_name || '') + '</td>' +
-          '<td><span class="badge bg-secondary">' + escapeHtml(l.action_type || '') + '</span></td>' +
+          '<td><span class="badge ' + thinkingActionBadgeClass(l.action_type) + '">' +
+          escapeHtml(l.action_type || '') + '</span></td>' +
           '<td><small>' + escapeHtml(l.detail || '') + '</small></td>' +
           '<td>' + (l.duration_ms != null ? l.duration_ms + 'ms' : '') + '</td>' +
           '<td class="' + tokensInClass + '">' + tokensIn + '</td>' +
           '<td class="' + tokensOutClass + '">' + tokensOut + '</td></tr>'
       }).join('')
       $('#thinking-log-tbody').html(html)
+      renderCodeGraphTimeline(logs)
     },
     error: function () {
       $('#thinking-log-tbody').html('<tr><td colspan="7" class="text-muted text-center">Could not load thinking log</td></tr>')
     }
   })
+}
+
+function renderCodeGraphTimeline (logs) {
+  const entries = (logs || []).filter(function (l) {
+    return l.agent_name === 'code_graph_agent'
+  })
+  if (entries.length === 0) {
+    $('#code-graph-timeline-btn').addClass('d-none')
+    return
+  }
+  $('#code-graph-timeline-btn').removeClass('d-none')
+  $('#code-graph-timeline-empty').addClass('d-none')
+
+  const html = entries.map(function (l) {
+    const action = l.action_type || 'STEP'
+    let itemClass = 'timeline-item'
+    if (action === 'VERSION_ALIGNMENT_WARNING' || action === 'DEGRADED') itemClass += ' timeline-warn'
+    else if (action === 'SKIP') itemClass += ' timeline-skip'
+    else if (action === 'CBM_QUERY') itemClass += ' timeline-query'
+
+    let item = '<li class="' + itemClass + '">'
+    item += '<div class="d-flex flex-wrap align-items-center gap-2">'
+    item += '<span class="badge ' + thinkingActionBadgeClass(action) + '">' + escapeHtml(action) + '</span>'
+    if (l.duration_ms != null) {
+      item += '<small class="text-muted">' + l.duration_ms + 'ms</small>'
+    }
+    item += '</div>'
+    if (l.detail) {
+      item += '<div class="small mt-1">' + escapeHtml(l.detail) + '</div>'
+    }
+    item += '</li>'
+    return item
+  }).join('')
+  $('#code-graph-timeline').html(html)
+}
+
+function thinkingActionBadgeClass (actionType) {
+  const action = (actionType || '').toUpperCase()
+  if (action === 'CBM_QUERY') return 'bg-primary'
+  if (action === 'RESOLVE') return 'bg-info text-dark'
+  if (action === 'REFORMULATE') return 'bg-secondary'
+  if (action === 'BUDGET') return 'bg-dark'
+  if (action === 'VERSION_ALIGNMENT_WARNING') return 'bg-warning text-dark'
+  if (action === 'DEGRADED') return 'bg-warning text-dark'
+  if (action === 'SKIP') return 'bg-light text-dark border'
+  return 'bg-secondary'
 }
 
 function formatNumber (num) {
