@@ -155,6 +155,17 @@
                             </div>
                         </div>
 
+                        <div class="card mb-3 d-none" id="gate-decision-card">
+                            <div class="card-header d-flex flex-wrap align-items-center gap-2">
+                                <strong>Propose-Fix Gate</strong>
+                                <span class="badge" id="gate-action-badge"></span>
+                                <span class="badge bg-secondary" id="gate-tier-badge"></span>
+                            </div>
+                            <div class="card-body">
+                                <div id="gate-decision-body"></div>
+                            </div>
+                        </div>
+
                         <div id="version-alignment-banner" class="alert alert-warning d-none" role="alert"></div>
 
                         <div class="card mb-3 d-none" id="engineering-resolution-card">
@@ -187,6 +198,16 @@
 
                                 <div class="accordion" id="code-findings-accordion"></div>
                                 <p id="code-findings-empty" class="text-muted mb-0 d-none">No findings match the current filters.</p>
+                            </div>
+                        </div>
+
+                        <div class="card mb-3 d-none" id="proposed-fixes-card">
+                            <div class="card-header d-flex flex-wrap align-items-center gap-2">
+                                <strong>Proposed Code Fixes</strong>
+                                <span class="badge bg-info" id="proposed-fixes-pill"></span>
+                            </div>
+                            <div class="card-body">
+                                <div class="accordion" id="proposed-fixes-accordion"></div>
                             </div>
                         </div>
 

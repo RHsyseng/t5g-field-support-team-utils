@@ -115,7 +115,9 @@ function renderReport (data) {
   renderSimilarCases(report)
   renderJiras(report)
   renderCaseResolution(report)
+  renderGateDecision(report)
   renderEngineeringResolution(report)
+  renderProposedFixes(report)
   renderVersionAlignmentWarning(report)
   renderKB(report)
   renderQuestions(report)
@@ -218,6 +220,177 @@ function renderCaseResolution (report) {
   $('#case-resolution-message').text(resolution.message || 'No message')
   $('#code-findings-count').text(resolution.code_findings_count || 0)
   $('#proposed-fixes-count').text(resolution.proposed_fixes_count || 0)
+}
+
+function renderGateDecision (report) {
+  const decision = report.propose_fix_decision || null
+  if (!decision) {
+    $('#gate-decision-card').addClass('d-none')
+    return
+  }
+  $('#gate-decision-card').removeClass('d-none')
+
+  const action = decision.action || 'skip'
+  const actionBadge = $('#gate-action-badge')
+  actionBadge.text(action.replace(/_/g, ' '))
+  if (action === 'skip') {
+    actionBadge.attr('class', 'badge bg-secondary')
+  } else if (action === 'investigate_code') {
+    actionBadge.attr('class', 'badge bg-info text-dark')
+  } else {
+    actionBadge.attr('class', 'badge bg-success')
+  }
+
+  const tier = decision.gate_tier != null ? decision.gate_tier : (decision.tier != null ? decision.tier : 0)
+  const tierBadge = $('#gate-tier-badge')
+  tierBadge.text('Tier ' + tier)
+  tierBadge.attr('class', 'badge ' + (tier >= 2 ? 'bg-success' : tier === 1 ? 'bg-info text-dark' : 'bg-secondary'))
+
+  let html = ''
+
+  if (decision.reasoning) {
+    html += '<p class="mb-2">' + escapeHtml(decision.reasoning) + '</p>'
+  }
+
+  if (decision.skip_reason) {
+    html += '<div class="mb-2"><span class="text-muted small me-2">Skip reason</span>'
+    html += escapeHtml(decision.skip_reason) + '</div>'
+  }
+
+  if (decision.issue_classification && decision.issue_classification !== 'insufficient_evidence') {
+    html += '<div class="mb-2"><span class="text-muted small me-2">Classification</span>'
+    html += '<span class="badge bg-light text-dark border">' +
+      escapeHtml(decision.issue_classification.replace(/_/g, ' ')) + '</span></div>'
+  }
+
+  if (decision.confidence && decision.confidence !== 'low') {
+    html += '<div class="mb-2"><span class="text-muted small me-2">Confidence</span>'
+    html += '<span class="badge ' + confidenceBadgeClass(decision.confidence) + '">' +
+      escapeHtml(decision.confidence) + '</span></div>'
+  }
+
+  const components = decision.components || []
+  if (components.length > 0) {
+    html += '<div class="mb-2"><span class="text-muted small me-2">Components</span>'
+    html += components.map(function (c) {
+      return '<span class="badge bg-light text-dark border me-1">' + escapeHtml(c) + '</span>'
+    }).join('')
+    html += '</div>'
+  }
+
+  if (decision.downgrade_reason) {
+    html += '<div class="mb-0"><span class="text-muted small me-2">Downgraded</span>'
+    html += '<span class="text-warning">' + escapeHtml(decision.downgrade_reason) + '</span></div>'
+  }
+
+  $('#gate-decision-body').html(html)
+}
+
+function renderProposedFixes (report) {
+  const fixes = report.proposed_code_fixes || []
+  if (fixes.length === 0) {
+    $('#proposed-fixes-card').addClass('d-none')
+    return
+  }
+  $('#proposed-fixes-card').removeClass('d-none')
+  $('#proposed-fixes-pill').text(fixes.length + ' fix' + (fixes.length === 1 ? '' : 'es'))
+
+  const html = fixes.map(function (fix, idx) {
+    return renderProposedFixItem(fix, idx)
+  }).join('')
+  $('#proposed-fixes-accordion').html(html)
+}
+
+function renderProposedFixItem (fix, idx) {
+  const collapseId = 'proposed-fix-' + idx
+  const conf = fix.confidence || 'low'
+  const fixType = (fix.fix_type || 'none').replace(/_/g, ' ')
+  const rec = (fix.recommendation || '').replace(/_/g, ' ')
+  const symbol = fix.symbol || ''
+  const repo = fix.repo || ''
+  const filePath = fix.file_path || ''
+
+  let html = '<div class="accordion-item proposed-fix-item">'
+  html += '<h2 class="accordion-header">'
+  html += '<button class="accordion-button collapsed py-2" type="button" data-bs-toggle="collapse" data-bs-target="#' + collapseId + '">'
+  html += '<div class="w-100 pe-3">'
+  html += '<div class="d-flex flex-wrap align-items-center gap-2 mb-1">'
+  if (symbol) html += '<code>' + escapeHtml(symbol) + '</code>'
+  if (repo) html += '<span class="text-muted small">in</span> <strong>' + escapeHtml(repo) + '</strong>'
+  html += '<span class="badge ' + confidenceBadgeClass(conf) + '">' + escapeHtml(conf) + '</span>'
+  html += '<span class="badge bg-light text-dark border">' + escapeHtml(fixType) + '</span>'
+  html += '</div>'
+  if (filePath) {
+    html += '<div class="small text-muted text-truncate">' + escapeHtml(filePath) + '</div>'
+  }
+  html += '</div></button></h2>'
+
+  html += '<div id="' + collapseId + '" class="accordion-collapse collapse" data-bs-parent="#proposed-fixes-accordion">'
+  html += '<div class="accordion-body">'
+
+  if (rec) {
+    html += '<div class="mb-2"><span class="badge ' + recommendationBadgeClass(fix.recommendation) + '">' +
+      escapeHtml(rec) + '</span></div>'
+  }
+
+  if (fix.rationale) {
+    html += '<p class="mb-3">' + escapeHtml(fix.rationale) + '</p>'
+  }
+
+  if (fix.unified_diff) {
+    html += '<div class="mb-3"><span class="text-muted small d-block mb-1">Diff</span>'
+    html += '<pre class="diff-block p-2 border rounded mb-0">' + renderDiffHtml(fix.unified_diff) + '</pre></div>'
+  }
+
+  const risks = fix.risks || []
+  if (risks.length > 0) {
+    html += '<div class="mb-3"><span class="text-muted small d-block mb-1">Risks</span><ul class="mb-0">'
+    risks.forEach(function (r) {
+      html += '<li class="small">' + escapeHtml(r) + '</li>'
+    })
+    html += '</ul></div>'
+  }
+
+  if (fix.workaround) {
+    html += '<div class="mb-3"><span class="text-muted small d-block mb-1">Workaround</span>'
+    html += '<p class="mb-0">' + escapeHtml(fix.workaround) + '</p></div>'
+  }
+
+  if (fix.jira_context) {
+    html += '<div class="mb-2"><span class="text-muted small me-2">Jira</span>'
+    html += linkJiraKeysInText(fix.jira_context) + '</div>'
+  }
+
+  if (fix.pull_request && fix.pull_request.url) {
+    const pr = fix.pull_request
+    html += '<div class="mb-0"><span class="text-muted small me-2">Pull Request</span>'
+    html += '<a href="' + escapeHtml(pr.url) + '" target="_blank" rel="noopener noreferrer">'
+    html += escapeHtml(pr.title || ('#' + pr.number)) + '</a>'
+    if (pr.status) html += ' <span class="badge bg-secondary">' + escapeHtml(pr.status) + '</span>'
+    if (pr.draft) html += ' <span class="badge bg-warning text-dark">draft</span>'
+    html += '</div>'
+  }
+
+  html += '</div></div></div>'
+  return html
+}
+
+function recommendationBadgeClass (rec) {
+  if (rec === 'propose_to_engineering') return 'bg-primary'
+  if (rec === 'customer_workaround_only') return 'bg-warning text-dark'
+  if (rec === 'escalate_for_design') return 'bg-danger'
+  return 'bg-secondary'
+}
+
+function renderDiffHtml (diff) {
+  if (!diff) return ''
+  return diff.split('\n').map(function (line) {
+    const escaped = escapeHtml(line)
+    if (/^@@/.test(line)) return '<span class="diff-hunk">' + escaped + '</span>'
+    if (/^\+/.test(line)) return '<span class="diff-add">' + escaped + '</span>'
+    if (/^-/.test(line)) return '<span class="diff-del">' + escaped + '</span>'
+    return escaped
+  }).join('\n')
 }
 
 function getCodeFindings (report) {

@@ -368,6 +368,42 @@ span.anchor {
   border-left-color: #0d6efd;
 }
 
+/* Proposed Code Fixes */
+.proposed-fix-item .accordion-button {
+  align-items: flex-start;
+}
+
+.proposed-fix-item .accordion-button:not(.collapsed) {
+  background-color: #f8f9fa;
+}
+
+.diff-block {
+  font-size: 0.85em;
+  max-height: 400px;
+  overflow: auto;
+  white-space: pre;
+  background: #1e1e1e;
+  color: #d4d4d4;
+  font-family: 'Courier New', Courier, monospace;
+}
+
+.diff-add {
+  color: #4ec9b0;
+  background: rgba(78, 201, 176, 0.1);
+  display: block;
+}
+
+.diff-del {
+  color: #f14c4c;
+  background: rgba(241, 76, 76, 0.1);
+  display: block;
+}
+
+.diff-hunk {
+  color: #569cd6;
+  display: block;
+}
+
 #version-alignment-banner {
   border-left: 4px solid #ffc107;
 }
