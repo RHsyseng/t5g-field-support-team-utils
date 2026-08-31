@@ -5,6 +5,18 @@
         <div class="row justify-content-center">
             <div class="col-12 col-lg-10">
                 <h2>AI Case Analysis</h2>
+
+                {# HU-01: persistent, non-dismissible human-in-the-loop disclaimer #}
+                <div class="alert alert-warning" role="alert" id="ai-disclaimer-banner">
+                    <strong>Review AI-generated content prior to use and check for mistakes.</strong>
+                </div>
+
+                {# GLC-04 / TR-02: restricted-data exclusion notice #}
+                <div class="alert alert-danger" role="alert" id="ai-exclusion-notice">
+                    Do not submit cases for Confirmed Sovereign Support, Confirmed Stateside
+                    Support (CSS), U.S. Government, or FedRAMP services or customers into this AI tool.
+                </div>
+
                 <div class="input-group mb-3" id="agent-search-bar">
                     <input type="text"
                            class="form-control"
@@ -31,6 +43,8 @@
                 <div id="report-container" class="d-none">
                     <div class="d-flex justify-content-between align-items-center mb-3">
                         <div>
+                            {# TR-03: every AI output is tagged as AI-generated #}
+                            <span class="badge bg-info text-dark" id="report-ai-generated-badge">AI-generated</span>
                             <span class="badge" id="report-status-badge"></span>
                             <span class="badge" id="report-confidence-badge"></span>
                             <small class="text-muted ms-2" id="report-meta"></small>
@@ -227,6 +241,45 @@
                         No AI analysis found for case <strong id="no-report-case"></strong>.
                     </div>
                     <button class="btn btn-primary" id="run-analysis-btn">Run Analysis</button>
+                </div>
+
+                {# TR-02 / GLC-09: help, feedback, contact, and Use of Claude notices #}
+                <div class="mt-4 pt-3 border-top small text-muted" id="ai-about-section">
+                    <p class="mb-2">
+                        <a href="https://gitlab.cee.redhat.com/pibanezr/t5g-field-agents/-/blob/main/docs/USER_GUIDE.md"
+                           target="_blank" rel="noopener">User Guide</a>
+                        &middot; Report performance issues or inaccuracies using the
+                        &#128077;&nbsp;/&nbsp;&#128078; feedback control above.
+                        &middot; Questions: <a href="mailto:rh-telco5g-field-support@redhat.com">rh-telco5g-field-support@redhat.com</a>
+                    </p>
+                    <button class="btn btn-link btn-sm p-0" type="button"
+                            data-bs-toggle="collapse" data-bs-target="#ai-notices"
+                            aria-expanded="false" aria-controls="ai-notices">
+                        About this AI tool
+                    </button>
+                    <div class="collapse" id="ai-notices">
+                        <div class="card card-body mt-2">
+                            <p class="mb-2">
+                                Factual assertions in outputs should not be relied upon without
+                                independently checking their accuracy, as they may be false,
+                                incomplete, misleading, or not reflective of recent events or
+                                information.
+                            </p>
+                            <p class="mb-2">
+                                You are accessing an administered service offering that enables
+                                Red Hat access to and control over data submitted to the Services.
+                            </p>
+                            <p class="mb-0">
+                                Use of this tool is subject to Anthropic's
+                                <a href="https://www.anthropic.com/legal/privacy" target="_blank"
+                                   rel="noopener">Privacy Policy</a> and
+                                <a href="https://www.anthropic.com/legal/aup" target="_blank"
+                                   rel="noopener">Usage Policy</a>. Claude access is restricted to
+                                supported regions, and the tool does not modify, disregard, or
+                                disable Claude safety filters.
+                            </p>
+                        </div>
+                    </div>
                 </div>
             </div>
         </div>
