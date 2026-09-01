@@ -6,12 +6,12 @@
             <div class="col-12 col-lg-10">
                 <h2>AI Case Analysis</h2>
 
-                {# HU-01: persistent, non-dismissible human-in-the-loop disclaimer #}
+                {# Persistent, non-dismissible human-in-the-loop disclaimer #}
                 <div class="alert alert-warning" role="alert" id="ai-disclaimer-banner">
                     <strong>Review AI-generated content prior to use and check for mistakes.</strong>
                 </div>
 
-                {# GLC-04 / TR-02: restricted-data exclusion notice #}
+                {# Restricted-data exclusion notice #}
                 <div class="alert alert-danger" role="alert" id="ai-exclusion-notice">
                     Do not submit cases for Confirmed Sovereign Support, Confirmed Stateside
                     Support (CSS), U.S. Government, or FedRAMP services or customers into this AI tool.
@@ -43,7 +43,7 @@
                 <div id="report-container" class="d-none">
                     <div class="d-flex justify-content-between align-items-center mb-3">
                         <div>
-                            {# TR-03: every AI output is tagged as AI-generated #}
+                            {# Every AI output is tagged as AI-generated #}
                             <span class="badge bg-info text-dark" id="report-ai-generated-badge">AI-generated</span>
                             <span class="badge" id="report-status-badge"></span>
                             <span class="badge" id="report-confidence-badge"></span>
@@ -243,7 +243,7 @@
                     <button class="btn btn-primary" id="run-analysis-btn">Run Analysis</button>
                 </div>
 
-                {# TR-02 / GLC-09: help, feedback, contact, and Use of Claude notices #}
+                {# Help, feedback, contact, and Use of Claude notices #}
                 <div class="mt-4 pt-3 border-top small text-muted" id="ai-about-section">
                     <p class="mb-2">
                         <a href="https://gitlab.cee.redhat.com/pibanezr/t5g-field-agents/-/blob/main/docs/USER_GUIDE.md"
