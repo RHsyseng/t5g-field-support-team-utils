@@ -18,10 +18,17 @@ from flask import (
     session,
     url_for,
 )
-from flask_login import LoginManager, UserMixin, login_required, login_user
+from flask_login import (
+    LoginManager,
+    UserMixin,
+    current_user,
+    login_required,
+    login_user,
+)
 from onelogin.saml2.auth import OneLogin_Saml2_Auth
 from onelogin.saml2.utils import OneLogin_Saml2_Utils
 
+from t5gweb.database.operations import get_my_queue_cases
 from t5gweb.libtelco5g import (
     generate_histogram_stats,
     generate_stats,
@@ -53,7 +60,14 @@ class User(UserMixin):
         user = users[user_id]
         self.id = user_id
         self.given_name = user["givenName"][0]
+        self.sn = user.get("sn", [""])[0]
         self.mail = user["mail"][0]
+
+    @property
+    def display_name(self):
+        if self.given_name and self.sn:
+            return f"{self.given_name} {self.sn}"
+        return self.given_name
 
 
 def is_safe_url(target):
@@ -626,3 +640,100 @@ def get_engineer(engineer):
         engineer_view=True,
         sla_settings=cfg["sla_settings"],
     )
+
+
+@BP.route("/my-queue")
+@login_required
+def my_queue_view():
+    """Display the logged-in engineer's queue of cases needing attention.
+
+    Shows only the current user's cases where customers have commented after
+    the engineering team. The engineer filter is derived from the SAML login
+    or from the ENGINEER_OVERRIDE env var for local testing.
+    """
+    cfg = set_cfg()
+
+    engineer_override = os.getenv("ENGINEER_OVERRIDE")
+    if engineer_override:
+        engineer_filter = engineer_override
+    elif current_user.is_authenticated:
+        engineer_filter = current_user.display_name
+    else:
+        engineer_filter = None
+
+    my_queue_cases = get_my_queue_cases(engineer_filter=engineer_filter)
+
+    return render_template(
+        "ui/my_queue.html",
+        cases=my_queue_cases,
+        jira_server=cfg["server"],
+        page_title="My Queue",
+        engineer_filter=engineer_filter,
+    )
+
+
+@BP.route("/api/my-queue/case/<case_number>/comments")
+@login_required
+def get_case_comments(case_number):
+    """API endpoint to fetch comments for a specific case
+
+    Returns JSON with portal_comments and jira_comments arrays
+    """
+    from t5gweb.database.models import Case, Comment, JiraCard, JiraComment
+    from t5gweb.database.session import db_config
+
+    session = db_config.SessionLocal()
+    try:
+        # Get the case and jira card
+        case = session.query(Case).filter(Case.case_number == case_number).first()
+
+        if not case:
+            return jsonify({"error": "Case not found"}), 404
+
+        # Get portal comments
+        portal_comments = (
+            session.query(Comment)
+            .filter(Comment.case_number == case_number)
+            .order_by(Comment.commented_at.desc())
+            .all()
+        )
+
+        # Get jira card and comments
+        jira_card = (
+            session.query(JiraCard).filter(JiraCard.case_number == case_number).first()
+        )
+
+        jira_comments = []
+        if jira_card:
+            jira_comments_query = (
+                session.query(JiraComment)
+                .filter(JiraComment.jira_card_id == jira_card.jira_card_id)
+                .order_by(JiraComment.last_update_date.desc())
+                .all()
+            )
+
+            jira_comments = [
+                {
+                    "author": c.author,
+                    "updated": c.last_update_date.isoformat(),
+                    "body": c.body,
+                }
+                for c in jira_comments_query
+            ]
+
+        portal_comments_data = [
+            {
+                "author": c.author,
+                "date": c.commented_at.isoformat(),
+                "comment_type": c.comment_type,
+                "body": c.comment_text,
+            }
+            for c in portal_comments
+        ]
+
+        return jsonify(
+            {"portal_comments": portal_comments_data, "jira_comments": jira_comments}
+        )
+
+    finally:
+        session.close()

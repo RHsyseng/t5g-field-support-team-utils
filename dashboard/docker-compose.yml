@@ -13,7 +13,7 @@ services:
       - redis_data:/data
   ### PostgresQL
   postgresql:
-    image: docker.io/postgres:latest
+    image: docker.io/postgres:18
     environment:
       - POSTGRES_USER=postgres
       - POSTGRES_PASSWORD=secret
@@ -24,7 +24,7 @@ services:
       timeout: 5s
       retries: 5
     volumes:
-      - postgresql_data:/var/lib/postgresql/data
+      - postgresql_data:/var/lib/postgresql
     ports:
       - "5432:5432"
 
