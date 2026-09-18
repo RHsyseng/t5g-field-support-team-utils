@@ -9,7 +9,7 @@ from datetime import date, datetime, timezone
 
 import click
 from flask.cli import with_appcontext
-from t5gweb.utils import format_date, get_fake_data, set_cfg
+from t5gweb.utils import format_date, get_fake_data, remap_case_status, set_cfg
 
 from . import cache, libtelco5g
 
@@ -171,8 +171,17 @@ def organize_cards(detailed_cards, account_list):
         accounts[account] = deepcopy(states)
 
     for i in detailed_cards.keys():
-        status = detailed_cards[i]["case_status"]
+        # Re-bucket the stored case_status defensively. Cards persist across
+        # syncs, so production Redis mixes cards written before and after the
+        # status-collapse fix (and could hold any raw GraphQL picklist value like
+        # "In Progress"). remap_case_status guarantees one of the three bucket
+        # keys above, so an unexpected/legacy value can never KeyError here.
+        status = remap_case_status(detailed_cards[i]["case_status"])
         account = detailed_cards[i]["account"]
+        if account not in accounts:
+            # A card whose account isn't in the requested account_list would also
+            # KeyError; skip it rather than crash the whole table view.
+            continue
         accounts[account][status][i] = detailed_cards[i]
 
     return accounts

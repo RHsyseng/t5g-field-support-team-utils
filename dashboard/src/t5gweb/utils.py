@@ -176,7 +176,16 @@ def set_cfg():
     # sources
     cfg["offline_token"] = os.environ.get("offline_token")  # portal
     cfg["redhat_api"] = os.environ.get("redhat_api")  # redhat api url
+    cfg["graphql_api"] = os.environ.get("graphql_api") or "https://graphql.redhat.com"
     cfg["query"] = os.environ.get("case_query")
+    # v3 selection: account + product + subject saved-search (planv3.md §3a).
+    # JSON blob; see cfg/sample.env for the shape. Falls back to None so the
+    # legacy tag-glob query stays usable until the v1 path is retired.
+    cfg["saved_search"] = (
+        json.loads(os.environ.get("saved_search"))
+        if os.environ.get("saved_search")
+        else None
+    )
     cfg["max_portal_results"] = os.environ.get("max_portal_results")
     cfg["bz_key"] = os.environ.get("bz_key")
     cfg["sheet_id"] = os.environ.get("sheet_id")
@@ -398,6 +407,57 @@ def make_headers(token):
     """
     headers = {"Accept": "application/json", "Authorization": "Bearer " + token}
     return headers
+
+
+def make_graphql_headers(token):
+    """Builds the HTTP headers for Red Hat GraphQL API requests
+
+    The GraphQL endpoint needs a JSON content type and the Apollo client
+    identification headers used by the tested saved-search client; the plain
+    REST headers (Accept + Authorization only) are not sufficient (planv3.md
+    §3a).
+
+    Args:
+        token(str): A valid bearer token
+
+    Returns:
+        dict: valid headers for use with the requests module
+    """
+    return {
+        "Content-Type": "application/json",
+        "Accept-Encoding": "gzip",
+        "Authorization": "Bearer " + token,
+        "apollographql-client-name": "t5g-field-support-team-utils",
+        "apollographql-client-version": "1.0",
+    }
+
+
+# The GraphQL UIAPI Status picklist is far richer than v1's three customer-facing
+# case statuses (live values include "In Progress", "Waiting on Collab",
+# "Waiting on 3rd Party Vendor", "Needs New Owner", "Deferred", ...). Downstream
+# code buckets on the exact v1 strings and is load-bearing - t5gweb.organize_cards
+# only has {"Waiting on Red Hat", "Waiting on Customer", "Closed"} columns and
+# KeyErrors on anything else (planv3.md §6.4). So collapse the whole picklist back
+# to those three buckets at ingest: closed -> "Closed", any customer-side wait ->
+# "Waiting on Customer", everything else (Red Hat is the active party) ->
+# "Waiting on Red Hat".
+def remap_case_status(status):
+    """Collapse a GraphQL case status into a v1 display bucket.
+
+    Args:
+        status(str): the Status value returned by the GraphQL API.
+
+    Returns:
+        str: one of "Closed", "Waiting on Customer", or "Waiting on Red Hat".
+            An empty/missing status defaults to "Waiting on Red Hat" so the
+            table view never KeyErrors.
+    """
+    lowered = (status or "").lower()
+    if "closed" in lowered:
+        return "Closed"
+    if "customer" in lowered:
+        return "Waiting on Customer"
+    return "Waiting on Red Hat"
 
 
 def format_date(the_date):

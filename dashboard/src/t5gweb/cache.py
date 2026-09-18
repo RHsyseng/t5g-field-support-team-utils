@@ -3,12 +3,17 @@
 import datetime
 import json
 import logging
+import os
+import random
 import re
+import threading
 import time
 import xmlrpc
+from concurrent.futures import ThreadPoolExecutor
 
 import bugzilla
 import requests
+from dateutil import parser as date_parser
 from jira.exceptions import JIRAError
 
 from t5gweb import libtelco5g
@@ -17,91 +22,503 @@ from t5gweb.database import (
     load_comments_postgres,
     load_jira_card_postgres,
 )
-from t5gweb.utils import format_comment, format_date, make_headers
+from t5gweb.utils import (
+    format_comment,
+    format_date,
+    make_graphql_headers,
+    make_headers,
+    remap_case_status,
+)
+
+# Selection query (planv3.md §3a). Account name is pulled inline via the
+# RedHatSupportAccount parent relationship so no separate /v1/accounts/{ref}
+# lookup is needed. This light query carries every field the case-assignment
+# path needs (account, severity, status, subject, product, dates), so get_cases
+# builds the projection straight from it - no per-case case(id) hydration. The
+# richer fields (description, comments, tags, critSit, ...) are filled in later
+# by get_case_details, so they are left blank/placeholder here.
+GRAPHQL_SAVED_SEARCH_QUERY = """
+query SavedSearch($where: RedHatSupportCase_Filter, $after: String) {
+  redhat_support_uiapi { query {
+    RedHatSupportCase(where: $where, first: 100, after: $after,
+                      orderBy: { LastModifiedDate: { order: DESC } }) {
+      totalCount
+      pageInfo { hasNextPage endCursor }
+      edges { node {
+        CaseNumber__c { value }
+        Account_Number__c { value }
+        RedHatSupportAccount { Name { value } }
+        Status { value }
+        Priority { value }
+        Product { Name { value } }
+        Subject { value }
+        CreatedDate { value }
+        LastModifiedDate { value }
+      } }
+    }
+  } }
+}
+"""
+
+# Canonical timestamp form the downstream code expects (utils.format_date and
+# libtelco5g._is_old_case both strptime this exact pattern). The UIAPI selection
+# query returns fractional-second timestamps ("2026-09-03T12:36:12.000Z"), so
+# normalize to the v1 form at ingest to preserve the stored contract.
+_CANONICAL_TS_FORMAT = "%Y-%m-%dT%H:%M:%SZ"
+
+
+def _normalize_ts(value):
+    """Coerce an API timestamp to the canonical ``%Y-%m-%dT%H:%M:%SZ`` form.
+
+    The GraphQL UIAPI selection returns timestamps with a fractional-second part
+    (``.000Z``) that ``utils.format_date`` / ``_is_old_case`` cannot parse.
+    Parse leniently and reformat; return the value unchanged if it is empty or
+    cannot be parsed (so a bad value surfaces later rather than crashing ingest).
+
+    Args:
+        value: the raw timestamp string (or None).
+
+    Returns:
+        str or None: the normalized timestamp, or the original value.
+    """
+    if not value:
+        return value
+    try:
+        return date_parser.parse(value).strftime(_CANONICAL_TS_FORMAT)
+    except (ValueError, TypeError):
+        return value
+
+
+# Placeholder for projection fields the light saved-search query does not carry.
+# get_case_details (or a future per-case backfill queue) replaces the real value;
+# until then the card/dashboard shows this rather than an empty string.
+_PENDING_VALUE = "In progress - details not yet synced"
+
+# Case detail / hydration query - the GraphQL twin of GET /v3/cases/{n}
+# (HydraCase mirrors the v3 REST GetCaseResponse field-for-field).
+GRAPHQL_CASE_DETAIL_QUERY = """
+query CaseDetail($id: String!) {
+  case(id: $id) {
+    caseNumber
+    ownerId
+    severity
+    summary
+    status
+    createdDate
+    lastModifiedDate
+    description
+    product
+    version
+    accountNumberRef
+    isClosed
+    lastClosedAt
+    critSit
+    groupName
+    apiTags
+    bugzillas
+    notifiedUsers { ssoUsername title type }
+    comments { commentBody createdBy createdDate }
+  }
+}
+"""
+
+# Transient GraphQL upstream failures worth retrying (planv3.md §3a).
+_GRAPHQL_TRANSIENT_MARKERS = (
+    "503",
+    "502",
+    "504",
+    "Service Unavailable",
+    "SUBREQUEST_HTTP_ERROR",
+    "unsupported content-type",
+)
+
+
+def _product_or(products):
+    """OR block matching any product in the configured list by name substring."""
+    return {"or": [{"Product": {"Name": {"like": f"%{p}%"}}} for p in products]}
+
+
+def _account_filter(accounts):
+    """Match a single account (eq) or a list of accounts (in)."""
+    if len(accounts) == 1:
+        return {"Account_Number__c": {"eq": accounts[0]}}
+    return {"Account_Number__c": {"in": list(accounts)}}
+
+
+def build_where(saved_search, open_only=True):
+    """Build the GraphQL ``where`` filter from the saved-search config.
+
+    Ported from the field owner's tested saved-search script (planv3.md §3a).
+    The filter is ``OR(subject-contains block, each account branch)``, each
+    branch being ``Account_Number__c IN (...)`` optionally AND-ed with the
+    product block when the branch sets ``product: true``. When ``open_only`` is
+    set the whole OR is AND-ed with ``IsClosed: {eq: false}``.
+
+    Args:
+        saved_search: dict with ``products``, ``subject_contains`` and
+            ``account_branches`` keys (see cfg/sample.env).
+        open_only: when True, restrict to non-closed cases.
+
+    Returns:
+        dict: the GraphQL ``where`` filter object.
+    """
+    products = saved_search.get("products", [])
+    subject_contains = saved_search.get("subject_contains", [])
+    product_block = _product_or(products) if products else None
+
+    branches = []
+    if subject_contains:
+        branches.append(
+            {"or": [{"Subject": {"like": f"%{s}%"}} for s in subject_contains]}
+        )
+    for branch in saved_search.get("account_branches", []):
+        account_block = _account_filter(branch["accounts"])
+        if branch.get("product") and product_block:
+            branches.append({"and": [account_block, product_block]})
+        else:
+            branches.append(account_block)
+
+    where = {"or": branches}
+    if open_only:
+        where = {"and": [{"IsClosed": {"eq": False}}, where]}
+    return where
+
+
+def _graphql_post(url, headers, query, variables, timeout=180, retries=5):
+    """POST a GraphQL query, retrying transient upstream failures.
+
+    Args:
+        url: the GraphQL endpoint.
+        headers: request headers (see utils.make_graphql_headers).
+        query: the GraphQL query string.
+        variables: the query variables dict.
+        timeout: per-request timeout in seconds.
+        retries: number of attempts before giving up.
+
+    Returns:
+        dict: the parsed GraphQL response.
+
+    Raises:
+        RuntimeError: if the request keeps failing after all retries.
+    """
+    body = {"query": query, "variables": variables}
+    for attempt in range(retries):
+        err = None
+        transient = False
+        try:
+            r = requests.post(url, json=body, headers=headers, timeout=timeout)
+        except requests.exceptions.RequestException as exc:
+            # network-level failure (reset, timeout) - always worth retrying
+            err = str(exc)
+            transient = True
+        else:
+            try:
+                data = r.json()
+            except ValueError:
+                # Non-JSON body. Under request-rate pressure the edge WAF/CDN
+                # returns an HTML "403 Access Denied" page instead of JSON
+                # (r.json() then fails with "Expecting value: line 1 column 1").
+                # This is a throttle, so back off and retry rather than dropping
+                # the case. The real fix is fewer requests: keep hydration
+                # concurrency modest (see _MAX_HYDRATION_WORKERS).
+                err = "HTTP %s non-JSON body: %r" % (r.status_code, r.text[:120])
+                transient = True
+            else:
+                if data.get("errors"):
+                    err = json.dumps(data["errors"])[:500]
+                    transient = any(m in err for m in _GRAPHQL_TRANSIENT_MARKERS)
+                else:
+                    return data
+
+        if attempt < retries - 1 and transient:
+            # exponential backoff with jitter so the pool's threads don't all
+            # retry in lockstep and re-trigger the same overload.
+            wait = 2**attempt + random.uniform(0, 1)
+            logging.warning(
+                "transient GraphQL error, retry %s/%s in %.1fs: %s",
+                attempt + 1,
+                retries - 1,
+                wait,
+                (err or "no data")[:120],
+            )
+            time.sleep(wait)
+            continue
+        raise RuntimeError("GraphQL error: " + (err or "no data"))
+
+
+def _fetch_saved_search_cases(cfg, token, limit=None):
+    """Select the telco case set via the Red Hat GraphQL saved-search.
+
+    Cursor-pages the tested account+product+subject query (planv3.md §3a) and
+    returns the light case nodes; each is hydrated with the v3 detail endpoint
+    later to build the full projection. The query is ordered by
+    ``LastModifiedDate DESC``, so when ``limit`` is set the returned list is the
+    ``limit`` most-recently-modified matches (the v1 ``max_portal_results``
+    contract: v1 capped the search with ``rows=max_portal_results``).
+
+    Args:
+        cfg: configuration dictionary (needs ``graphql_api`` and
+            ``saved_search``).
+        token: a valid bearer access token.
+        limit: maximum number of cases to return; ``None``/``0`` means no cap.
+
+    Returns:
+        list: dicts with the light projection fields (``caseNumber``, ``account``,
+            ``severity``, ``status``, ``problem``, ``product``, ``createdate``,
+            ``last_update``) - everything the case-assignment path needs.
+    """
+    url = cfg["graphql_api"]
+    headers = make_graphql_headers(token)
+    where = build_where(cfg["saved_search"])
+
+    cases = []
+    after = None
+    total = None
+    while True:
+        data = _graphql_post(
+            url, headers, GRAPHQL_SAVED_SEARCH_QUERY, {"where": where, "after": after}
+        )
+        conn = data["data"]["redhat_support_uiapi"]["query"]["RedHatSupportCase"]
+        total = conn["totalCount"]
+        for edge in conn["edges"]:
+            node = edge["node"]
+            account = ((node.get("RedHatSupportAccount") or {}).get("Name") or {}).get(
+                "value"
+            )
+            product = ((node.get("Product") or {}).get("Name") or {}).get("value")
+            cases.append(
+                {
+                    "caseNumber": node["CaseNumber__c"]["value"],
+                    "account": account,
+                    "severity": (node.get("Priority") or {}).get("value"),
+                    "status": (node.get("Status") or {}).get("value"),
+                    "problem": (node.get("Subject") or {}).get("value"),
+                    "product": product,
+                    "createdate": (node.get("CreatedDate") or {}).get("value"),
+                    "last_update": (node.get("LastModifiedDate") or {}).get("value"),
+                }
+            )
+        page_info = conn["pageInfo"]
+        if limit and len(cases) >= limit:
+            cases = cases[:limit]
+            break
+        if not page_info["hasNextPage"]:
+            break
+        after = page_info["endCursor"]
+
+    logging.warning(
+        "GraphQL saved-search matched %s cases (totalCount=%s, limit=%s)",
+        len(cases),
+        total,
+        limit,
+    )
+    return cases
+
+
+def _hydrate_case_graphql(url, headers, case_number):
+    """Fetch full case detail via the GraphQL ``case(id)`` query (HydraCase).
+
+    GraphQL twin of ``GET /v3/cases/{n}`` (planv3.md §3b). Returns the raw
+    HydraCase object.
+
+    Args:
+        url: the GraphQL endpoint.
+        headers: GraphQL request headers.
+        case_number: the case number to hydrate.
+
+    Returns:
+        dict or None: the HydraCase object, or None if not returned.
+    """
+    data = _graphql_post(url, headers, GRAPHQL_CASE_DETAIL_QUERY, {"id": case_number})
+    return (data.get("data") or {}).get("case")
+
+
+def _hydrate_case_with_reauth(cfg, url, headers, case_number):
+    """Hydrate a case, refreshing the access token once on failure.
+
+    Access tokens are short-lived, so during a long sync a hydration call may
+    fail with an auth error; refresh the token and retry once (mirrors the 401
+    handling the REST loop used to do).
+
+    Args:
+        cfg: configuration dictionary (needs ``offline_token``).
+        url: the GraphQL endpoint.
+        headers: current GraphQL request headers.
+        case_number: the case number to hydrate.
+
+    Returns:
+        tuple: ``(case_json_or_None, headers)`` - the (possibly refreshed)
+            headers are returned so the caller can reuse them for later cases.
+    """
+    try:
+        return _hydrate_case_graphql(url, headers, case_number), headers
+    except Exception as exc:
+        logging.warning(
+            "re-authenticating after hydration error for %s: %s", case_number, exc
+        )
+        headers = make_graphql_headers(libtelco5g.get_token(cfg["offline_token"]))
+        try:
+            return _hydrate_case_graphql(url, headers, case_number), headers
+        except Exception as exc2:
+            logging.warning(
+                "could not hydrate case %s via GraphQL: %s", case_number, exc2
+            )
+            return None, headers
+
+
+def _int_or_none(value):
+    """Coerce a config value to a positive int, or None when unset/invalid.
+
+    ``max_portal_results`` and ``graphql_hydration_workers`` arrive as strings
+    from the environment; treat a missing, non-numeric or non-positive value as
+    "unset".
+
+    Args:
+        value: the raw config value (str, int or None).
+
+    Returns:
+        int or None: the positive integer, or None when there is no valid value.
+    """
+    try:
+        result = int(value)
+    except (TypeError, ValueError):
+        return None
+    return result if result > 0 else None
+
+
+# Number of concurrent case(id) hydration requests. The casesFilter batch
+# endpoint ignores the caseNumbers filter on this deployment, so hydration is one
+# case(id) round-trip per case; doing them sequentially blows the request/worker
+# timeout on a few hundred cases, so fan them out over a small thread pool. Kept
+# modest because too much concurrency makes the gateway shed load with empty
+# responses (and init-cache + the web worker can hydrate at the same time, so the
+# effective concurrency is a multiple of this). Override with the
+# ``graphql_hydration_workers`` env var if the endpoint tolerates more.
+_MAX_HYDRATION_WORKERS = _int_or_none(os.environ.get("graphql_hydration_workers")) or 8
+
+
+def _hydrate_cases_parallel(cfg, url, headers, case_numbers):
+    """Hydrate many cases concurrently via the GraphQL ``case(id)`` query.
+
+    Fans ``case_numbers`` out over a bounded thread pool (each a case(id)
+    round-trip; planv3.md §3b). On a per-case failure the access token is
+    refreshed once - serialized under a lock and collapsed so a burst of
+    simultaneous auth failures triggers a single refresh, not one per case - and
+    the case retried once, mirroring the sequential ``_hydrate_case_with_reauth``.
+
+    Args:
+        cfg: configuration dictionary (needs ``offline_token``).
+        url: the GraphQL endpoint.
+        headers: current GraphQL request headers.
+        case_numbers: list of case numbers to hydrate.
+
+    Returns:
+        tuple: ``(hydrated, headers)`` where ``hydrated`` maps case number to its
+            HydraCase dict (cases that never hydrated are omitted), and
+            ``headers`` are the (possibly refreshed) headers for reuse.
+    """
+    lock = threading.Lock()
+    state = {"headers": headers}
+
+    def worker(case_number):
+        used = state["headers"]
+        try:
+            return case_number, _hydrate_case_graphql(url, used, case_number)
+        except Exception as exc:
+            with lock:
+                # Only refresh if nobody else already did since this worker's
+                # attempt, so a stampede of failures costs one token exchange.
+                if state["headers"] is used:
+                    logging.warning(
+                        "re-authenticating after hydration error for %s: %s",
+                        case_number,
+                        exc,
+                    )
+                    try:
+                        state["headers"] = make_graphql_headers(
+                            libtelco5g.get_token(cfg["offline_token"])
+                        )
+                    except Exception as refresh_exc:
+                        logging.warning("token refresh failed: %s", refresh_exc)
+                retry_headers = state["headers"]
+            try:
+                return case_number, _hydrate_case_graphql(
+                    url, retry_headers, case_number
+                )
+            except Exception as exc2:
+                logging.warning(
+                    "could not hydrate case %s via GraphQL: %s", case_number, exc2
+                )
+                return case_number, None
+
+    hydrated = {}
+    with ThreadPoolExecutor(max_workers=_MAX_HYDRATION_WORKERS) as executor:
+        for case_number, case_json in executor.map(worker, case_numbers):
+            if case_json:
+                hydrated[case_number] = case_json
+    return hydrated, state["headers"]
 
 
 def get_cases(cfg):
-    """Get cases from Red Hat Portal API and cache them
+    """Get cases from the Red Hat GraphQL saved-search and cache them
 
-    Queries the Red Hat Portal API using configured search parameters and
-    retrieves case information. The results are stored in both PostgreSQL
-    and Redis cache.
+    Selects the telco case set with the tested GraphQL saved-search
+    (account + product + subject; planv3.md §3a), capped at
+    ``max_portal_results`` most-recently-modified cases, and builds the case
+    projection **straight from that one light query** - no per-case case(id)
+    hydration. The light query already carries every field the case-assignment
+    path needs (account, severity, status, subject, product, dates); the richer
+    fields the light query cannot supply (description, tags, product_version,
+    owner) are left blank / "in progress" and backfilled later by
+    get_case_details. Results are stored in both PostgreSQL and Redis. Replaces
+    the v1 Solr tag-glob search.
 
     Args:
-        cfg: Configuration dictionary containing API credentials, query
-            parameters, and field specifications
+        cfg: Configuration dictionary containing API credentials, the
+            ``saved_search`` selection, and API endpoints
 
     Returns:
         None. Results are cached in Redis under the 'cases' key.
     """
-    # https://source.redhat.com/groups/public/hydra/hydra_integration_platform_cee_integration_wiki/hydras_api_layer
+    if not cfg.get("saved_search"):
+        logging.error("no saved_search configured; skipping case selection")
+        return
 
     token = libtelco5g.get_token(cfg["offline_token"])
-    query = cfg["query"]
-    fields = ",".join(cfg["fields"])
-    query = f"({query})"
-    num_cases = cfg["max_portal_results"]
-    payload = {"q": query, "partnerSearch": "false", "rows": num_cases, "fl": fields}
-    headers = make_headers(token)
-    url = f"{cfg['redhat_api']}/search/cases"
 
-    logging.warning("searching the portal for cases")
+    logging.warning("selecting cases via the GraphQL saved-search")
     start = time.time()
-    r = requests.get(url, headers=headers, params=payload)
-    r.raise_for_status()
-    cases_json = r.json()["response"]["docs"]
-    # The case portal only allows 9999 cases to be returned by a query, so we cannot
-    # simply paginate. We must use a different query to get the remaining cases.
+    # Cap the selection at max_portal_results, mirroring the v1 rows= cap. The
+    # saved-search is ordered LastModifiedDate DESC, so this yields the N latest.
+    limit = _int_or_none(cfg.get("max_portal_results"))
+    selected = _fetch_saved_search_cases(cfg, token, limit=limit)
 
-    # Total number of cases found by query
-    num_found = int(r.json()["response"].get("numFound"))
-    # Timestamp of the 9999th case found by query
-    newest_case_timestamp = cases_json[-1]["case_createdDate"]
-    if num_found > int(num_cases):
-        # Get cases > 9999
-        date_query = (
-            f"({cfg['query']} AND case_createdDate:[{newest_case_timestamp} TO *])"
-        )
-        # Start at 1 to avoid duplicates from the first query
-        payload = {
-            "q": date_query,
-            "partnerSearch": "false",
-            "start": 1,
-            "rows": num_cases,
-            "fl": fields,
-        }
-        r = requests.get(url, headers=headers, params=payload)
-        r.raise_for_status()
-        cases_json.extend(r.json()["response"]["docs"])
-    end = time.time()
-    logging.warning("found %s cases in %s seconds", len(cases_json), end - start)
     cases = {}
-    for case in cases_json:
-        cases[case["case_number"]] = {
-            "owner": case["case_owner"],
-            "severity": case["case_severity"],
-            "account": case["case_account_name"],
-            "problem": case["case_summary"],
-            "status": case["case_status"],
-            "createdate": case["case_createdDate"],
-            "last_update": case["case_lastModifiedDate"],
-            "description": case["case_description"],
-            "product": case["case_product"][0] + " " + case["case_version"],
-            "product_version": case["case_version"],
+    for entry in selected:
+        case = entry["caseNumber"]
+        cases[case] = {
+            # owner / tags / product_version / description are not carried by the
+            # light saved-search query; leave them blank/placeholder so the
+            # assignment path (which does not need them) works now, and let
+            # get_case_details backfill the real values later.
+            "owner": None,
+            "severity": entry["severity"],
+            "account": entry["account"],
+            "problem": entry["problem"],
+            # v3 status vocabulary can differ from v1 - remap before anything
+            # buckets on the string downstream (planv3.md §6.4).
+            "status": remap_case_status(entry["status"]),
+            "createdate": _normalize_ts(entry["createdate"]),
+            "last_update": _normalize_ts(entry["last_update"]),
+            "description": _PENDING_VALUE,
+            # Product.Name from the UIAPI selection already includes the version
+            # (unlike HydraCase, which splits them), so store it as-is.
+            "product": entry["product"],
+            "product_version": None,
         }
-        # Sometimes there is no BZ attached to the case
-        if "case_bugzillaNumber" in case:
-            cases[case["case_number"]]["bug"] = case["case_bugzillaNumber"]
-        # Sometimes there is no tag attached to the case
-        if "case_tags" in case:
-            case_tags = case["case_tags"]
-            if len(case_tags) == 1:
-                tags = case_tags[0].split(";")  # csv instead of a proper list
-            else:
-                tags = case_tags
-            cases[case["case_number"]]["tags"] = tags
-        if "case_closedDate" in case:
-            cases[case["case_number"]]["closeddate"] = case["case_closedDate"]
+
+    end = time.time()
+    logging.warning("selected %s cases in %s seconds", len(cases), end - start)
 
     try:
         load_cases_postgres(cases)
@@ -610,42 +1027,49 @@ def get_case_details(cfg):
 
     bz_dict = {}
     token = libtelco5g.get_token(cfg["offline_token"])
-    headers = make_headers(token)
+    url = cfg["graphql_api"]
+    headers = make_graphql_headers(token)
     case_details = {}
     logging.warning("getting all bugzillas and case details")
-    for case in cases:
-        if cases[case]["status"] != "Closed":
-            case_endpoint = f"{cfg['redhat_api']}/v1/cases/{case}"
-            r_case = requests.get(case_endpoint, headers=headers)
-            if r_case.status_code == 401:
-                token = libtelco5g.get_token(cfg["offline_token"])
-                headers = make_headers(token)
-                r_case = requests.get(case_endpoint, headers=headers)
 
-            case_json = r_case.json()
-            crit_sit = case_json.get("critSit", False)
-            group_name = case_json.get("groupName", None)
-            notified_users = case_json.get("notifiedUsers", [])
-            relief_at = case_json.get("reliefAt", None)
-            resolved_at = case_json.get("resolvedAt", None)
+    # Hydrate the open cases concurrently (same reason as get_cases: sequential
+    # case(id) round-trips over a few hundred cases blow the request timeout).
+    # The Redis/Postgres writes below stay on this thread to avoid touching the
+    # DB layer from worker threads.
+    open_cases = [case for case in cases if cases[case]["status"] != "Closed"]
+    hydrated, headers = _hydrate_cases_parallel(cfg, url, headers, open_cases)
 
-            case_details[case] = {
-                "crit_sit": crit_sit,
-                "group_name": group_name,
-                "notified_users": notified_users,
-                "relief_at": relief_at,
-                "resolved_at": resolved_at,
-            }
-            if "bug" in cases[case]:
-                bz_dict[case] = case_json["bugzillas"]
+    for case in open_cases:
+        case_json = hydrated.get(case)
+        if not case_json:
+            continue
 
-            api_comments = case_json.get("comments", [])
-            if api_comments:
-                try:
-                    case_created_date = format_date(cases[case]["createdate"])
-                    load_comments_postgres(case, case_created_date, api_comments)
-                except Exception as e:
-                    logging.error("Failed to load comments for case %s: %s", case, e)
+        case_details[case] = {
+            # crit_sit and notified_users are populated on the GraphQL
+            # HydraCase (live-verified 2026-09-18) - unlike the empty v3 REST
+            # payload, so they are active again (planv3.md §3b/§3e).
+            "crit_sit": case_json.get("critSit", False),
+            "group_name": case_json.get("groupName", None),
+            "notified_users": case_json.get("notifiedUsers") or [],
+            # reliefAt / resolvedAt do not exist on HydraCase (dead reads in
+            # v1 too - no regression).
+            "relief_at": None,
+            "resolved_at": None,
+        }
+        if "bug" in cases[case]:
+            # HydraCase.bugzillas is a list of id strings; wrap them so the
+            # bugzilla detail pass (get_bz_details) keeps its dict contract.
+            bz_dict[case] = [
+                {"bugzillaNumber": bug} for bug in case_json.get("bugzillas") or []
+            ]
+
+        api_comments = case_json.get("comments", [])
+        if api_comments:
+            try:
+                case_created_date = format_date(cases[case]["createdate"])
+                load_comments_postgres(case, case_created_date, api_comments)
+            except Exception as e:
+                logging.error("Failed to load comments for case %s: %s", case, e)
 
     libtelco5g.redis_set("details", json.dumps(case_details))
     libtelco5g.redis_set("case_bz", json.dumps(bz_dict))
