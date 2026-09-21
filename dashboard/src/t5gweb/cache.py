@@ -133,18 +133,6 @@ _GRAPHQL_TRANSIENT_MARKERS = (
 )
 
 
-def _product_or(products):
-    """OR block matching any product in the configured list by name substring."""
-    return {"or": [{"Product": {"Name": {"like": f"%{p}%"}}} for p in products]}
-
-
-def _account_filter(accounts):
-    """Match a single account (eq) or a list of accounts (in)."""
-    if len(accounts) == 1:
-        return {"Account_Number__c": {"eq": accounts[0]}}
-    return {"Account_Number__c": {"in": list(accounts)}}
-
-
 def build_where(saved_search, open_only=True):
     """Build the GraphQL ``where`` filter from the saved-search config.
 
@@ -164,7 +152,11 @@ def build_where(saved_search, open_only=True):
     """
     products = saved_search.get("products", [])
     subject_contains = saved_search.get("subject_contains", [])
-    product_block = _product_or(products) if products else None
+    product_block = (
+        {"or": [{"Product": {"Name": {"like": f"%{p}%"}}} for p in products]}
+        if products
+        else None
+    )
 
     branches = []
     if subject_contains:
@@ -172,7 +164,11 @@ def build_where(saved_search, open_only=True):
             {"or": [{"Subject": {"like": f"%{s}%"}} for s in subject_contains]}
         )
     for branch in saved_search.get("account_branches", []):
-        account_block = _account_filter(branch["accounts"])
+        accounts = branch["accounts"]
+        if len(accounts) == 1:
+            account_block = {"Account_Number__c": {"eq": accounts[0]}}
+        else:
+            account_block = {"Account_Number__c": {"in": list(accounts)}}
         if branch.get("product") and product_block:
             branches.append({"and": [account_block, product_block]})
         else:
