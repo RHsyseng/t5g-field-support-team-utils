@@ -177,10 +177,8 @@ def set_cfg():
     cfg["offline_token"] = os.environ.get("offline_token")  # portal
     cfg["redhat_api"] = os.environ.get("redhat_api")  # redhat api url
     cfg["graphql_api"] = os.environ.get("graphql_api") or "https://graphql.redhat.com"
-    cfg["query"] = os.environ.get("case_query")
     # Selection: account + product + subject saved-search.
-    # JSON blob; see cfg/sample.env for the shape. Falls back to None so the
-    # legacy tag-glob query stays usable until the v1 path is retired.
+    # JSON blob; see cfg/sample.env for the shape.
     cfg["saved_search"] = (
         json.loads(os.environ.get("saved_search"))
         if os.environ.get("saved_search")

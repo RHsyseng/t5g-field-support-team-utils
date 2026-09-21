@@ -63,7 +63,7 @@ query SavedSearch($where: RedHatSupportCase_Filter, $after: String) {
 # Canonical timestamp form the downstream code expects (utils.format_date and
 # libtelco5g._is_old_case both strptime this exact pattern). The UIAPI selection
 # query returns fractional-second timestamps ("2026-09-03T12:36:12.000Z"), so
-# normalize to the v1 form at ingest to preserve the stored contract.
+# normalize to this form at ingest to preserve the stored contract.
 _CANONICAL_TS_FORMAT = "%Y-%m-%dT%H:%M:%SZ"
 
 
@@ -245,11 +245,10 @@ def _fetch_saved_search_cases(cfg, token, limit=None):
     """Select the telco case set via the Red Hat GraphQL saved-search.
 
     Cursor-pages the account+product+subject query and
-    returns the light case nodes; each is populated with the v3 detail endpoint
+    returns the light case nodes; each is populated with the detail endpoint
     later to build the full projection. The query is ordered by
     ``LastModifiedDate DESC``, so when ``limit`` is set the returned list is the
-    ``limit`` most-recently-modified matches (the v1 ``max_portal_results``
-    contract: v1 capped the search with ``rows=max_portal_results``).
+    ``limit`` most-recently-modified matches.
 
     Args:
         cfg: configuration dictionary (needs ``graphql_api`` and
@@ -418,8 +417,7 @@ def get_cases(cfg):
     path needs (account, severity, status, subject, product, dates); the richer
     fields the light query cannot supply (description, tags, product_version,
     owner) are left blank / "in progress" and backfilled later by
-    get_case_details. Results are stored in both PostgreSQL and Redis. Replaces
-    the v1 Solr tag-glob search.
+    get_case_details. Results are stored in both PostgreSQL and Redis.
 
     Args:
         cfg: Configuration dictionary containing API credentials, the
@@ -436,8 +434,8 @@ def get_cases(cfg):
 
     logging.warning("selecting cases via the GraphQL saved-search")
     start = time.time()
-    # Cap the selection at max_portal_results, mirroring the v1 rows= cap. The
-    # saved-search is ordered LastModifiedDate DESC, so this yields the N latest.
+    # Cap the selection at max_portal_results. The saved-search is ordered
+    # LastModifiedDate DESC, so this yields the N latest.
     limit = _int_or_none(cfg.get("max_portal_results"))
     selected = _fetch_saved_search_cases(cfg, token, limit=limit)
 
@@ -997,8 +995,7 @@ def get_case_details(cfg):
             "crit_sit": case_json.get("critSit", False),
             "group_name": case_json.get("groupName", None),
             "notified_users": case_json.get("notifiedUsers") or [],
-            # reliefAt / resolvedAt do not exist on HydraCase (dead reads in
-            # v1 too - no regression).
+            # reliefAt / resolvedAt do not exist on HydraCase.
             "relief_at": None,
             "resolved_at": None,
         }
