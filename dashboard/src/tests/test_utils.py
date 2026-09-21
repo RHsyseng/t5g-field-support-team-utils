@@ -1,6 +1,6 @@
 import pytest
 
-from t5gweb.graphql import build_where, remap_case_status
+from t5gweb.cache import build_where, remap_case_status
 from t5gweb.utils import exists_or_zero, set_defaults
 
 

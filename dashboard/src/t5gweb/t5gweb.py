@@ -10,7 +10,7 @@ from datetime import date, datetime, timezone
 import click
 from flask.cli import with_appcontext
 
-from t5gweb.graphql import remap_case_status
+from t5gweb.cache import remap_case_status
 from t5gweb.utils import format_date, get_fake_data, set_cfg
 
 from . import cache, libtelco5g
