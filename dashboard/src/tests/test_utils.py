@@ -1,7 +1,7 @@
 import pytest
 
 from t5gweb.cache import build_where, remap_case_status
-from t5gweb.utils import exists_or_zero, set_defaults
+from t5gweb.utils import exists_or_zero, is_support_case_number, set_defaults
 
 
 @pytest.mark.parametrize(
@@ -16,6 +16,22 @@ from t5gweb.utils import exists_or_zero, set_defaults
 def test_exists_or_zero(data, key, expected):
     data_point = exists_or_zero(data, key)
     assert data_point == expected
+
+
+@pytest.mark.parametrize(
+    "case_number, expected",
+    [
+        ("00000001", True),
+        ("00000002", True),
+        ("EN-00001", False),
+        ("EN-00002", False),
+        ("", False),
+        (None, False),
+        (12345678, False),
+    ],
+)
+def test_is_support_case_number(case_number, expected):
+    assert is_support_case_number(case_number) is expected
 
 
 def test_set_default():
