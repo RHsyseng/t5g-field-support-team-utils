@@ -35,6 +35,7 @@ portal2jira_sevs = {
     "1 (Urgent)": "Critical",
     "2 (High)": "Major",
     "3 (Normal)": "Normal",
+    "3 (Medium)": "Normal",   # GraphQL UIAPI uses "Medium" where v1 used "Normal"
     "4 (Low)": "Minor",
 }
 
