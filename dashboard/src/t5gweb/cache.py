@@ -3,12 +3,9 @@
 import datetime
 import json
 import logging
-import os
 import re
-import threading
 import time
 import xmlrpc
-from concurrent.futures import ThreadPoolExecutor
 
 import bugzilla
 import requests
@@ -34,9 +31,9 @@ from t5gweb.utils import (
 # RedHatSupportAccount parent relationship so no separate /v1/accounts/{ref}
 # lookup is needed. This light query carries every field the case-assignment
 # path needs (account, severity, status, subject, product, dates), so get_cases
-# builds the projection straight from it - no per-case case(id) population. The
-# richer fields (description, comments, tags, critSit, ...) are filled in later
-# by get_case_details, so they are left blank/placeholder here.
+# builds the projection straight from it. The richer fields (description, tags,
+# ...) are left blank/placeholder here; group name and comments are fetched
+# separately by get_case_details.
 GRAPHQL_SAVED_SEARCH_QUERY = """
 query SavedSearch($where: RedHatSupportCase_Filter, $after: String) {
   redhat_support_uiapi { query {
@@ -66,43 +63,39 @@ query SavedSearch($where: RedHatSupportCase_Filter, $after: String) {
 # normalize to this form at ingest to preserve the stored contract.
 _CANONICAL_TS_FORMAT = "%Y-%m-%dT%H:%M:%SZ"
 
-# Case detail / population query - the GraphQL twin of GET /v3/cases/{n}
-# (HydraCase mirrors the v3 REST GetCaseResponse field-for-field).
-GRAPHQL_CASE_DETAIL_QUERY = """
-query CaseDetail($id: String!) {
-  case(id: $id) {
-    caseNumber
-    ownerId
-    severity
-    summary
-    status
-    createdDate
-    lastModifiedDate
-    description
-    product
-    version
-    accountNumberRef
-    isClosed
-    lastClosedAt
-    critSit
-    groupName
-    apiTags
-    bugzillas
-    notifiedUsers { ssoUsername title type }
-    comments { commentBody createdBy createdDate }
-  }
+# Case detail query. Reads the group and comments for a batch of cases straight
+# from the authoritative UIAPI RedHatSupportCase object, replacing the stale
+# HydraCase ``case(id)`` resolver (which returned closed statuses for open cases
+# and 404'd on freshly-created ones). ``CaseNumber__c: { in: [...] }`` lets a
+# whole chunk of open cases be fetched in one request instead of one round-trip
+# per case. crit_sit / notified_users have no UIAPI equivalent and are dropped.
+GRAPHQL_CASE_DETAIL_UIAPI_QUERY = """
+query CaseDetailUIAPI($where: RedHatSupportCase_Filter, $after: String) {
+  redhat_support_uiapi { query {
+    RedHatSupportCase(where: $where, first: 100, after: $after) {
+      pageInfo { hasNextPage endCursor }
+      edges { node {
+        CaseNumber__c { value }
+        Group__r { Name { value } }
+        CaseComments(first: 200, orderBy: { CreatedDate: { order: ASC } }) {
+          edges { node {
+            CommentBody { value }
+            CreatedDate { value }
+            IsPublished { value }
+            CreatedBy { Name { value } }
+          } }
+        }
+      } }
+    }
+  } }
 }
 """
 
-# Number of concurrent case(id) population requests. The casesFilter batch
-# endpoint ignores the caseNumbers filter on this deployment, so population is one
-# case(id) round-trip per case; doing them sequentially blows the request/worker
-# timeout on a few hundred cases, so fan them out over a small thread pool. Kept
-# modest because too much concurrency makes the gateway shed load with empty
-# responses (and init-cache + the web worker can populate at the same time, so the
-# effective concurrency is a multiple of this). Override with the
-# ``graphql_population_workers`` env var if the endpoint tolerates more.
-_MAX_POPULATE_WORKERS = int_or_none(os.environ.get("graphql_population_workers")) or 8
+# Cases per detail request. The UIAPI object accepts CaseNumber__c: { in: [...] },
+# so open cases are fetched in batches (one request per chunk, plus paging) rather
+# than one round-trip per case. 100 matches the query's first:100 page size, so a
+# full chunk comes back in a single page.
+_CASE_DETAIL_CHUNK_SIZE = 100
 
 # Placeholder for projection fields the light saved-search query does not carry.
 # get_case_details (or a future per-case backfill queue) replaces the real value;
@@ -270,70 +263,110 @@ def fetch_saved_search_cases(cfg, token, limit=None):
     return cases
 
 
-def populate_cases_parallel(cfg, url, headers, case_numbers):
-    """Populate many cases concurrently via the GraphQL ``case(id)`` query.
+def _uiapi_comment_to_dict(node):
+    """Map a UIAPI ``RedHatSupportCaseComment`` node to the comment dict shape.
 
-    Fans ``case_numbers`` out over a bounded thread pool (each a case(id)
-    round-trip). On a per-case failure the access token is
-    refreshed once - serialized under a lock and collapsed so a burst of
-    simultaneous auth failures triggers a single refresh, not one per case - and
-    the case retried once, mirroring the sequential ``_populate_case_with_reauth``.
+    ``load_comments_postgres`` consumes ``{"commentBody", "createdBy",
+    "createdDate"}`` (operations.py), so flatten the UIAPI node's nested
+    ``{value}`` wrappers into that flat shape. ``IsPublished`` is available on
+    the node but not currently filtered on (parity with the old HydraCase
+    ``comments``, which returned all comments).
 
     Args:
-        cfg: configuration dictionary (needs ``offline_token``).
-        url: the GraphQL endpoint.
-        headers: current GraphQL request headers.
-        case_numbers: list of case numbers to populate.
+        node: a ``RedHatSupportCaseComment`` node from ``CaseComments.edges``.
 
     Returns:
-        tuple: ``(populated, headers)`` where ``populated`` maps case number to its
-            HydraCase dict (cases that never populated are omitted), and
-            ``headers`` are the (possibly refreshed) headers for reuse.
+        dict: ``{"commentBody": str, "createdBy": str, "createdDate": str|None}``.
     """
-    lock = threading.Lock()
-    state = {"headers": headers}
+    return {
+        "commentBody": (node.get("CommentBody") or {}).get("value") or "",
+        "createdBy": ((node.get("CreatedBy") or {}).get("Name") or {}).get("value")
+        or "unknown",
+        "createdDate": (node.get("CreatedDate") or {}).get("value"),
+    }
 
-    def worker(case_number):
-        used = state["headers"]
-        try:
-            data = graphql_post(
-                url, used, GRAPHQL_CASE_DETAIL_QUERY, {"id": case_number}
-            )
-            return case_number, (data.get("data") or {}).get("case")
-        except Exception as exc:
-            with lock:
-                # Only refresh if nobody else already did since this worker's
-                # attempt, so a stampede of failures costs one token exchange.
-                if state["headers"] is used:
-                    logging.warning(
-                        "re-authenticating after population error for %s: %s",
-                        case_number,
-                        exc,
-                    )
-                    try:
-                        state["headers"] = make_graphql_headers(
-                            libtelco5g.get_token(cfg["offline_token"])
-                        )
-                    except Exception as refresh_exc:
-                        logging.warning("token refresh failed: %s", refresh_exc)
-                retry_headers = state["headers"]
+
+def _chunked(items, size):
+    """Yield successive ``size``-length chunks of ``items``."""
+    for start in range(0, len(items), size):
+        yield items[start : start + size]
+
+
+def fetch_case_details_uiapi(cfg, token, case_numbers):
+    """Fetch group name and comments for open cases from the UIAPI object.
+
+    Batches ``case_numbers`` into ``CaseNumber__c: { in: <chunk> }`` filters and
+    cursor-pages each chunk, reading straight from the authoritative
+    ``RedHatSupportCase`` object (see ``GRAPHQL_CASE_DETAIL_UIAPI_QUERY``). On a
+    chunk failure the access token is refreshed once and the request retried, so
+    a long population run can outlive its access token; a chunk that still fails
+    is logged and skipped rather than aborting the whole pass.
+
+    Args:
+        cfg: configuration dictionary (needs ``graphql_api`` and
+            ``offline_token``).
+        token: a valid bearer access token.
+        case_numbers: list of open case numbers to fetch.
+
+    Returns:
+        dict: case number -> ``{"group_name": str|None, "comments": [dict, ...]}``.
+            Cases with no returned node are omitted.
+    """
+    url = cfg["graphql_api"]
+    headers = make_graphql_headers(token)
+    details = {}
+
+    for chunk in _chunked(case_numbers, _CASE_DETAIL_CHUNK_SIZE):
+        where = {"CaseNumber__c": {"in": chunk}}
+        after = None
+        while True:
+            variables = {"where": where, "after": after}
             try:
                 data = graphql_post(
-                    url, retry_headers, GRAPHQL_CASE_DETAIL_QUERY, {"id": case_number}
+                    url, headers, GRAPHQL_CASE_DETAIL_UIAPI_QUERY, variables
                 )
-                return case_number, (data.get("data") or {}).get("case")
-            except Exception as exc2:
-                logging.warning(
-                    "could not populate case %s via GraphQL: %s", case_number, exc2
-                )
-                return case_number, None
+            except RuntimeError as exc:
+                # Refresh the token once and retry this page; drop the chunk if it
+                # still fails so one bad batch does not abort the whole pass.
+                logging.warning("re-authenticating after detail error: %s", exc)
+                try:
+                    headers = make_graphql_headers(
+                        libtelco5g.get_token(cfg["offline_token"])
+                    )
+                    data = graphql_post(
+                        url, headers, GRAPHQL_CASE_DETAIL_UIAPI_QUERY, variables
+                    )
+                except Exception as exc2:
+                    logging.warning(
+                        "could not fetch case details for chunk %s: %s", chunk, exc2
+                    )
+                    break
 
-    populated = {}
-    with ThreadPoolExecutor(max_workers=_MAX_POPULATE_WORKERS) as executor:
-        for case_number, case_json in executor.map(worker, case_numbers):
-            if case_json:
-                populated[case_number] = case_json
-    return populated, state["headers"]
+            conn = data["data"]["redhat_support_uiapi"]["query"]["RedHatSupportCase"]
+            for edge in conn["edges"]:
+                node = edge["node"]
+                case_number = (node.get("CaseNumber__c") or {}).get("value")
+                if not case_number:
+                    continue
+                group_name = ((node.get("Group__r") or {}).get("Name") or {}).get(
+                    "value"
+                )
+                # CaseComments(first: 200) bounds volume; paginate the nested
+                # connection here if any case can exceed 200 comments.
+                comment_edges = (node.get("CaseComments") or {}).get("edges") or []
+                details[case_number] = {
+                    "group_name": group_name,
+                    "comments": [
+                        _uiapi_comment_to_dict(e["node"]) for e in comment_edges
+                    ],
+                }
+
+            page_info = conn["pageInfo"]
+            if not page_info["hasNextPage"]:
+                break
+            after = page_info["endCursor"]
+
+    return details
 
 
 def get_cases(cfg):
@@ -346,8 +379,8 @@ def get_cases(cfg):
     population. The light query already carries every field the case-assignment
     path needs (account, severity, status, subject, product, dates); the richer
     fields the light query cannot supply (description, tags, product_version,
-    owner) are left blank / "in progress" and backfilled later by
-    get_case_details. Results are stored in both PostgreSQL and Redis.
+    owner) are left blank / "in progress" placeholders (backfilling them is a
+    separate enhancement). Results are stored in both PostgreSQL and Redis.
 
     Args:
         cfg: Configuration dictionary containing API credentials, the
@@ -374,16 +407,14 @@ def get_cases(cfg):
     for entry in selected:
         case = entry["caseNumber"]
         # Drop non-support records (e.g. EN-* escalation notifications) that the
-        # saved search sometimes returns; they cannot be hydrated via case(id)
-        # and must never become JIRA cards.
+        # saved search sometimes returns; they must never become JIRA cards.
         if not is_support_case_number(case):
             skipped.append(case)
             continue
         cases[case] = {
             # owner / tags / product_version / description are not carried by the
             # light saved-search query; leave them blank/placeholder so the
-            # assignment path (which does not need them) works now, and let
-            # get_case_details backfill the real values later.
+            # assignment path (which does not need them) works now.
             "owner": None,
             "severity": entry["severity"],
             "account": entry["account"],
@@ -896,11 +927,13 @@ def _get_label_flags(labels, escalated):
 
 
 def get_case_details(cfg):
-    """Caches CritSit and CaseGroup from open cases
+    """Cache the group name and comments for open cases.
 
-    Retrieves detailed information for each open case from the Red Hat Portal
-    API including CritSit status, group names, notified users, and associated
-    bugzillas. Results are cached in Redis.
+    Fetches the case group and comments for each open case straight from the
+    authoritative UIAPI ``RedHatSupportCase`` object (batched by case number) and
+    caches them in Redis. This replaces the stale HydraCase ``case(id)`` resolver.
+    ``crit_sit`` and ``notified_users`` have no UIAPI equivalent, so they are no
+    longer populated (defaulted to ``False`` / ``[]``).
 
     Args:
         cfg: Configuration dictionary containing API credentials and endpoints
@@ -914,43 +947,34 @@ def get_case_details(cfg):
         libtelco5g.redis_set("case_bz", json.dumps(None))
         return
 
+    # Bugzillas are no longer carried by the case detail source; keep case_bz as
+    # an empty map so get_bz_details reads {} (its long-standing contract - the
+    # "bug" branch never fired) rather than None.
     bz_dict = {}
     token = libtelco5g.get_token(cfg["offline_token"])
-    url = cfg["graphql_api"]
-    headers = make_graphql_headers(token)
     case_details = {}
-    logging.warning("getting all bugzillas and case details")
+    logging.warning("getting case details (group + comments) via UIAPI")
 
-    # Populate the open cases concurrently (same reason as get_cases: sequential
-    # case(id) round-trips over a few hundred cases blow the request timeout).
-    # The Redis/Postgres writes below stay on this thread to avoid touching the
-    # DB layer from worker threads.
     open_cases = [case for case in cases if cases[case]["status"] != "Closed"]
-    populated, headers = populate_cases_parallel(cfg, url, headers, open_cases)
+    populated = fetch_case_details_uiapi(cfg, token, open_cases)
 
     for case in open_cases:
-        case_json = populated.get(case)
-        if not case_json:
+        detail = populated.get(case)
+        if not detail:
             continue
 
         case_details[case] = {
-            # crit_sit and notified_users are populated on the GraphQL
-            # HydraCase (live-verified 2026-09-18).
-            "crit_sit": case_json.get("critSit", False),
-            "group_name": case_json.get("groupName", None),
-            "notified_users": case_json.get("notifiedUsers") or [],
-            # reliefAt / resolvedAt do not exist on HydraCase.
+            # crit_sit / notified_users have no UIAPI field (dropped when the
+            # stale HydraCase case(id) resolver was retired).
+            "crit_sit": False,
+            "group_name": detail["group_name"],
+            "notified_users": [],
+            # relief_at / resolved_at have no source field.
             "relief_at": None,
             "resolved_at": None,
         }
-        if "bug" in cases[case]:
-            # HydraCase.bugzillas is a list of id strings; wrap them so the
-            # bugzilla detail pass (get_bz_details) keeps its dict contract.
-            bz_dict[case] = [
-                {"bugzillaNumber": bug} for bug in case_json.get("bugzillas") or []
-            ]
 
-        api_comments = case_json.get("comments", [])
+        api_comments = detail["comments"]
         if api_comments:
             try:
                 case_created_date = format_date(cases[case]["createdate"])
