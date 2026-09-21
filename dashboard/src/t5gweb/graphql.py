@@ -75,8 +75,8 @@ def graphql_post(url, headers, query, variables, timeout=180, retries=5):
                 # returns an HTML "403 Access Denied" page instead of JSON
                 # (r.json() then fails with "Expecting value: line 1 column 1").
                 # This is a throttle, so back off and retry rather than dropping
-                # the case. The real fix is fewer requests: keep population
-                # concurrency modest (see _MAX_POPULATE_WORKERS).
+                # the case. The real fix is fewer requests: batch case detail
+                # lookups (see _CASE_DETAIL_CHUNK_SIZE) rather than one per case.
                 err = "HTTP %s non-JSON body: %r" % (r.status_code, r.text[:120])
                 transient = True
             else:

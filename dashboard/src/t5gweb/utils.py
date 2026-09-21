@@ -445,6 +445,29 @@ def is_support_case_number(case_number):
     return isinstance(case_number, str) and case_number.isdigit()
 
 
+def chunked(items, size):
+    """Yield successive ``size``-length chunks of ``items``."""
+    for start in range(0, len(items), size):
+        yield items[start : start + size]
+
+
+def uiapi_comment_to_dict(node):
+    """Flatten a UIAPI ``RedHatSupportCaseComment`` node into a comment dict.
+
+    Args:
+        node: a ``RedHatSupportCaseComment`` node from ``CaseComments.edges``.
+
+    Returns:
+        dict: ``{"commentBody": str, "createdBy": str, "createdDate": str|None}``.
+    """
+    return {
+        "commentBody": (node.get("CommentBody") or {}).get("value") or "",
+        "createdBy": ((node.get("CreatedBy") or {}).get("Name") or {}).get("value")
+        or "unknown",
+        "createdDate": (node.get("CreatedDate") or {}).get("value"),
+    }
+
+
 def format_date(the_date):
     """Converts a date string in to the required format
 
