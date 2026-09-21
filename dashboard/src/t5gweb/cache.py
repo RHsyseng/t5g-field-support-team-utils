@@ -20,11 +20,13 @@ from t5gweb.database import (
 )
 from t5gweb.graphql import graphql_post, make_graphql_headers
 from t5gweb.utils import (
+    chunked,
     format_comment,
     format_date,
     int_or_none,
     is_support_case_number,
     make_headers,
+    uiapi_comment_to_dict,
 )
 
 # Selection query. Account name is pulled inline via the
@@ -63,12 +65,6 @@ query SavedSearch($where: RedHatSupportCase_Filter, $after: String) {
 # normalize to this form at ingest to preserve the stored contract.
 _CANONICAL_TS_FORMAT = "%Y-%m-%dT%H:%M:%SZ"
 
-# Case detail query. Reads the group and comments for a batch of cases straight
-# from the authoritative UIAPI RedHatSupportCase object, replacing the stale
-# HydraCase ``case(id)`` resolver (which returned closed statuses for open cases
-# and 404'd on freshly-created ones). ``CaseNumber__c: { in: [...] }`` lets a
-# whole chunk of open cases be fetched in one request instead of one round-trip
-# per case. crit_sit / notified_users have no UIAPI equivalent and are dropped.
 GRAPHQL_CASE_DETAIL_UIAPI_QUERY = """
 query CaseDetailUIAPI($where: RedHatSupportCase_Filter, $after: String) {
   redhat_support_uiapi { query {
@@ -263,35 +259,6 @@ def fetch_saved_search_cases(cfg, token, limit=None):
     return cases
 
 
-def _uiapi_comment_to_dict(node):
-    """Map a UIAPI ``RedHatSupportCaseComment`` node to the comment dict shape.
-
-    ``load_comments_postgres`` consumes ``{"commentBody", "createdBy",
-    "createdDate"}`` (operations.py), so flatten the UIAPI node's nested
-    ``{value}`` wrappers into that flat shape. ``IsPublished`` is available on
-    the node but not currently filtered on (parity with the old HydraCase
-    ``comments``, which returned all comments).
-
-    Args:
-        node: a ``RedHatSupportCaseComment`` node from ``CaseComments.edges``.
-
-    Returns:
-        dict: ``{"commentBody": str, "createdBy": str, "createdDate": str|None}``.
-    """
-    return {
-        "commentBody": (node.get("CommentBody") or {}).get("value") or "",
-        "createdBy": ((node.get("CreatedBy") or {}).get("Name") or {}).get("value")
-        or "unknown",
-        "createdDate": (node.get("CreatedDate") or {}).get("value"),
-    }
-
-
-def _chunked(items, size):
-    """Yield successive ``size``-length chunks of ``items``."""
-    for start in range(0, len(items), size):
-        yield items[start : start + size]
-
-
 def fetch_case_details_uiapi(cfg, token, case_numbers):
     """Fetch group name and comments for open cases from the UIAPI object.
 
@@ -316,7 +283,7 @@ def fetch_case_details_uiapi(cfg, token, case_numbers):
     headers = make_graphql_headers(token)
     details = {}
 
-    for chunk in _chunked(case_numbers, _CASE_DETAIL_CHUNK_SIZE):
+    for chunk in chunked(case_numbers, _CASE_DETAIL_CHUNK_SIZE):
         where = {"CaseNumber__c": {"in": chunk}}
         after = None
         while True:
@@ -357,7 +324,7 @@ def fetch_case_details_uiapi(cfg, token, case_numbers):
                 details[case_number] = {
                     "group_name": group_name,
                     "comments": [
-                        _uiapi_comment_to_dict(e["node"]) for e in comment_edges
+                        uiapi_comment_to_dict(e["node"]) for e in comment_edges
                     ],
                 }
 
@@ -379,8 +346,8 @@ def get_cases(cfg):
     population. The light query already carries every field the case-assignment
     path needs (account, severity, status, subject, product, dates); the richer
     fields the light query cannot supply (description, tags, product_version,
-    owner) are left blank / "in progress" placeholders (backfilling them is a
-    separate enhancement). Results are stored in both PostgreSQL and Redis.
+    owner) are left blank / "in progress" placeholders. Results are stored in
+    both PostgreSQL and Redis.
 
     Args:
         cfg: Configuration dictionary containing API credentials, the
@@ -413,8 +380,7 @@ def get_cases(cfg):
             continue
         cases[case] = {
             # owner / tags / product_version / description are not carried by the
-            # light saved-search query; leave them blank/placeholder so the
-            # assignment path (which does not need them) works now.
+            # light saved-search query; leave them blank/placeholder.
             "owner": None,
             "severity": entry["severity"],
             "account": entry["account"],

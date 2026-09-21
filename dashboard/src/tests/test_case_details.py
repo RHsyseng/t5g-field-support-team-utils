@@ -6,10 +6,10 @@ import pytest
 
 from t5gweb import cache
 from t5gweb.cache import (
-    _uiapi_comment_to_dict,
     fetch_case_details_uiapi,
     get_case_details,
 )
+from t5gweb.utils import uiapi_comment_to_dict
 
 
 def _node(case_number, group_name=None, comments=None):
@@ -54,7 +54,7 @@ def _page(nodes, has_next=False, end_cursor=None):
 class TestUiapiCommentToDict:
     def test_full_node(self):
         node = _comment("hello", "Jane Doe", "2026-09-01T00:00:00.000Z")
-        assert _uiapi_comment_to_dict(node) == {
+        assert uiapi_comment_to_dict(node) == {
             "commentBody": "hello",
             "createdBy": "Jane Doe",
             "createdDate": "2026-09-01T00:00:00.000Z",
@@ -66,7 +66,7 @@ class TestUiapiCommentToDict:
             "CreatedDate": {"value": "2026-09-01T00:00:00.000Z"},
             "CreatedBy": None,
         }
-        assert _uiapi_comment_to_dict(node)["createdBy"] == "unknown"
+        assert uiapi_comment_to_dict(node)["createdBy"] == "unknown"
 
     def test_missing_body_defaults_to_empty_string(self):
         node = {
@@ -74,7 +74,7 @@ class TestUiapiCommentToDict:
             "CreatedDate": {"value": "2026-09-01T00:00:00.000Z"},
             "CreatedBy": {"Name": {"value": "Jane"}},
         }
-        assert _uiapi_comment_to_dict(node)["commentBody"] == ""
+        assert uiapi_comment_to_dict(node)["commentBody"] == ""
 
     def test_missing_created_date_is_none(self):
         node = {
@@ -82,7 +82,7 @@ class TestUiapiCommentToDict:
             "CreatedDate": None,
             "CreatedBy": {"Name": {"value": "Jane"}},
         }
-        assert _uiapi_comment_to_dict(node)["createdDate"] is None
+        assert uiapi_comment_to_dict(node)["createdDate"] is None
 
 
 class TestFetchCaseDetailsUiapi:
