@@ -30,11 +30,11 @@ from t5gweb.utils import (
     remap_case_status,
 )
 
-# Selection query (planv3.md §3a). Account name is pulled inline via the
+# Selection query. Account name is pulled inline via the
 # RedHatSupportAccount parent relationship so no separate /v1/accounts/{ref}
 # lookup is needed. This light query carries every field the case-assignment
 # path needs (account, severity, status, subject, product, dates), so get_cases
-# builds the projection straight from it - no per-case case(id) hydration. The
+# builds the projection straight from it - no per-case case(id) population. The
 # richer fields (description, comments, tags, critSit, ...) are filled in later
 # by get_case_details, so they are left blank/placeholder here.
 GRAPHQL_SAVED_SEARCH_QUERY = """
@@ -94,7 +94,7 @@ def _normalize_ts(value):
 # until then the card/dashboard shows this rather than an empty string.
 _PENDING_VALUE = "In progress - details not yet synced"
 
-# Case detail / hydration query - the GraphQL twin of GET /v3/cases/{n}
+# Case detail / population query - the GraphQL twin of GET /v3/cases/{n}
 # (HydraCase mirrors the v3 REST GetCaseResponse field-for-field).
 GRAPHQL_CASE_DETAIL_QUERY = """
 query CaseDetail($id: String!) {
@@ -122,7 +122,7 @@ query CaseDetail($id: String!) {
 }
 """
 
-# Transient GraphQL upstream failures worth retrying (planv3.md §3a).
+# Transient GraphQL upstream failures worth retrying.
 _GRAPHQL_TRANSIENT_MARKERS = (
     "503",
     "502",
@@ -136,7 +136,6 @@ _GRAPHQL_TRANSIENT_MARKERS = (
 def build_where(saved_search, open_only=True):
     """Build the GraphQL ``where`` filter from the saved-search config.
 
-    Ported from the field owner's tested saved-search script (planv3.md §3a).
     The filter is ``OR(subject-contains block, each account branch)``, each
     branch being ``Account_Number__c IN (...)`` optionally AND-ed with the
     product block when the branch sets ``product: true``. When ``open_only`` is
@@ -215,8 +214,8 @@ def _graphql_post(url, headers, query, variables, timeout=180, retries=5):
                 # returns an HTML "403 Access Denied" page instead of JSON
                 # (r.json() then fails with "Expecting value: line 1 column 1").
                 # This is a throttle, so back off and retry rather than dropping
-                # the case. The real fix is fewer requests: keep hydration
-                # concurrency modest (see _MAX_HYDRATION_WORKERS).
+                # the case. The real fix is fewer requests: keep population
+                # concurrency modest (see _MAX_POPULATE_WORKERS).
                 err = "HTTP %s non-JSON body: %r" % (r.status_code, r.text[:120])
                 transient = True
             else:
@@ -245,8 +244,8 @@ def _graphql_post(url, headers, query, variables, timeout=180, retries=5):
 def _fetch_saved_search_cases(cfg, token, limit=None):
     """Select the telco case set via the Red Hat GraphQL saved-search.
 
-    Cursor-pages the tested account+product+subject query (planv3.md §3a) and
-    returns the light case nodes; each is hydrated with the v3 detail endpoint
+    Cursor-pages the account+product+subject query and
+    returns the light case nodes; each is populated with the v3 detail endpoint
     later to build the full projection. The query is ordered by
     ``LastModifiedDate DESC``, so when ``limit`` is set the returned list is the
     ``limit`` most-recently-modified matches (the v1 ``max_portal_results``
@@ -314,7 +313,7 @@ def _fetch_saved_search_cases(cfg, token, limit=None):
 def _int_or_none(value):
     """Coerce a config value to a positive int, or None when unset/invalid.
 
-    ``max_portal_results`` and ``graphql_hydration_workers`` arrive as strings
+    ``max_portal_results`` and ``graphql_population_workers`` arrive as strings
     from the environment; treat a missing, non-numeric or non-positive value as
     "unset".
 
@@ -331,35 +330,35 @@ def _int_or_none(value):
     return result if result > 0 else None
 
 
-# Number of concurrent case(id) hydration requests. The casesFilter batch
-# endpoint ignores the caseNumbers filter on this deployment, so hydration is one
+# Number of concurrent case(id) population requests. The casesFilter batch
+# endpoint ignores the caseNumbers filter on this deployment, so population is one
 # case(id) round-trip per case; doing them sequentially blows the request/worker
 # timeout on a few hundred cases, so fan them out over a small thread pool. Kept
 # modest because too much concurrency makes the gateway shed load with empty
-# responses (and init-cache + the web worker can hydrate at the same time, so the
+# responses (and init-cache + the web worker can populate at the same time, so the
 # effective concurrency is a multiple of this). Override with the
-# ``graphql_hydration_workers`` env var if the endpoint tolerates more.
-_MAX_HYDRATION_WORKERS = _int_or_none(os.environ.get("graphql_hydration_workers")) or 8
+# ``graphql_population_workers`` env var if the endpoint tolerates more.
+_MAX_POPULATE_WORKERS = _int_or_none(os.environ.get("graphql_population_workers")) or 8
 
 
-def _hydrate_cases_parallel(cfg, url, headers, case_numbers):
-    """Hydrate many cases concurrently via the GraphQL ``case(id)`` query.
+def _populate_cases_parallel(cfg, url, headers, case_numbers):
+    """Populate many cases concurrently via the GraphQL ``case(id)`` query.
 
     Fans ``case_numbers`` out over a bounded thread pool (each a case(id)
-    round-trip; planv3.md §3b). On a per-case failure the access token is
+    round-trip). On a per-case failure the access token is
     refreshed once - serialized under a lock and collapsed so a burst of
     simultaneous auth failures triggers a single refresh, not one per case - and
-    the case retried once, mirroring the sequential ``_hydrate_case_with_reauth``.
+    the case retried once, mirroring the sequential ``_populate_case_with_reauth``.
 
     Args:
         cfg: configuration dictionary (needs ``offline_token``).
         url: the GraphQL endpoint.
         headers: current GraphQL request headers.
-        case_numbers: list of case numbers to hydrate.
+        case_numbers: list of case numbers to populate.
 
     Returns:
-        tuple: ``(hydrated, headers)`` where ``hydrated`` maps case number to its
-            HydraCase dict (cases that never hydrated are omitted), and
+        tuple: ``(populated, headers)`` where ``populated`` maps case number to its
+            HydraCase dict (cases that never populated are omitted), and
             ``headers`` are the (possibly refreshed) headers for reuse.
     """
     lock = threading.Lock()
@@ -378,7 +377,7 @@ def _hydrate_cases_parallel(cfg, url, headers, case_numbers):
                 # attempt, so a stampede of failures costs one token exchange.
                 if state["headers"] is used:
                     logging.warning(
-                        "re-authenticating after hydration error for %s: %s",
+                        "re-authenticating after population error for %s: %s",
                         case_number,
                         exc,
                     )
@@ -396,26 +395,26 @@ def _hydrate_cases_parallel(cfg, url, headers, case_numbers):
                 return case_number, (data.get("data") or {}).get("case")
             except Exception as exc2:
                 logging.warning(
-                    "could not hydrate case %s via GraphQL: %s", case_number, exc2
+                    "could not populate case %s via GraphQL: %s", case_number, exc2
                 )
                 return case_number, None
 
-    hydrated = {}
-    with ThreadPoolExecutor(max_workers=_MAX_HYDRATION_WORKERS) as executor:
+    populated = {}
+    with ThreadPoolExecutor(max_workers=_MAX_POPULATE_WORKERS) as executor:
         for case_number, case_json in executor.map(worker, case_numbers):
             if case_json:
-                hydrated[case_number] = case_json
-    return hydrated, state["headers"]
+                populated[case_number] = case_json
+    return populated, state["headers"]
 
 
 def get_cases(cfg):
     """Get cases from the Red Hat GraphQL saved-search and cache them
 
-    Selects the telco case set with the tested GraphQL saved-search
-    (account + product + subject; planv3.md §3a), capped at
+    Selects the telco case set with the GraphQL saved-search
+    (account + product + subject), capped at
     ``max_portal_results`` most-recently-modified cases, and builds the case
     projection **straight from that one light query** - no per-case case(id)
-    hydration. The light query already carries every field the case-assignment
+    population. The light query already carries every field the case-assignment
     path needs (account, severity, status, subject, product, dates); the richer
     fields the light query cannot supply (description, tags, product_version,
     owner) are left blank / "in progress" and backfilled later by
@@ -454,8 +453,7 @@ def get_cases(cfg):
             "severity": entry["severity"],
             "account": entry["account"],
             "problem": entry["problem"],
-            # v3 status vocabulary can differ from v1 - remap before anything
-            # buckets on the string downstream (planv3.md §6.4).
+            # remap the status before anything buckets on the string downstream.
             "status": remap_case_status(entry["status"]),
             "createdate": _normalize_ts(entry["createdate"]),
             "last_update": _normalize_ts(entry["last_update"]),
@@ -981,22 +979,21 @@ def get_case_details(cfg):
     case_details = {}
     logging.warning("getting all bugzillas and case details")
 
-    # Hydrate the open cases concurrently (same reason as get_cases: sequential
+    # Populate the open cases concurrently (same reason as get_cases: sequential
     # case(id) round-trips over a few hundred cases blow the request timeout).
     # The Redis/Postgres writes below stay on this thread to avoid touching the
     # DB layer from worker threads.
     open_cases = [case for case in cases if cases[case]["status"] != "Closed"]
-    hydrated, headers = _hydrate_cases_parallel(cfg, url, headers, open_cases)
+    populated, headers = _populate_cases_parallel(cfg, url, headers, open_cases)
 
     for case in open_cases:
-        case_json = hydrated.get(case)
+        case_json = populated.get(case)
         if not case_json:
             continue
 
         case_details[case] = {
             # crit_sit and notified_users are populated on the GraphQL
-            # HydraCase (live-verified 2026-09-18) - unlike the empty v3 REST
-            # payload, so they are active again (planv3.md §3b/§3e).
+            # HydraCase (live-verified 2026-09-18).
             "crit_sit": case_json.get("critSit", False),
             "group_name": case_json.get("groupName", None),
             "notified_users": case_json.get("notifiedUsers") or [],
