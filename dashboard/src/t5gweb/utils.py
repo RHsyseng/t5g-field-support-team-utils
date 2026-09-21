@@ -427,6 +427,24 @@ def int_or_none(value):
     return result if result > 0 else None
 
 
+def is_support_case_number(case_number):
+    """Return True if the value looks like a Red Hat support case number.
+
+    Real support cases are all-digit numbers (often zero-padded, e.g.
+    ``04542750``). The saved search occasionally also returns other record
+    types (e.g. ``EN-*`` escalation notifications) which cannot be hydrated
+    via the Hydra ``case(id)`` query (they 404) and must never become JIRA
+    cards, so they are filtered out where the cases cache is built.
+
+    Args:
+        case_number: the raw case identifier from the saved search.
+
+    Returns:
+        bool: True when the value is an all-digit support case number.
+    """
+    return isinstance(case_number, str) and case_number.isdigit()
+
+
 def format_date(the_date):
     """Converts a date string in to the required format
 

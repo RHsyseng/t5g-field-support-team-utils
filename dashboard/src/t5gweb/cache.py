@@ -22,7 +22,13 @@ from t5gweb.database import (
     load_jira_card_postgres,
 )
 from t5gweb.graphql import graphql_post, make_graphql_headers
-from t5gweb.utils import format_comment, format_date, int_or_none, make_headers
+from t5gweb.utils import (
+    format_comment,
+    format_date,
+    int_or_none,
+    is_support_case_number,
+    make_headers,
+)
 
 # Selection query. Account name is pulled inline via the
 # RedHatSupportAccount parent relationship so no separate /v1/accounts/{ref}
@@ -364,8 +370,15 @@ def get_cases(cfg):
     selected = fetch_saved_search_cases(cfg, token, limit=limit)
 
     cases = {}
+    skipped = []
     for entry in selected:
         case = entry["caseNumber"]
+        # Drop non-support records (e.g. EN-* escalation notifications) that the
+        # saved search sometimes returns; they cannot be hydrated via case(id)
+        # and must never become JIRA cards.
+        if not is_support_case_number(case):
+            skipped.append(case)
+            continue
         cases[case] = {
             # owner / tags / product_version / description are not carried by the
             # light saved-search query; leave them blank/placeholder so the
@@ -385,6 +398,13 @@ def get_cases(cfg):
             "product": entry["product"],
             "product_version": None,
         }
+
+    if skipped:
+        logging.warning(
+            "skipped %s non-support records from saved search: %s",
+            len(skipped),
+            skipped,
+        )
 
     end = time.time()
     logging.warning("selected %s cases in %s seconds", len(cases), end - start)
