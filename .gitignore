@@ -272,3 +272,9 @@ dmypy.json
 
 # Cython debug symbols
 cython_debug/
+
+# Local dev-only artifacts (Hydra v3 migration): plan notes, GraphQL schema dump
+# and ad-hoc probe scripts. Kept locally for development, never committed.
+planv3.md
+graphql-definition.graphql
+probe_*.py

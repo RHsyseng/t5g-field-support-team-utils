@@ -176,7 +176,14 @@ def set_cfg():
     # sources
     cfg["offline_token"] = os.environ.get("offline_token")  # portal
     cfg["redhat_api"] = os.environ.get("redhat_api")  # redhat api url
-    cfg["query"] = os.environ.get("case_query")
+    cfg["graphql_api"] = os.environ.get("graphql_api") or "https://graphql.redhat.com"
+    # Selection: account + product + subject saved-search.
+    # JSON blob; see cfg/sample.env for the shape.
+    cfg["saved_search"] = (
+        json.loads(os.environ.get("saved_search"))
+        if os.environ.get("saved_search")
+        else None
+    )
     cfg["max_portal_results"] = os.environ.get("max_portal_results")
     cfg["bz_key"] = os.environ.get("bz_key")
     cfg["sheet_id"] = os.environ.get("sheet_id")
@@ -398,6 +405,26 @@ def make_headers(token):
     """
     headers = {"Accept": "application/json", "Authorization": "Bearer " + token}
     return headers
+
+
+def int_or_none(value):
+    """Coerce a config value to a positive int, or None when unset/invalid.
+
+    ``max_portal_results`` and ``graphql_population_workers`` arrive as strings
+    from the environment; treat a missing, non-numeric or non-positive value as
+    "unset".
+
+    Args:
+        value: the raw config value (str, int or None).
+
+    Returns:
+        int or None: the positive integer, or None when there is no valid value.
+    """
+    try:
+        result = int(value)
+    except (TypeError, ValueError):
+        return None
+    return result if result > 0 else None
 
 
 def format_date(the_date):
