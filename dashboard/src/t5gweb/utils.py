@@ -407,50 +407,24 @@ def make_headers(token):
     return headers
 
 
-def make_graphql_headers(token):
-    """Builds the HTTP headers for Red Hat GraphQL API requests
+def int_or_none(value):
+    """Coerce a config value to a positive int, or None when unset/invalid.
 
-    The GraphQL endpoint needs a JSON content type and the Apollo client
-    identification headers used by the saved-search client; the plain
-    REST headers (Accept + Authorization only) are not sufficient.
-
-    Args:
-        token(str): A valid bearer token
-
-    Returns:
-        dict: valid headers for use with the requests module
-    """
-    return {
-        "Content-Type": "application/json",
-        "Accept-Encoding": "gzip",
-        "Authorization": "Bearer " + token,
-        "apollographql-client-name": "t5g-field-support-team-utils",
-        "apollographql-client-version": "1.0",
-    }
-
-
-# t5gweb.organize_cards only has {"Waiting on Red Hat", "Waiting on Customer",
-# "Closed"} columns and KeyErrors on anything else, so collapse the whole Status
-# picklist to those three buckets at ingest: closed -> "Closed", any customer-side
-# wait -> "Waiting on Customer", everything else (Red Hat is the active party) ->
-# "Waiting on Red Hat".
-def remap_case_status(status):
-    """Collapse a GraphQL case status into a display bucket.
+    ``max_portal_results`` and ``graphql_population_workers`` arrive as strings
+    from the environment; treat a missing, non-numeric or non-positive value as
+    "unset".
 
     Args:
-        status(str): the Status value returned by the GraphQL API.
+        value: the raw config value (str, int or None).
 
     Returns:
-        str: one of "Closed", "Waiting on Customer", or "Waiting on Red Hat".
-            An empty/missing status defaults to "Waiting on Red Hat" so the
-            table view never KeyErrors.
+        int or None: the positive integer, or None when there is no valid value.
     """
-    lowered = (status or "").lower()
-    if "closed" in lowered:
-        return "Closed"
-    if "customer" in lowered:
-        return "Waiting on Customer"
-    return "Waiting on Red Hat"
+    try:
+        result = int(value)
+    except (TypeError, ValueError):
+        return None
+    return result if result > 0 else None
 
 
 def format_date(the_date):
