@@ -333,39 +333,6 @@ def _hydrate_case_graphql(url, headers, case_number):
     return (data.get("data") or {}).get("case")
 
 
-def _hydrate_case_with_reauth(cfg, url, headers, case_number):
-    """Hydrate a case, refreshing the access token once on failure.
-
-    Access tokens are short-lived, so during a long sync a hydration call may
-    fail with an auth error; refresh the token and retry once (mirrors the 401
-    handling the REST loop used to do).
-
-    Args:
-        cfg: configuration dictionary (needs ``offline_token``).
-        url: the GraphQL endpoint.
-        headers: current GraphQL request headers.
-        case_number: the case number to hydrate.
-
-    Returns:
-        tuple: ``(case_json_or_None, headers)`` - the (possibly refreshed)
-            headers are returned so the caller can reuse them for later cases.
-    """
-    try:
-        return _hydrate_case_graphql(url, headers, case_number), headers
-    except Exception as exc:
-        logging.warning(
-            "re-authenticating after hydration error for %s: %s", case_number, exc
-        )
-        headers = make_graphql_headers(libtelco5g.get_token(cfg["offline_token"]))
-        try:
-            return _hydrate_case_graphql(url, headers, case_number), headers
-        except Exception as exc2:
-            logging.warning(
-                "could not hydrate case %s via GraphQL: %s", case_number, exc2
-            )
-            return None, headers
-
-
 def _int_or_none(value):
     """Coerce a config value to a positive int, or None when unset/invalid.
 
