@@ -311,24 +311,6 @@ def _fetch_saved_search_cases(cfg, token, limit=None):
     return cases
 
 
-def _hydrate_case_graphql(url, headers, case_number):
-    """Fetch full case detail via the GraphQL ``case(id)`` query (HydraCase).
-
-    GraphQL twin of ``GET /v3/cases/{n}`` (planv3.md §3b). Returns the raw
-    HydraCase object.
-
-    Args:
-        url: the GraphQL endpoint.
-        headers: GraphQL request headers.
-        case_number: the case number to hydrate.
-
-    Returns:
-        dict or None: the HydraCase object, or None if not returned.
-    """
-    data = _graphql_post(url, headers, GRAPHQL_CASE_DETAIL_QUERY, {"id": case_number})
-    return (data.get("data") or {}).get("case")
-
-
 def _int_or_none(value):
     """Coerce a config value to a positive int, or None when unset/invalid.
 
@@ -386,7 +368,10 @@ def _hydrate_cases_parallel(cfg, url, headers, case_numbers):
     def worker(case_number):
         used = state["headers"]
         try:
-            return case_number, _hydrate_case_graphql(url, used, case_number)
+            data = _graphql_post(
+                url, used, GRAPHQL_CASE_DETAIL_QUERY, {"id": case_number}
+            )
+            return case_number, (data.get("data") or {}).get("case")
         except Exception as exc:
             with lock:
                 # Only refresh if nobody else already did since this worker's
@@ -405,9 +390,10 @@ def _hydrate_cases_parallel(cfg, url, headers, case_numbers):
                         logging.warning("token refresh failed: %s", refresh_exc)
                 retry_headers = state["headers"]
             try:
-                return case_number, _hydrate_case_graphql(
-                    url, retry_headers, case_number
+                data = _graphql_post(
+                    url, retry_headers, GRAPHQL_CASE_DETAIL_QUERY, {"id": case_number}
                 )
+                return case_number, (data.get("data") or {}).get("case")
             except Exception as exc2:
                 logging.warning(
                     "could not hydrate case %s via GraphQL: %s", case_number, exc2
