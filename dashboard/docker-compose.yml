@@ -13,7 +13,7 @@ services:
       - redis_data:/data
   ### PostgresQL
   postgresql:
-    image: docker.io/postgres:18
+    image: docker.io/postgres:latest
     environment:
       - POSTGRES_USER=postgres
       - POSTGRES_PASSWORD=secret
