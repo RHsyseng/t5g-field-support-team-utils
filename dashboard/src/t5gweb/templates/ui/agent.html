@@ -1,0 +1,260 @@
+{% extends "skeleton.html" %}
+{% block title %}AI Agent{% endblock %}
+{% block content %}
+    <div class="container-fluid mt-5 pt-3">
+        <div class="row justify-content-center">
+            <div class="col-12 col-lg-10">
+                <h2>AI Case Analysis</h2>
+                <div class="input-group mb-3" id="agent-search-bar">
+                    <input type="text"
+                           class="form-control"
+                           id="case-number-input"
+                           placeholder="Enter case number (e.g. 03252981)"
+                           aria-label="Case number">
+                    <button class="btn btn-primary" type="button" id="search-btn">Search</button>
+                </div>
+
+                <div id="agent-alert" class="alert d-none" role="alert"></div>
+
+                <div id="analysis-progress" class="d-none mb-3">
+                    <div class="d-flex align-items-center">
+                        <strong>Analysis in progress...</strong>
+                        <div class="spinner-border ms-auto" role="status" aria-hidden="true"></div>
+                    </div>
+                    <div class="progress mt-2">
+                        <div class="progress-bar progress-bar-striped progress-bar-animated"
+                             role="progressbar" style="width: 100%"></div>
+                    </div>
+                    <small class="text-muted" id="analysis-status-text"></small>
+                </div>
+
+                <div id="report-container" class="d-none">
+                    <div class="d-flex justify-content-between align-items-center mb-3">
+                        <div>
+                            <span class="badge" id="report-status-badge"></span>
+                            <span class="badge" id="report-confidence-badge"></span>
+                            <small class="text-muted ms-2" id="report-meta"></small>
+                        </div>
+                        <div>
+                            <button class="btn btn-sm btn-outline-secondary" id="toggle-view-btn">Raw JSON</button>
+                            <button class="btn btn-sm btn-outline-primary" id="reanalyze-btn" title="Force re-analysis">Re-analyze</button>
+                        </div>
+                    </div>
+
+                    <div id="structured-view">
+                        <div class="card mb-3">
+                            <div class="card-header"><strong>Root Cause Hypothesis</strong></div>
+                            <div class="card-body" id="hypothesis-body"></div>
+                        </div>
+
+                        <div class="card mb-3" id="domain-tags-card">
+                            <div class="card-header"><strong>Domain Tags</strong></div>
+                            <div class="card-body" id="domain-tags-body"></div>
+                        </div>
+
+                        <div class="card mb-3" id="recommendations-card">
+                            <div class="card-header"><strong>Recommendations</strong></div>
+                            <div class="card-body p-0">
+                                <table class="table table-hover mb-0">
+                                    <thead>
+                                        <tr>
+                                            <th>Action</th>
+                                            <th>Command</th>
+                                            <th>Risk</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody id="recommendations-tbody"></tbody>
+                                </table>
+                            </div>
+                        </div>
+
+                        <div class="card mb-3" id="similar-cases-card">
+                            <div class="card-header"><strong>Similar Cases</strong></div>
+                            <div class="card-body p-0">
+                                <table class="table table-hover mb-0">
+                                    <thead>
+                                        <tr>
+                                            <th>Case</th>
+                                            <th>Similarity</th>
+                                            <th>Relevance</th>
+                                            <th>Resolution</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody id="similar-cases-tbody"></tbody>
+                                </table>
+                            </div>
+                        </div>
+
+                        <div class="card mb-3" id="jiras-card">
+                            <div class="card-header"><strong>Engineering Jiras</strong></div>
+                            <div class="card-body p-0">
+                                <table class="table table-hover mb-0">
+                                    <thead>
+                                        <tr>
+                                            <th>Key</th>
+                                            <th>Summary</th>
+                                            <th>Status</th>
+                                            <th>Priority</th>
+                                            <th>Fix Versions</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody id="jiras-tbody"></tbody>
+                                </table>
+                            </div>
+                        </div>
+
+                        <div class="card mb-3" id="case-resolution-card">
+                            <div class="card-header">
+                                <strong>Case Resolution</strong>
+                                <span class="badge bg-secondary ms-2" id="case-resolution-status-badge"></span>
+                            </div>
+                            <div class="card-body">
+                                <p class="lead mb-3" id="case-resolution-message"></p>
+                                <div class="row">
+                                    <div class="col-md-6">
+                                        <div class="metric-card">
+                                            <span class="metric-label">Code Findings</span>
+                                            <span class="metric-value" id="code-findings-count">0</span>
+                                        </div>
+                                    </div>
+                                    <div class="col-md-6">
+                                        <div class="metric-card">
+                                            <span class="metric-label">Proposed Fixes</span>
+                                            <span class="metric-value" id="proposed-fixes-count">0</span>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+
+                        <div class="card mb-3" id="kb-card">
+                            <div class="card-header"><strong>KB References</strong></div>
+                            <div class="card-body p-0">
+                                <table class="table table-hover mb-0">
+                                    <thead>
+                                        <tr>
+                                            <th>Title</th>
+                                            <th>Type</th>
+                                            <th>Snippet</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody id="kb-tbody"></tbody>
+                                </table>
+                            </div>
+                        </div>
+
+                        <div class="card mb-3" id="questions-card">
+                            <div class="card-header"><strong>Clarifying Questions</strong></div>
+                            <div class="card-body">
+                                <ul id="questions-list"></ul>
+                            </div>
+                        </div>
+
+                        <div class="card mb-3" id="agents-card">
+                            <div class="card-header"><strong>Agent Summaries</strong></div>
+                            <div class="card-body" id="agents-body"></div>
+                        </div>
+
+                        <div class="card mb-3" id="degraded-card">
+                            <div class="card-header"><strong>Degraded Steps</strong></div>
+                            <div class="card-body p-0">
+                                <table class="table table-hover mb-0">
+                                    <thead>
+                                        <tr>
+                                            <th>Step</th>
+                                            <th>Reason</th>
+                                            <th>Impact</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody id="degraded-tbody"></tbody>
+                                </table>
+                            </div>
+                        </div>
+
+                        <div class="card mb-3" id="warnings-card">
+                            <div class="card-header"><strong>Context Warnings</strong></div>
+                            <div class="card-body">
+                                <ul id="warnings-list"></ul>
+                            </div>
+                        </div>
+
+                        <div class="card mb-3" id="attachments-card">
+                            <div class="card-header"><strong>Attachments Reviewed</strong></div>
+                            <div class="card-body p-0">
+                                <table class="table table-hover mb-0">
+                                    <thead>
+                                        <tr>
+                                            <th>File</th>
+                                            <th>Type</th>
+                                            <th>Size (KB)</th>
+                                            <th>Status</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody id="attachments-tbody"></tbody>
+                                </table>
+                            </div>
+                        </div>
+
+                        <div class="card mb-3" id="validation-card">
+                            <div class="card-header"><strong>Hypothesis Validation</strong></div>
+                            <div class="card-body" id="validation-body"></div>
+                        </div>
+                    </div>
+
+                    <div id="raw-view" class="d-none">
+                        <pre id="raw-json" class="bg-light p-3 border rounded" style="max-height: 600px; overflow: auto;"></pre>
+                    </div>
+
+                    <div class="mt-3 mb-3" id="thinking-log-section">
+                        <button class="btn btn-sm btn-outline-secondary" type="button"
+                                data-bs-toggle="collapse" data-bs-target="#thinking-log-collapse">
+                            Thinking Log
+                        </button>
+                        <div class="collapse mt-2" id="thinking-log-collapse">
+                            <div class="card card-body p-0">
+                                <table class="table table-sm table-hover mb-0">
+                                    <thead>
+                                        <tr>
+                                            <th>Round</th>
+                                            <th>Agent</th>
+                                            <th>Action</th>
+                                            <th>Detail</th>
+                                            <th>Duration</th>
+                                            <th>Tokens In</th>
+                                            <th>Tokens Out</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody id="thinking-log-tbody"></tbody>
+                                </table>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="d-flex align-items-center gap-2 mb-4" id="feedback-section">
+                        <span>Was this analysis helpful?</span>
+                        <button class="btn btn-sm btn-outline-success" id="feedback-up" title="Thumbs up">
+                            <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" fill="currentColor" viewBox="0 0 16 16">
+                                <path d="M6.956 1.745C7.021.81 7.908.087 8.864.325l.261.066c.463.116.874.456 1.012.965.22.816.533 2.511.062 4.51a10 10 0 0 1 .443-.051c.713-.065 1.669-.072 2.516.21.518.173.994.681 1.2 1.273.184.532.16 1.162-.234 1.733.058.119.103.242.138.363.077.27.113.567.113.856s-.036.586-.113.856c-.039.135-.09.273-.16.404.169.387.107.819-.003 1.148a3.2 3.2 0 0 1-.488.901c.054.152.076.312.076.465 0 .305-.089.625-.253.912C13.1 15.522 12.437 16 11.5 16H8c-.605 0-1.07-.081-1.466-.218a4.8 4.8 0 0 1-.97-.484l-.048-.03c-.504-.307-.999-.609-2.068-.722C2.682 14.464 2 13.846 2 13V9c0-.85.685-1.432 1.357-1.615.849-.232 1.574-.787 2.132-1.41.56-.627.914-1.28 1.039-1.639.199-.575.356-1.539.428-2.59z"/>
+                            </svg>
+                        </button>
+                        <button class="btn btn-sm btn-outline-danger" id="feedback-down" title="Thumbs down">
+                            <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" fill="currentColor" viewBox="0 0 16 16">
+                                <path d="M6.956 14.534c.065.936.952 1.659 1.908 1.42l.261-.065a1.38 1.38 0 0 0 1.012-.965c.22-.816.533-2.512.062-4.51q.205.03.443.051c.713.065 1.669.071 2.516-.211.518-.173.994-.68 1.2-1.272a1.9 1.9 0 0 0-.234-1.734c.058-.118.103-.242.138-.362.077-.27.113-.568.113-.856s-.036-.586-.113-.857a2 2 0 0 0-.16-.403c.169-.387.107-.82-.003-1.149a3.2 3.2 0 0 0-.488-.9c.054-.153.076-.313.076-.466a1.65 1.65 0 0 0-.253-.912C13.1.757 12.437.28 11.5.28H8c-.605 0-1.07.08-1.466.217a4.8 4.8 0 0 0-.97.485l-.048.029c-.504.308-.999.61-2.068.723C2.682 1.815 2 2.434 2 3.279v4c0 .851.685 1.433 1.357 1.616.849.232 1.574.787 2.132 1.41.56.626.914 1.28 1.039 1.638.199.575.356 1.54.428 2.591"/>
+                            </svg>
+                        </button>
+                        <span id="feedback-status" class="text-muted small"></span>
+                    </div>
+                </div>
+
+                <div id="no-report" class="d-none">
+                    <div class="alert alert-info">
+                        No AI analysis found for case <strong id="no-report-case"></strong>.
+                    </div>
+                    <button class="btn btn-primary" id="run-analysis-btn">Run Analysis</button>
+                </div>
+            </div>
+        </div>
+    </div>
+    <script type="text/javascript" charset="utf8"
+            src="{{ url_for('static', filename='js/agent.js') }}"></script>
+{% endblock %}
