@@ -558,6 +558,12 @@ def get_stats():
     )
 
 
+@BP.route("/agent")
+@login_required
+def agent_view():
+    return render_template("ui/agent.html", timestamp=redis_get("timestamp"))
+
+
 @BP.route("/account/<string:account>")
 @login_required
 def get_account(account):
