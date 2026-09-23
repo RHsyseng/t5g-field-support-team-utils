@@ -1290,7 +1290,11 @@ def _extract_assignee_email(bug):
         str: Assignee email address, or None if not assigned
     """
     if bug.fields.assignee is not None:
-        return bug.fields.assignee.emailAddress
+        # Atlassian hides emailAddress under GDPR privacy settings, so the
+        # assignee User can lack the attribute entirely. Degrade to None
+        # instead of raising - otherwise _process_case_issues drops every
+        # issue on the case and the case vanishes from the issues cache.
+        return getattr(bug.fields.assignee, "emailAddress", None)
     return None
 
 
