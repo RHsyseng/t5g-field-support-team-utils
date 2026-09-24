@@ -8,7 +8,6 @@ import time
 import xmlrpc
 
 import bugzilla
-import requests
 from dateutil import parser as date_parser
 from jira.exceptions import JIRAError
 
@@ -25,7 +24,6 @@ from t5gweb.utils import (
     format_date,
     int_or_none,
     is_support_case_number,
-    make_headers,
     uiapi_comment_to_dict,
 )
 
@@ -64,6 +62,12 @@ query SavedSearch($where: RedHatSupportCase_Filter, $after: String) {
 # query returns fractional-second timestamps ("2026-09-03T12:36:12.000Z"), so
 # normalize to this form at ingest to preserve the stored contract.
 _CANONICAL_TS_FORMAT = "%Y-%m-%dT%H:%M:%SZ"
+
+# Issue property maintained by the SFDC case-linking app. Holds the linked case
+# numbers as a space separated string, in plaintext - unlike the matching
+# customfield_10979, which is encrypted at rest and only readable through
+# renderedFields.
+SFDC_CASES_PROPERTY = "sfdc-cases-links"
 
 GRAPHQL_CASE_DETAIL_UIAPI_QUERY = """
 query CaseDetailUIAPI($where: RedHatSupportCase_Filter, $after: String) {
@@ -422,7 +426,7 @@ def get_escalations(cfg, cases):
         cases: cases returned from portal API using the configured query
 
     Returns:
-        list: open Jira cards that have been escalated
+        list: case numbers linked to an open escalation card
     """
     if (
         cases is None
@@ -441,17 +445,14 @@ def get_escalations(cfg, cases):
         f'"{escalations_label}" AND status != "Closed"'
     )
 
-    # Use expand to decrypt the restricted custom fields
-    # Custom field: SFDC Case Links in escalations proj.
     escalated_cards = jira_conn.search_issues(
-        jira_query, 0, max_cards, fields=["customfield_10979"], expand="renderedFields"
+        jira_query, 0, max_cards, fields=["key"], properties=SFDC_CASES_PROPERTY
     )
     escalations = []
     for card in escalated_cards:
-        # Custom field: SFDC Case Links in escalations proj.
-        case = card.renderedFields.customfield_10979
-        if case is not None:
-            escalations.append(case)
+        # One card can escalate several cases at once, so each case number has
+        # to be listed on its own - callers test membership per case number.
+        escalations.extend(_linked_case_numbers(card))
     return escalations
 
 
@@ -1005,16 +1006,36 @@ def get_bz_details(cfg):
     libtelco5g.redis_set("bugs", json.dumps(bz_dict))
 
 
+# JIRA fields needed to build an issue record. Requested explicitly so that a
+# single search returns everything, rather than a follow-up jira_conn.issue()
+# call per result.
+ISSUE_SEARCH_FIELDS = [
+    "summary",
+    "status",
+    "updated",
+    "priority",
+    "assignee",
+    "fixVersions",
+    "issuetype",
+    "customfield_10470",  # QA Contact
+    "customfield_10840",  # Severity
+    "customfield_11087",  # RH Private Keywords
+]
+
+# Case numbers per JQL query. Each case contributes an OR clause, and the GET
+# form of search/jql starts rejecting the URL past roughly 100 of them.
+_ISSUE_QUERY_CHUNK_SIZE = 50
+
+
 def get_issue_details(cfg):
     """Cache issues associated with cases
 
-    Retrieves all JIRA issues associated with open cases from the Red Hat
-    Portal API and JIRA, extracting detailed information for each issue.
-    Results are cached in Redis.
+    Retrieves all JIRA issues linked to open cases by querying JIRA for the
+    case numbers, and extracts detailed information for each issue. Results
+    are cached in Redis.
 
     Args:
-        cfg: Configuration dictionary containing API credentials and JIRA
-            connection parameters
+        cfg: Configuration dictionary containing JIRA connection parameters
 
     Returns:
         None. Results are cached in Redis under the 'issues' key.
@@ -1026,161 +1047,123 @@ def get_issue_details(cfg):
         libtelco5g.redis_set("issues", json.dumps(None))
         return
 
-    # Setup authentication and JIRA connection
-    token, headers, jira_conn = _setup_issue_processing(cfg)
+    jira_conn = libtelco5g.jira_connection(cfg)
 
-    # Process issues for all open cases
     jira_issues = {}
     open_cases = [case for case in cases if cases[case]["status"] != "Closed"]
 
-    for case in open_cases:
+    for chunk in chunked(open_cases, _ISSUE_QUERY_CHUNK_SIZE):
         try:
-            case_issues = _process_case_issues(case, cfg, token, headers, jira_conn)
-            if case_issues:
-                jira_issues[case] = case_issues
+            issues = _search_issues_by_cases(jira_conn, chunk)
         except Exception as e:
-            logging.warning("Error processing issues for case %s: %s", case, str(e))
+            # A failed chunk drops every case in it, not just one, so make it
+            # obvious which cases are missing from this refresh.
+            logging.warning("Error searching issues for cases %s: %s", chunk, str(e))
             continue
+        _collect_issues_by_case(issues, set(open_cases), jira_issues, cfg)
 
     # Cache the results
     libtelco5g.redis_set("issues", json.dumps(jira_issues))
     logging.warning("issues cached")
 
 
-def _setup_issue_processing(cfg):
-    # Generated by: Cursor
-    """Setup authentication and JIRA connection for issue processing
-
-    Initializes the necessary authentication tokens and JIRA connection
-    objects for processing issues.
+def _search_issues_by_cases(jira_conn, case_numbers):
+    """Find every JIRA issue linked to any of the given cases
 
     Args:
-        cfg: Configuration dictionary containing API credentials and JIRA
-            connection parameters
+        jira_conn: Active JIRA connection object
+        case_numbers: List of case numbers to search for
 
     Returns:
-        tuple: A 3-tuple containing (token, headers, jira_conn) for API access
+        ResultList: Matching JIRA issues, with the fields in
+            ISSUE_SEARCH_FIELDS and the SFDC case property populated
     """
-    # Reuse the existing libtelco5g setup pattern for consistency
-    token = libtelco5g.get_token(cfg["offline_token"])
-    headers = make_headers(token)
-    jira_conn = libtelco5g.jira_connection(cfg)
+    # SFDC_Cases_Links is the searchable alias the case-linking app exposes. It
+    # accepts only '~', and matches only the zero padded case number. The
+    # space separated "SFDC Cases Links" custom field is the encrypted one and
+    # silently matches nothing.
+    jql = " OR ".join(f'SFDC_Cases_Links ~ "{case}"' for case in case_numbers)
 
-    return token, headers, jira_conn
+    # maxResults=False pages through the whole result set via nextPageToken.
+    # search_issues() can't be used here: against JIRA Cloud it only works when
+    # startAt is 0, so it can't return more than one page.
+    return jira_conn.enhanced_search_issues(
+        jql,
+        maxResults=False,
+        fields=ISSUE_SEARCH_FIELDS,
+        expand="renderedFields",
+        properties=SFDC_CASES_PROPERTY,
+    )
 
 
-def _process_case_issues(case, cfg, token, headers, jira_conn):
-    # Generated by: Cursor
-    """Process all issues for a specific case
-
-    Retrieves issues from the API for a case and processes each one to extract
-    detailed JIRA information.
+def _linked_case_numbers(issue):
+    """Read the case numbers linked to a JIRA issue
 
     Args:
-        case: Case number to process
+        issue: JIRA issue object fetched with the SFDC case property
+
+    Returns:
+        set: Linked case numbers, empty if the issue has no linked cases
+    """
+    properties = issue.raw.get("properties") or {}
+    value = (properties.get(SFDC_CASES_PROPERTY) or {}).get("value")
+    if not value:
+        return set()
+    return set(str(value).split())
+
+
+def _collect_issues_by_case(issues, open_cases, jira_issues, cfg):
+    """Map search results onto the cases they belong to
+
+    Args:
+        issues: JIRA issues returned by a case search
+        open_cases: Set of open case numbers being cached
+        jira_issues: Dictionary of case number to issue list, updated in place
         cfg: Configuration dictionary
-        token: Authentication token for Red Hat Portal API
-        headers: HTTP headers for API requests
-        jira_conn: Active JIRA connection object
 
     Returns:
-        list: List of processed issue dictionaries, or None if no valid issues
-            found
+        None. 'jira_issues' is updated in place.
     """
-    # Get issues from API
-    issues_data = _get_case_issues_from_api(case, cfg, token, headers)
-    if not issues_data:
-        return None
+    for issue in issues:
+        # An issue can be linked to several cases, so rather than trusting the
+        # '~' text match it is mapped back through the property it matched on.
+        matched = _linked_case_numbers(issue) & open_cases
+        if not matched:
+            continue
 
-    case_issues = []
-    for issue in issues_data:
-        if "title" in issue.keys():
-            try:
-                processed_issue = _process_single_jira_issue(issue, jira_conn)
-                if processed_issue:
-                    case_issues.append(processed_issue)
-            except JIRAError:
-                logging.warning("Can't access %s", issue["resourceKey"])
-                continue
-            except Exception as e:
-                logging.warning(
-                    "Error processing issue %s: %s",
-                    issue.get("resourceKey", "unknown"),
-                    str(e),
-                )
-                continue
+        try:
+            issue_data = _build_issue_data(issue, cfg)
+        except Exception as e:
+            logging.warning("Error processing issue %s: %s", issue.key, str(e))
+            continue
 
-    return case_issues if case_issues else None
+        for case in matched:
+            case_issues = jira_issues.setdefault(case, [])
+            # A multi-case issue comes back once per chunk covering any of its
+            # cases, so guard against listing it against a case twice.
+            if not any(existing["id"] == issue_data["id"] for existing in case_issues):
+                case_issues.append(issue_data)
 
 
-def _get_case_issues_from_api(case, cfg, token, headers):
-    # Generated by: Cursor
-    """Get issues for a case from the Red Hat API
-
-    Makes an API request to retrieve all JIRA issues associated with a
-    specific case. Handles 401 authentication errors with retry.
+def _build_issue_data(issue, cfg):
+    """Build the issue record consumed by the dashboard
 
     Args:
-        case: Case number to query
-        cfg: Configuration dictionary containing API endpoint
-        token: Authentication token for Red Hat Portal API
-        headers: HTTP headers for API requests
+        issue: JIRA issue object fetched with ISSUE_SEARCH_FIELDS
+        cfg: Configuration dictionary containing the JIRA server URL
 
     Returns:
-        list: List of issue data from API, or None if no issues found or
-            request fails
+        dict: Complete issue data dictionary with all extracted fields
     """
-    issues_url = f"{cfg['redhat_api']}/cases/{case}/jiras"
-    issues = requests.get(issues_url, headers=headers)
-
-    # Handle 401 authorization errors
-    if issues.status_code == 401:
-        token = libtelco5g.get_token(cfg["offline_token"])
-        headers = make_headers(token)
-        issues = requests.get(issues_url, headers=headers)
-
-    if issues.status_code == 200 and len(issues.json()) > 0:
-        return issues.json()
-
-    return None
-
-
-def _process_single_jira_issue(issue, jira_conn):
-    # Generated by: Cursor
-    """Process a single JIRA issue and extract all relevant fields
-
-    Retrieves full details for a JIRA issue and extracts all relevant fields
-    including status, QA contact, severity, assignee, and more.
-
-    Args:
-        issue: Issue data dictionary from Red Hat API containing resourceKey
-            and other basic info
-        jira_conn: Active JIRA connection object
-
-    Returns:
-        dict: Complete issue data dictionary with all extracted fields, or
-            None if issue cannot be accessed
-    """
-    try:
-        bug = jira_conn.issue(issue["resourceKey"], expand="renderedFields")
-    except JIRAError:
-        logging.warning("Can't access %s", issue["resourceKey"])
-        return None
-
-    # Extract all JIRA fields
-    jira_fields = _extract_jira_fields(bug)
-
-    # Build the complete issue data
     return {
-        "id": issue["resourceKey"],
-        "url": issue["resourceURL"],
-        "title": issue["title"],
-        "status": issue["status"],
-        "updated": datetime.datetime.strftime(
-            format_date(str(issue["lastModifiedDate"])),
-            "%Y-%m-%d",
-        ),
-        **jira_fields,
+        "id": issue.key,
+        "url": "{}/browse/{}".format(cfg["server"].rstrip("/"), issue.key),
+        "title": issue.fields.summary,
+        "status": issue.fields.status.name,
+        # JIRA timestamps carry milliseconds and a numeric UTC offset, which
+        # utils.format_date's fixed format doesn't accept.
+        "updated": date_parser.parse(issue.fields.updated).strftime("%Y-%m-%d"),
+        **_extract_jira_fields(issue),
     }
 
 
@@ -1292,8 +1275,8 @@ def _extract_assignee_email(bug):
     if bug.fields.assignee is not None:
         # Atlassian hides emailAddress under GDPR privacy settings, so the
         # assignee User can lack the attribute entirely. Degrade to None
-        # instead of raising - otherwise _process_case_issues drops every
-        # issue on the case and the case vanishes from the issues cache.
+        # instead of raising - otherwise _collect_issues_by_case drops the
+        # issue from every case it is linked to.
         return getattr(bug.fields.assignee, "emailAddress", None)
     return None
 
