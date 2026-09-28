@@ -336,18 +336,14 @@ def slack_notify(ini, notification_content):
 
         # Get severity #. Ex: "3 (Normal)" => "3"
         severity = re.search(r"\d+", notification_content[card]["severity"])
-        description = notification_content[card]["description"]
 
-        # Posting Summaries + reply with Description
+        # Posting Summaries
         if severity and int(severity.group()) < 3:
             channel = ini["high_severity_slack_channel"]
         else:
             channel = ini["low_severity_slack_channel"]
         try:
-            message = client.chat_postMessage(channel=channel, text=body)
-            client.chat_postMessage(
-                channel=channel, text=description, thread_ts=message["ts"]
-            )
+            client.chat_postMessage(channel=channel, text=body)
         except SlackApiError as slack_error:
             logging.warning("failed to post to slack: %s", slack_error)
 
