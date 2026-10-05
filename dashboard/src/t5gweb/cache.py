@@ -91,6 +91,27 @@ query CaseDetailUIAPI($where: RedHatSupportCase_Filter, $after: String) {
 }
 """
 
+# Confirms whether a case that dropped out of the open saved-search is genuinely
+# closed (vs. merely pushed past max_portal_results). Reads IsClosed/ClosedDate
+# straight from the authoritative RedHatSupportCase object, batched by case
+# number like the detail query.
+GRAPHQL_CASE_CLOSURE_UIAPI_QUERY = """
+query CaseClosureUIAPI($where: RedHatSupportCase_Filter, $after: String) {
+  redhat_support_uiapi { query {
+    RedHatSupportCase(where: $where, first: 100, after: $after) {
+      pageInfo { hasNextPage endCursor }
+      edges { node {
+        CaseNumber__c { value }
+        IsClosed { value }
+        ClosedDate { value }
+        Status { value }
+        LastModifiedDate { value }
+      } }
+    }
+  } }
+}
+"""
+
 # Cases per detail request. The UIAPI object accepts CaseNumber__c: { in: [...] },
 # so open cases are fetched in batches (one request per chunk, plus paging) rather
 # than one round-trip per case. 100 matches the query's first:100 page size, so a
@@ -340,6 +361,169 @@ def fetch_case_details_uiapi(cfg, token, case_numbers):
     return details
 
 
+def fetch_case_closure_uiapi(cfg, token, case_numbers):
+    """Fetch IsClosed / ClosedDate for the given cases from the UIAPI object.
+
+    Used by ``merge_closed_cases`` to confirm whether a case that dropped out of
+    the open saved-search is genuinely closed (vs. merely pushed past the result
+    cap). Batches ``case_numbers`` into ``CaseNumber__c: { in: <chunk> }`` filters
+    and cursor-pages each chunk, refreshing the access token once on error and
+    skipping a chunk that still fails rather than aborting the whole pass.
+
+    Args:
+        cfg: configuration dictionary (needs ``graphql_api`` and
+            ``offline_token``).
+        token: a valid bearer access token.
+        case_numbers: list of case numbers to check.
+
+    Returns:
+        dict: case number -> ``{"is_closed": bool, "closeddate": str|None,
+            "status": str|None, "last_update": str|None}``. Cases with no
+            returned node are omitted.
+    """
+    url = cfg["graphql_api"]
+    headers = make_graphql_headers(token)
+    closure = {}
+
+    for chunk in chunked(case_numbers, _CASE_DETAIL_CHUNK_SIZE):
+        where = {"CaseNumber__c": {"in": chunk}}
+        after = None
+        while True:
+            variables = {"where": where, "after": after}
+            try:
+                data = graphql_post(
+                    url, headers, GRAPHQL_CASE_CLOSURE_UIAPI_QUERY, variables
+                )
+            except RuntimeError as exc:
+                # Refresh the token once and retry this page; drop the chunk if it
+                # still fails so one bad batch does not abort the whole pass.
+                logging.warning("re-authenticating after closure error: %s", exc)
+                try:
+                    headers = make_graphql_headers(
+                        libtelco5g.get_token(cfg["offline_token"])
+                    )
+                    data = graphql_post(
+                        url, headers, GRAPHQL_CASE_CLOSURE_UIAPI_QUERY, variables
+                    )
+                except Exception as exc2:
+                    logging.warning(
+                        "could not fetch closure for chunk %s: %s", chunk, exc2
+                    )
+                    break
+
+            conn = data["data"]["redhat_support_uiapi"]["query"]["RedHatSupportCase"]
+            for edge in conn["edges"]:
+                node = edge["node"]
+                case_number = (node.get("CaseNumber__c") or {}).get("value")
+                if not case_number:
+                    continue
+                closure[case_number] = {
+                    "is_closed": bool((node.get("IsClosed") or {}).get("value")),
+                    "closeddate": (node.get("ClosedDate") or {}).get("value"),
+                    "status": (node.get("Status") or {}).get("value"),
+                    "last_update": (node.get("LastModifiedDate") or {}).get("value"),
+                }
+
+            page_info = conn["pageInfo"]
+            if not page_info["hasNextPage"]:
+                break
+            after = page_info["endCursor"]
+
+    return closure
+
+
+def _ensure_closeddate(entry):
+    """Guarantee a closed-case projection carries a ``closeddate``.
+
+    ``generate_stats`` reads ``data["closeddate"]`` directly on every case whose
+    status is "Closed", so a carried-forward closed case missing the key (e.g.
+    one closed before this feature existed) would KeyError. Fall back to the last
+    update, then the create date. Mutates and returns ``entry``.
+    """
+    if not entry.get("closeddate"):
+        entry["closeddate"] = entry.get("last_update") or entry.get("createdate")
+    return entry
+
+
+def merge_closed_cases(cfg, token, cases):
+    """Keep previously-known cases that dropped out of the open saved-search.
+
+    ``get_cases`` rebuilds ``cases`` from the open-only saved-search and then
+    overwrites the Redis cache wholesale, so a case that leaves the open result -
+    because it closed (the common path) or, rarely, because it fell past
+    ``max_portal_results`` - would silently vanish from the dashboard. Load the
+    prior cache and carry forward the cases missing from this run:
+
+    - cases already marked "Closed" carry forward unchanged (no re-verification),
+      which keeps the GraphQL closure query bounded to recently-dropped cases;
+    - cases that were open last run are verified against GraphQL - genuinely
+      closed ones are kept marked "Closed" with their real ClosedDate, while
+      still-open or unverifiable ones are carried forward untouched so history is
+      never lost.
+
+    Mutates ``cases`` in place.
+
+    Args:
+        cfg: configuration dictionary.
+        token: a valid bearer access token (reused for the closure query).
+        cases: the freshly selected open-case projection, keyed by case number.
+
+    Returns:
+        None. ``cases`` is updated in place.
+    """
+    # redis_get already JSON-decodes, returning a dict (or {} when the key is
+    # missing or Redis is unreachable).
+    prior = libtelco5g.redis_get("cases")
+    if not prior:
+        return
+
+    dropped = [case for case in prior if case not in cases]
+    if not dropped:
+        return
+
+    to_verify = []
+    for case in dropped:
+        if prior[case].get("status") == "Closed":
+            cases[case] = _ensure_closeddate(prior[case])
+        else:
+            to_verify.append(case)
+
+    if not to_verify:
+        return
+
+    try:
+        closure = fetch_case_closure_uiapi(cfg, token, to_verify)
+    except Exception as e:
+        # Keep the prior entries untouched on a verification failure rather than
+        # dropping them; the next run retries.
+        logging.error("failed to verify closure for dropped cases: %s", e)
+        closure = {}
+
+    newly_closed = 0
+    for case in to_verify:
+        entry = prior[case]
+        info = closure.get(case)
+        if info and info.get("is_closed"):
+            entry["status"] = "Closed"
+            entry["closeddate"] = (
+                normalize_timestamp(info.get("closeddate"))
+                or entry.get("last_update")
+                or entry.get("createdate")
+            )
+            if info.get("last_update"):
+                entry["last_update"] = normalize_timestamp(info["last_update"])
+            newly_closed += 1
+        # Still open (dropped past the result cap) or unverifiable: carry the
+        # prior projection forward unchanged so it is not lost.
+        cases[case] = entry
+
+    logging.warning(
+        "carried forward %s dropped cases (%s newly marked closed)",
+        len(dropped),
+        newly_closed,
+    )
+
+
 def get_cases(cfg):
     """Get cases from the Red Hat GraphQL saved-search and cache them
 
@@ -352,6 +536,11 @@ def get_cases(cfg):
     fields the light query cannot supply (description, tags, product_version,
     owner) are left blank / "in progress" placeholders. Results are stored in
     both PostgreSQL and Redis.
+
+    Because the saved-search is open-only, previously-known cases that have since
+    closed are no longer returned; ``merge_closed_cases`` carries them forward
+    marked "Closed" (with their real close date) so they are retained for history
+    rather than dropped by the Redis overwrite.
 
     Args:
         cfg: Configuration dictionary containing API credentials, the
@@ -406,6 +595,12 @@ def get_cases(cfg):
             len(skipped),
             skipped,
         )
+
+    # The saved-search is open-only, so a case that has closed since the last run
+    # is now absent from `cases` and the Redis overwrite below would drop it.
+    # Carry forward the previously-known cases instead, marking the genuinely
+    # closed ones "Closed" so the dashboard keeps a history.
+    merge_closed_cases(cfg, token, cases)
 
     end = time.time()
     logging.warning("selected %s cases in %s seconds", len(cases), end - start)

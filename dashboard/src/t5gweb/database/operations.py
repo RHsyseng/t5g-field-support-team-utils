@@ -28,6 +28,7 @@ def load_cases_postgres(cases):
             - status: Current case status
             - createdate: Case creation timestamp string
             - last_update: Last modified timestamp string
+            - closeddate: Close timestamp string (optional; set on closed cases)
             - description: Case description text
             - product: Product name
             - product_version: Product version
@@ -53,6 +54,11 @@ def load_cases_postgres(cases):
                 status=cases[case]["status"],
                 created_date=case_created_date,  # Use parsed datetime
                 last_update=parser.parse(cases[case]["last_update"]),  # Parse this too
+                closed_date=(
+                    parser.parse(cases[case]["closeddate"])
+                    if cases[case].get("closeddate")
+                    else None
+                ),
                 description=cases[case]["description"],
                 product=cases[case]["product"],
                 product_version=cases[case]["product_version"],
