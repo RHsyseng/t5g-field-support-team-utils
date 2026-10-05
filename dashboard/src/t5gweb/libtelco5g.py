@@ -558,6 +558,18 @@ def _handle_old_case(case, context, cfg):
     read_only = os.getenv("READ_ONLY", "false") == "true"
 
     if previous_issue and not read_only:
+        # A card that is already in the "To Do" column was never closed, so
+        # "reopening" it makes no sense. Without this guard the dashboard re-runs
+        # the transition and re-posts the "reopened" comment on every hourly
+        # sync whenever the card is missing from the cards cache, spamming the
+        # card. Only reopen a card that is in a different (e.g. closed) column.
+        if previous_issue.fields.status.name == "To Do":
+            logging.warning(
+                f"{previous_issue.key} is already in To Do; "
+                f"not reopening case {case}."
+            )
+            return True
+
         logging.warning(
             f"Updating: {previous_issue.key} rather than creating new card."
         )
