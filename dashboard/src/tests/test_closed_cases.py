@@ -350,6 +350,31 @@ class TestMergeClosedCases:
 
         assert cases["capped"]["status"] == "Waiting on Customer"
 
+    def test_postgres_error_falls_back_to_redis_universe(self, monkeypatch):
+        # When load_open_cases_postgres raises PgError, the merge degrades to the
+        # Redis universe alone instead of blowing up the whole sync.
+        from t5gweb.database import PgError
+
+        def _boom():
+            raise PgError("db down")
+
+        monkeypatch.setattr(cache, "load_open_cases_postgres", _boom)
+        prior = {"gone": _open_entry("gone")}
+        monkeypatch.setattr(cache.libtelco5g, "redis_get", lambda key: prior)
+        monkeypatch.setattr(cache, "make_graphql_headers", lambda token: {})
+        monkeypatch.setattr(
+            cache,
+            "graphql_post",
+            lambda *a, **k: _page(
+                [_closure_node("gone", True, closed_date="2026-03-01T10:00:00.000Z")]
+            ),
+        )
+
+        cases = {}
+        merge_closed_cases({"graphql_api": "x"}, "tok", cases)
+
+        assert cases["gone"]["status"] == "Closed"
+
     def test_redis_projection_preferred_over_postgres(self, monkeypatch):
         # When both Redis and Postgres hold the case, the fresher full-fidelity
         # Redis projection (description, etc.) wins over the stored Postgres one.

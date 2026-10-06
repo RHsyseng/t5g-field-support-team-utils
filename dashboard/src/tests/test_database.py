@@ -777,17 +777,19 @@ class TestLoadOpenCasesPostgres:
     def test_empty_database_returns_empty_dict(self, test_db_session):
         assert load_open_cases_postgres() == {}
 
-    def test_returns_empty_dict_on_database_error(self):
-        """A failure while reading degrades gracefully to an empty universe so
-        the caller falls back to the Redis cache alone (and the session is still
-        closed)."""
+    def test_raises_pgerror_on_database_error(self):
+        """A failure while reading is surfaced as PgError so the caller decides
+        how to recover (merge_closed_cases falls back to the Redis cache alone);
+        the session is still closed."""
+        from t5gweb.database import PgError
         from t5gweb.database.session import db_config
 
         failing_session = Mock()
         failing_session.query.side_effect = RuntimeError("down")
 
         with patch.object(db_config, "SessionLocal", return_value=failing_session):
-            assert load_open_cases_postgres() == {}
+            with pytest.raises(PgError):
+                load_open_cases_postgres()
 
         failing_session.close.assert_called_once()
 

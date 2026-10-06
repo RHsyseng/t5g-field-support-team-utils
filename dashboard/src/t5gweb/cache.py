@@ -13,6 +13,7 @@ from jira.exceptions import JIRAError
 
 from t5gweb import libtelco5g
 from t5gweb.database import (
+    PgError,
     load_cases_postgres,
     load_comments_postgres,
     load_jira_card_postgres,
@@ -521,7 +522,13 @@ def merge_closed_cases(cfg, token, cases):
     # missing or Redis is unreachable). PostgreSQL supplies the durable universe
     # of not-yet-closed cases (already-closed ones are excluded to keep the
     # closure query bounded); Redis overlays it so fresher projections win.
-    prior = {**load_open_cases_postgres(), **(libtelco5g.redis_get("cases") or {})}
+    try:
+        pg_prior = load_open_cases_postgres()
+    except PgError:
+        # PostgreSQL is unreachable or the query failed; fall back to the Redis
+        # universe alone rather than losing the whole merge step.
+        pg_prior = {}
+    prior = {**pg_prior, **(libtelco5g.redis_get("cases") or {})}
 
     dropped = [case for case in prior if case not in cases]
     if not dropped:

@@ -12,6 +12,11 @@ from .models import Case, Comment, JiraCard, JiraComment
 from .session import db_config
 
 
+class PgError(Exception):
+    """Raised when a PostgreSQL operation fails and the caller must decide how
+    to recover (e.g. fall back to an empty result)."""
+
+
 def load_cases_postgres(cases):
     """Load or update cases data in PostgreSQL database
 
@@ -98,8 +103,11 @@ def load_open_cases_postgres():
         dict: case number -> projection dict in the same shape ``get_cases``
             builds (``owner``, ``severity``, ``account``, ``problem``,
             ``status``, ``createdate``, ``last_update``, ``closeddate``,
-            ``description``, ``product``, ``product_version``). Empty on any
-            database error (the caller falls back to the Redis universe alone).
+            ``description``, ``product``, ``product_version``).
+
+    Raises:
+        PgError: on any database error, so the caller can decide how to recover
+            (``merge_closed_cases`` falls back to the Redis universe alone).
     """
 
     def _ts(value):
@@ -126,7 +134,7 @@ def load_open_cases_postgres():
         }
     except Exception as e:
         logging.error(f"Failed to read open cases: {e}")
-        return {}
+        raise PgError(f"Failed to read open cases: {e}") from e
     finally:
         session.close()
 
