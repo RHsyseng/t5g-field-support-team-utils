@@ -15,6 +15,7 @@ from .operations import (
     load_cases_postgres,
     load_comments_postgres,
     load_jira_card_postgres,
+    load_open_cases_postgres,
 )
 
 # Import session management components
@@ -35,4 +36,5 @@ __all__ = [
     "load_cases_postgres",
     "load_comments_postgres",
     "load_jira_card_postgres",
+    "load_open_cases_postgres",
 ]

@@ -4,10 +4,14 @@ Covers fetch_case_closure_uiapi (the closure-verification query) and
 merge_closed_cases (carrying dropped cases forward, marked "Closed").
 """
 
+import pytest
+
 from t5gweb import cache
 from t5gweb.cache import (
     _ensure_closeddate,
+    backfill_tracked_cases,
     fetch_case_closure_uiapi,
+    fetch_case_projection_uiapi,
     merge_closed_cases,
 )
 
@@ -41,6 +45,33 @@ def _page(nodes, has_next=False, end_cursor=None):
                 }
             }
         }
+    }
+
+
+def _projection_node(
+    case_number,
+    is_closed=False,
+    closed_date=None,
+    status="Waiting on Red Hat",
+    account="ACME",
+    severity="2 (High)",
+    problem="prob",
+    product="OpenShift 4.16",
+    createdate="2026-01-01T00:00:00.000Z",
+    last_update="2026-02-01T00:00:00.000Z",
+):
+    """Build a RedHatSupportCase node like the projection query returns."""
+    return {
+        "CaseNumber__c": {"value": case_number},
+        "RedHatSupportAccount": {"Name": {"value": account}},
+        "Status": {"value": status},
+        "Priority": {"value": severity},
+        "Product": {"Name": {"value": product}},
+        "Subject": {"value": problem},
+        "CreatedDate": {"value": createdate},
+        "LastModifiedDate": {"value": last_update},
+        "IsClosed": {"value": is_closed},
+        "ClosedDate": {"value": closed_date},
     }
 
 
@@ -164,6 +195,13 @@ class TestEnsureCloseddate:
 
 
 class TestMergeClosedCases:
+    @pytest.fixture(autouse=True)
+    def _empty_pg_universe(self, monkeypatch):
+        """Default the Postgres universe to empty so tests that only exercise the
+        Redis path don't reach a real database. Tests covering the Postgres path
+        override this with their own ``load_open_cases_postgres`` patch."""
+        monkeypatch.setattr(cache, "load_open_cases_postgres", lambda: {})
+
     def test_no_prior_cache_is_noop(self, monkeypatch):
         monkeypatch.setattr(cache.libtelco5g, "redis_get", lambda key: {})
         cases = {"open1": _open_entry("open1")}
@@ -172,9 +210,7 @@ class TestMergeClosedCases:
 
     def test_dropped_case_verified_closed_is_marked(self, monkeypatch):
         prior = {"gone": _open_entry("gone"), "open1": _open_entry("open1")}
-        monkeypatch.setattr(
-            cache.libtelco5g, "redis_get", lambda key: prior
-        )
+        monkeypatch.setattr(cache.libtelco5g, "redis_get", lambda key: prior)
         monkeypatch.setattr(cache, "make_graphql_headers", lambda token: {})
         monkeypatch.setattr(
             cache,
@@ -198,9 +234,7 @@ class TestMergeClosedCases:
         closed["status"] = "Closed"
         closed["closeddate"] = "2026-02-15T00:00:00Z"
         prior = {"done": closed}
-        monkeypatch.setattr(
-            cache.libtelco5g, "redis_get", lambda key: prior
-        )
+        monkeypatch.setattr(cache.libtelco5g, "redis_get", lambda key: prior)
 
         def boom(*a, **k):
             raise AssertionError(
@@ -219,9 +253,7 @@ class TestMergeClosedCases:
         closed = _open_entry("done")
         closed["status"] = "Closed"  # no closeddate key
         prior = {"done": closed}
-        monkeypatch.setattr(
-            cache.libtelco5g, "redis_get", lambda key: prior
-        )
+        monkeypatch.setattr(cache.libtelco5g, "redis_get", lambda key: prior)
 
         cases = {}
         merge_closed_cases({"graphql_api": "x"}, "tok", cases)
@@ -231,9 +263,7 @@ class TestMergeClosedCases:
 
     def test_dropped_but_still_open_is_carried_unchanged(self, monkeypatch):
         prior = {"capped": _open_entry("capped", status="Waiting on Customer")}
-        monkeypatch.setattr(
-            cache.libtelco5g, "redis_get", lambda key: prior
-        )
+        monkeypatch.setattr(cache.libtelco5g, "redis_get", lambda key: prior)
         monkeypatch.setattr(cache, "make_graphql_headers", lambda token: {})
         monkeypatch.setattr(
             cache,
@@ -250,9 +280,7 @@ class TestMergeClosedCases:
 
     def test_verification_failure_keeps_prior_entries(self, monkeypatch):
         prior = {"gone": _open_entry("gone")}
-        monkeypatch.setattr(
-            cache.libtelco5g, "redis_get", lambda key: prior
-        )
+        monkeypatch.setattr(cache.libtelco5g, "redis_get", lambda key: prior)
 
         def boom(cfg, token, case_numbers):
             raise RuntimeError("graphql down")
@@ -264,3 +292,204 @@ class TestMergeClosedCases:
 
         # Entry preserved despite the failure; not dropped, not forced closed.
         assert cases["gone"]["status"] == "Waiting on Red Hat"
+
+    def test_postgres_only_closed_case_carried_from_stored_projection(
+        self, monkeypatch
+    ):
+        # Redis has already lost the case (e.g. dropped by a pre-feature build),
+        # but Postgres still holds its projection. It must be carried forward and
+        # marked Closed using the stored projection - no GraphQL rebuild.
+        monkeypatch.setattr(cache.libtelco5g, "redis_get", lambda key: {})
+        lost = _open_entry("lost")
+        lost["account"] = "ACME"
+        lost["problem"] = "recovered problem"
+        monkeypatch.setattr(cache, "load_open_cases_postgres", lambda: {"lost": lost})
+        monkeypatch.setattr(cache, "make_graphql_headers", lambda token: {})
+        monkeypatch.setattr(
+            cache,
+            "graphql_post",
+            lambda *a, **k: _page(
+                [
+                    _closure_node(
+                        "lost",
+                        is_closed=True,
+                        closed_date="2026-03-01T10:00:00.000Z",
+                        status="Closed",
+                        last_update="2026-03-01T10:00:00.000Z",
+                    )
+                ]
+            ),
+        )
+
+        cases = {}
+        merge_closed_cases({"graphql_api": "x"}, "tok", cases)
+
+        assert cases["lost"]["status"] == "Closed"
+        assert cases["lost"]["closeddate"] == "2026-03-01T10:00:00Z"
+        # The stored projection is carried through intact.
+        assert cases["lost"]["account"] == "ACME"
+        assert cases["lost"]["problem"] == "recovered problem"
+
+    def test_postgres_only_still_open_case_is_carried(self, monkeypatch):
+        # Known to Postgres, absent from Redis, and still open (dropped past the
+        # result cap): carry it forward from the stored projection, not dropped.
+        monkeypatch.setattr(cache.libtelco5g, "redis_get", lambda key: {})
+        capped = _open_entry("capped", status="Waiting on Customer")
+        monkeypatch.setattr(
+            cache, "load_open_cases_postgres", lambda: {"capped": capped}
+        )
+        monkeypatch.setattr(cache, "make_graphql_headers", lambda token: {})
+        monkeypatch.setattr(
+            cache,
+            "graphql_post",
+            lambda *a, **k: _page([_closure_node("capped", is_closed=False)]),
+        )
+
+        cases = {}
+        merge_closed_cases({"graphql_api": "x"}, "tok", cases)
+
+        assert cases["capped"]["status"] == "Waiting on Customer"
+
+    def test_redis_projection_preferred_over_postgres(self, monkeypatch):
+        # When both Redis and Postgres hold the case, the fresher full-fidelity
+        # Redis projection (description, etc.) wins over the stored Postgres one.
+        redis_prior = {"gone": _open_entry("gone")}
+        redis_prior["gone"]["description"] = "rich history text"
+        pg_prior = {"gone": _open_entry("gone")}
+        pg_prior["gone"]["description"] = "stale postgres text"
+        monkeypatch.setattr(cache.libtelco5g, "redis_get", lambda key: redis_prior)
+        monkeypatch.setattr(cache, "load_open_cases_postgres", lambda: pg_prior)
+        monkeypatch.setattr(cache, "make_graphql_headers", lambda token: {})
+        monkeypatch.setattr(
+            cache,
+            "graphql_post",
+            lambda *a, **k: _page(
+                [_closure_node("gone", True, closed_date="2026-03-01T10:00:00.000Z")]
+            ),
+        )
+
+        cases = {}
+        merge_closed_cases({"graphql_api": "x"}, "tok", cases)
+
+        assert cases["gone"]["status"] == "Closed"
+        assert cases["gone"]["description"] == "rich history text"
+
+
+class TestFetchCaseProjectionUiapi:
+    def test_parses_projection_fields(self, monkeypatch):
+        monkeypatch.setattr(cache, "make_graphql_headers", lambda token: {})
+        node = _projection_node(
+            "11111111",
+            is_closed=True,
+            closed_date="2026-03-01T10:00:00.000Z",
+            status="Closed",
+            account="ACME",
+            severity="2 (High)",
+            problem="disk full",
+            product="OpenShift 4.16",
+        )
+        monkeypatch.setattr(cache, "graphql_post", lambda *a, **k: _page([node]))
+
+        result = fetch_case_projection_uiapi({"graphql_api": "x"}, "tok", ["11111111"])
+
+        assert result == {
+            "11111111": {
+                "account": "ACME",
+                "severity": "2 (High)",
+                "status": "Closed",
+                "problem": "disk full",
+                "product": "OpenShift 4.16",
+                "createdate": "2026-01-01T00:00:00.000Z",
+                "last_update": "2026-02-01T00:00:00.000Z",
+                "is_closed": True,
+                "closeddate": "2026-03-01T10:00:00.000Z",
+            }
+        }
+
+
+class TestBackfillTrackedCases:
+    def test_no_tracked_cases_is_noop(self):
+        cases = {"open1": _open_entry("open1")}
+        assert backfill_tracked_cases({}, "tok", cases, set()) == []
+        assert cases == {"open1": _open_entry("open1")}
+
+    def test_nothing_missing_skips_fetch(self, monkeypatch):
+        def boom(*a, **k):
+            raise AssertionError("should not fetch when nothing is missing")
+
+        monkeypatch.setattr(cache, "graphql_post", boom)
+
+        cases = {"open1": _open_entry("open1")}
+        # Every tracked case is already present, so there is nothing to fetch.
+        assert (
+            backfill_tracked_cases({"graphql_api": "x"}, "tok", cases, {"open1"}) == []
+        )
+        assert cases == {"open1": _open_entry("open1")}
+
+    def test_missing_closed_case_is_backfilled_and_marked(self, monkeypatch):
+        # "gone" is tracked (has a card) but absent from cases and from any stored
+        # universe - only recoverable by fetching its projection by case number.
+        monkeypatch.setattr(cache, "make_graphql_headers", lambda token: {})
+        monkeypatch.setattr(
+            cache,
+            "graphql_post",
+            lambda *a, **k: _page(
+                [
+                    _projection_node(
+                        "gone",
+                        is_closed=True,
+                        closed_date="2026-03-01T10:00:00.000Z",
+                        status="Closed",
+                        account="ACME",
+                        problem="recovered",
+                    )
+                ]
+            ),
+        )
+
+        cases = {"open1": _open_entry("open1")}
+        added = backfill_tracked_cases(
+            {"graphql_api": "x"}, "tok", cases, {"gone", "open1"}
+        )
+
+        assert added == ["gone"]
+        assert cases["gone"]["status"] == "Closed"
+        # Timestamp normalized to the canonical (no fractional seconds) form.
+        assert cases["gone"]["closeddate"] == "2026-03-01T10:00:00Z"
+        assert cases["gone"]["account"] == "ACME"
+        assert cases["gone"]["problem"] == "recovered"
+        assert cases["gone"]["description"] == cache._PENDING_VALUE
+        # The already-present case is untouched.
+        assert cases["open1"] == _open_entry("open1")
+
+    def test_missing_open_case_backfilled_without_closeddate(self, monkeypatch):
+        monkeypatch.setattr(cache, "make_graphql_headers", lambda token: {})
+        monkeypatch.setattr(
+            cache,
+            "graphql_post",
+            lambda *a, **k: _page(
+                [
+                    _projection_node(
+                        "capped", is_closed=False, status="Waiting on Customer"
+                    )
+                ]
+            ),
+        )
+
+        cases = {}
+        backfill_tracked_cases({"graphql_api": "x"}, "tok", cases, {"capped"})
+
+        assert cases["capped"]["status"] == "Waiting on Customer"
+        assert "closeddate" not in cases["capped"]
+
+    def test_fetch_failure_is_noop(self, monkeypatch):
+        def boom(cfg, token, case_numbers):
+            raise RuntimeError("graphql down")
+
+        monkeypatch.setattr(cache, "fetch_case_projection_uiapi", boom)
+
+        cases = {}
+        assert (
+            backfill_tracked_cases({"graphql_api": "x"}, "tok", cases, {"gone"}) == []
+        )
+        assert cases == {}

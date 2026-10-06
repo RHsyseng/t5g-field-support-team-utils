@@ -80,6 +80,57 @@ def load_cases_postgres(cases):
         logging.warning("Loaded cases to Postgres")
 
 
+def load_open_cases_postgres():
+    """Return full case projections for not-yet-closed cases known to PostgreSQL.
+
+    Unlike the Redis ``cases`` cache (overwritten wholesale on every sync), the
+    PostgreSQL ``cases`` table is never bulk-cleared, so it is the durable source
+    of truth for every case the dashboard has tracked. ``merge_closed_cases``
+    uses this as its universe of previously-known cases: a case that dropped out
+    of both the open saved-search and the Redis cache still has a row here and is
+    carried forward (and re-verified) from its stored projection - no rebuild
+    from GraphQL needed.
+
+    Cases already marked ``"Closed"`` are excluded so the universe (and the
+    downstream closure re-verification) stays bounded to still-open cases.
+
+    Returns:
+        dict: case number -> projection dict in the same shape ``get_cases``
+            builds (``owner``, ``severity``, ``account``, ``problem``,
+            ``status``, ``createdate``, ``last_update``, ``closeddate``,
+            ``description``, ``product``, ``product_version``). Empty on any
+            database error (the caller falls back to the Redis universe alone).
+    """
+
+    def _ts(value):
+        return value.strftime("%Y-%m-%dT%H:%M:%SZ") if value else None
+
+    session = db_config.SessionLocal()
+    try:
+        rows = session.query(Case).filter(Case.status != "Closed").all()
+        return {
+            row.case_number: {
+                "owner": row.owner,
+                "severity": str(row.severity) if row.severity is not None else None,
+                "account": row.account,
+                "problem": row.summary,
+                "status": row.status,
+                "createdate": _ts(row.created_date),
+                "last_update": _ts(row.last_update),
+                "closeddate": _ts(row.closed_date),
+                "description": row.description,
+                "product": row.product,
+                "product_version": row.product_version,
+            }
+            for row in rows
+        }
+    except Exception as e:
+        logging.error(f"Failed to read open cases: {e}")
+        return {}
+    finally:
+        session.close()
+
+
 def load_comments_postgres(case_number, case_created_date, api_comments):
     """Load or update Portal case comments in PostgreSQL.
 

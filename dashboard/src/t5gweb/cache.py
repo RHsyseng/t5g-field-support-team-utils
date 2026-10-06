@@ -16,6 +16,7 @@ from t5gweb.database import (
     load_cases_postgres,
     load_comments_postgres,
     load_jira_card_postgres,
+    load_open_cases_postgres,
 )
 from t5gweb.graphql import graphql_post, make_graphql_headers
 from t5gweb.utils import (
@@ -93,8 +94,32 @@ query CaseDetailUIAPI($where: RedHatSupportCase_Filter, $after: String) {
 
 # Confirms whether a case that dropped out of the open saved-search is genuinely
 # closed (vs. merely pushed past max_portal_results). Reads IsClosed/ClosedDate
-# straight from the authoritative RedHatSupportCase object, batched by case
-# number like the detail query.
+# straight from the authoritative RedHatSupportCase object, batched by case number
+# like the detail query. The carried-forward projection comes from Redis/Postgres,
+# so this only needs the closure verdict and its timestamps - not the full case
+# projection.
+GRAPHQL_CASE_PROJECTION_UIAPI_QUERY = """
+query CaseProjectionUIAPI($where: RedHatSupportCase_Filter, $after: String) {
+  redhat_support_uiapi { query {
+    RedHatSupportCase(where: $where, first: 100, after: $after) {
+      pageInfo { hasNextPage endCursor }
+      edges { node {
+        CaseNumber__c { value }
+        RedHatSupportAccount { Name { value } }
+        Status { value }
+        Priority { value }
+        Product { Name { value } }
+        Subject { value }
+        CreatedDate { value }
+        LastModifiedDate { value }
+        IsClosed { value }
+        ClosedDate { value }
+      } }
+    }
+  } }
+}
+"""
+
 GRAPHQL_CASE_CLOSURE_UIAPI_QUERY = """
 query CaseClosureUIAPI($where: RedHatSupportCase_Filter, $after: String) {
   redhat_support_uiapi { query {
@@ -284,15 +309,70 @@ def fetch_saved_search_cases(cfg, token, limit=None):
     return cases
 
 
+def _fetch_uiapi_by_case_number(cfg, token, query, case_numbers, parse_node, what):
+    """Run a UIAPI ``RedHatSupportCase`` query batched by case number.
+
+    Shared skeleton for the per-case UIAPI fetches: chunk ``case_numbers`` into
+    ``CaseNumber__c: { in: <chunk> }`` filters, cursor-page each chunk, refresh
+    the access token once on error and retry, and skip a chunk that still fails
+    rather than aborting the whole pass. ``parse_node(node)`` turns a result node
+    into the stored value; results are keyed by case number.
+
+    Args:
+        cfg: configuration dictionary (needs ``graphql_api`` and
+            ``offline_token``).
+        token: a valid bearer access token.
+        query: the GraphQL query string to run.
+        case_numbers: list of case numbers to fetch.
+        parse_node: callable mapping a result node to its stored value.
+        what: short label used in log messages (e.g. ``"case details"``).
+
+    Returns:
+        dict: case number -> ``parse_node(node)``. Cases with no returned node
+            are omitted.
+    """
+    url = cfg["graphql_api"]
+    headers = make_graphql_headers(token)
+    results = {}
+
+    for chunk in chunked(case_numbers, _CASE_DETAIL_CHUNK_SIZE):
+        after = None
+        while True:
+            variables = {"where": {"CaseNumber__c": {"in": chunk}}, "after": after}
+            try:
+                data = graphql_post(url, headers, query, variables)
+            except RuntimeError as exc:
+                # Refresh the token once and retry this page; drop the chunk if it
+                # still fails so one bad batch does not abort the whole pass.
+                logging.warning("re-authenticating after %s error: %s", what, exc)
+                try:
+                    headers = make_graphql_headers(
+                        libtelco5g.get_token(cfg["offline_token"])
+                    )
+                    data = graphql_post(url, headers, query, variables)
+                except Exception as exc2:
+                    logging.warning(
+                        "could not fetch %s for chunk %s: %s", what, chunk, exc2
+                    )
+                    break
+
+            conn = data["data"]["redhat_support_uiapi"]["query"]["RedHatSupportCase"]
+            for edge in conn["edges"]:
+                node = edge["node"]
+                case_number = (node.get("CaseNumber__c") or {}).get("value")
+                if case_number:
+                    results[case_number] = parse_node(node)
+
+            page_info = conn["pageInfo"]
+            if not page_info["hasNextPage"]:
+                break
+            after = page_info["endCursor"]
+
+    return results
+
+
 def fetch_case_details_uiapi(cfg, token, case_numbers):
     """Fetch group name and comments for open cases from the UIAPI object.
-
-    Batches ``case_numbers`` into ``CaseNumber__c: { in: <chunk> }`` filters and
-    cursor-pages each chunk, reading straight from the authoritative
-    ``RedHatSupportCase`` object (see ``GRAPHQL_CASE_DETAIL_UIAPI_QUERY``). On a
-    chunk failure the access token is refreshed once and the request retried, so
-    a long population run can outlive its access token; a chunk that still fails
-    is logged and skipped rather than aborting the whole pass.
 
     Args:
         cfg: configuration dictionary (needs ``graphql_api`` and
@@ -304,71 +384,28 @@ def fetch_case_details_uiapi(cfg, token, case_numbers):
         dict: case number -> ``{"group_name": str|None, "comments": [dict, ...]}``.
             Cases with no returned node are omitted.
     """
-    url = cfg["graphql_api"]
-    headers = make_graphql_headers(token)
-    details = {}
 
-    for chunk in chunked(case_numbers, _CASE_DETAIL_CHUNK_SIZE):
-        where = {"CaseNumber__c": {"in": chunk}}
-        after = None
-        while True:
-            variables = {"where": where, "after": after}
-            try:
-                data = graphql_post(
-                    url, headers, GRAPHQL_CASE_DETAIL_UIAPI_QUERY, variables
-                )
-            except RuntimeError as exc:
-                # Refresh the token once and retry this page; drop the chunk if it
-                # still fails so one bad batch does not abort the whole pass.
-                logging.warning("re-authenticating after detail error: %s", exc)
-                try:
-                    headers = make_graphql_headers(
-                        libtelco5g.get_token(cfg["offline_token"])
-                    )
-                    data = graphql_post(
-                        url, headers, GRAPHQL_CASE_DETAIL_UIAPI_QUERY, variables
-                    )
-                except Exception as exc2:
-                    logging.warning(
-                        "could not fetch case details for chunk %s: %s", chunk, exc2
-                    )
-                    break
+    def parse(node):
+        group_name = ((node.get("Group__r") or {}).get("Name") or {}).get("value")
+        # CaseComments(first: 200) bounds volume; paginate the nested connection
+        # here if any case can exceed 200 comments.
+        comment_edges = (node.get("CaseComments") or {}).get("edges") or []
+        return {
+            "group_name": group_name,
+            "comments": [uiapi_comment_to_dict(e["node"]) for e in comment_edges],
+        }
 
-            conn = data["data"]["redhat_support_uiapi"]["query"]["RedHatSupportCase"]
-            for edge in conn["edges"]:
-                node = edge["node"]
-                case_number = (node.get("CaseNumber__c") or {}).get("value")
-                if not case_number:
-                    continue
-                group_name = ((node.get("Group__r") or {}).get("Name") or {}).get(
-                    "value"
-                )
-                # CaseComments(first: 200) bounds volume; paginate the nested
-                # connection here if any case can exceed 200 comments.
-                comment_edges = (node.get("CaseComments") or {}).get("edges") or []
-                details[case_number] = {
-                    "group_name": group_name,
-                    "comments": [
-                        uiapi_comment_to_dict(e["node"]) for e in comment_edges
-                    ],
-                }
-
-            page_info = conn["pageInfo"]
-            if not page_info["hasNextPage"]:
-                break
-            after = page_info["endCursor"]
-
-    return details
+    return _fetch_uiapi_by_case_number(
+        cfg, token, GRAPHQL_CASE_DETAIL_UIAPI_QUERY, case_numbers, parse, "case details"
+    )
 
 
 def fetch_case_closure_uiapi(cfg, token, case_numbers):
-    """Fetch IsClosed / ClosedDate for the given cases from the UIAPI object.
+    """Fetch the closure verdict (IsClosed / ClosedDate) for the given cases.
 
     Used by ``merge_closed_cases`` to confirm whether a case that dropped out of
     the open saved-search is genuinely closed (vs. merely pushed past the result
-    cap). Batches ``case_numbers`` into ``CaseNumber__c: { in: <chunk> }`` filters
-    and cursor-pages each chunk, refreshing the access token once on error and
-    skipping a chunk that still fails rather than aborting the whole pass.
+    cap).
 
     Args:
         cfg: configuration dictionary (needs ``graphql_api`` and
@@ -378,58 +415,69 @@ def fetch_case_closure_uiapi(cfg, token, case_numbers):
 
     Returns:
         dict: case number -> ``{"is_closed": bool, "closeddate": str|None,
-            "status": str|None, "last_update": str|None}``. Cases with no
-            returned node are omitted.
+            "status": str|None, "last_update": str|None}``. Cases with no returned
+            node are omitted.
     """
-    url = cfg["graphql_api"]
-    headers = make_graphql_headers(token)
-    closure = {}
 
-    for chunk in chunked(case_numbers, _CASE_DETAIL_CHUNK_SIZE):
-        where = {"CaseNumber__c": {"in": chunk}}
-        after = None
-        while True:
-            variables = {"where": where, "after": after}
-            try:
-                data = graphql_post(
-                    url, headers, GRAPHQL_CASE_CLOSURE_UIAPI_QUERY, variables
-                )
-            except RuntimeError as exc:
-                # Refresh the token once and retry this page; drop the chunk if it
-                # still fails so one bad batch does not abort the whole pass.
-                logging.warning("re-authenticating after closure error: %s", exc)
-                try:
-                    headers = make_graphql_headers(
-                        libtelco5g.get_token(cfg["offline_token"])
-                    )
-                    data = graphql_post(
-                        url, headers, GRAPHQL_CASE_CLOSURE_UIAPI_QUERY, variables
-                    )
-                except Exception as exc2:
-                    logging.warning(
-                        "could not fetch closure for chunk %s: %s", chunk, exc2
-                    )
-                    break
+    def parse(node):
+        return {
+            "is_closed": bool((node.get("IsClosed") or {}).get("value")),
+            "closeddate": (node.get("ClosedDate") or {}).get("value"),
+            "status": (node.get("Status") or {}).get("value"),
+            "last_update": (node.get("LastModifiedDate") or {}).get("value"),
+        }
 
-            conn = data["data"]["redhat_support_uiapi"]["query"]["RedHatSupportCase"]
-            for edge in conn["edges"]:
-                node = edge["node"]
-                case_number = (node.get("CaseNumber__c") or {}).get("value")
-                if not case_number:
-                    continue
-                closure[case_number] = {
-                    "is_closed": bool((node.get("IsClosed") or {}).get("value")),
-                    "closeddate": (node.get("ClosedDate") or {}).get("value"),
-                    "status": (node.get("Status") or {}).get("value"),
-                    "last_update": (node.get("LastModifiedDate") or {}).get("value"),
-                }
+    return _fetch_uiapi_by_case_number(
+        cfg, token, GRAPHQL_CASE_CLOSURE_UIAPI_QUERY, case_numbers, parse, "closure"
+    )
 
-            page_info = conn["pageInfo"]
-            if not page_info["hasNextPage"]:
-                break
-            after = page_info["endCursor"]
 
-    return closure
+def fetch_case_projection_uiapi(cfg, token, case_numbers):
+    """Fetch the full light projection for arbitrary cases (open or closed).
+
+    Unlike the saved-search (open-only) this queries the UIAPI object directly by
+    case number, so it works for closed cases too. Used by
+    ``backfill_tracked_cases`` to rebuild a projection for a tracked case that has
+    no stored copy anywhere. Carries the same fields ``get_cases`` builds, plus
+    the closure verdict (``is_closed`` / ``closeddate``) so the caller can mark it.
+
+    Args:
+        cfg: configuration dictionary (needs ``graphql_api`` and
+            ``offline_token``).
+        token: a valid bearer access token.
+        case_numbers: list of case numbers to fetch.
+
+    Returns:
+        dict: case number -> projection dict (``account``, ``severity``,
+            ``status``, ``problem``, ``product``, ``createdate``, ``last_update``,
+            ``is_closed``, ``closeddate``). Cases with no returned node are omitted.
+    """
+
+    def parse(node):
+        account = ((node.get("RedHatSupportAccount") or {}).get("Name") or {}).get(
+            "value"
+        )
+        product = ((node.get("Product") or {}).get("Name") or {}).get("value")
+        return {
+            "account": account,
+            "severity": (node.get("Priority") or {}).get("value"),
+            "status": (node.get("Status") or {}).get("value"),
+            "problem": (node.get("Subject") or {}).get("value"),
+            "product": product,
+            "createdate": (node.get("CreatedDate") or {}).get("value"),
+            "last_update": (node.get("LastModifiedDate") or {}).get("value"),
+            "is_closed": bool((node.get("IsClosed") or {}).get("value")),
+            "closeddate": (node.get("ClosedDate") or {}).get("value"),
+        }
+
+    return _fetch_uiapi_by_case_number(
+        cfg,
+        token,
+        GRAPHQL_CASE_PROJECTION_UIAPI_QUERY,
+        case_numbers,
+        parse,
+        "case projection",
+    )
 
 
 def _ensure_closeddate(entry):
@@ -451,17 +499,15 @@ def merge_closed_cases(cfg, token, cases):
     ``get_cases`` rebuilds ``cases`` from the open-only saved-search and then
     overwrites the Redis cache wholesale, so a case that leaves the open result -
     because it closed (the common path) or, rarely, because it fell past
-    ``max_portal_results`` - would silently vanish from the dashboard. Load the
-    prior cache and carry forward the cases missing from this run:
+    ``max_portal_results`` - would silently vanish from the dashboard.
 
-    - cases already marked "Closed" carry forward unchanged (no re-verification),
-      which keeps the GraphQL closure query bounded to recently-dropped cases;
-    - cases that were open last run are verified against GraphQL - genuinely
-      closed ones are kept marked "Closed" with their real ClosedDate, while
-      still-open or unverifiable ones are carried forward untouched so history is
-      never lost.
-
-    Mutates ``cases`` in place.
+    The universe of previously-known cases is PostgreSQL (the durable source of
+    truth, so a case Redis has already lost is still carried forward) overlaid
+    with the Redis ``cases`` cache (fresher, full-fidelity projections win where
+    both hold a case). Every dropped case therefore has a stored projection to
+    carry forward - no rebuild from GraphQL. The genuinely closed ones are marked
+    "Closed" with their real ClosedDate; still-open or unverifiable ones carry
+    forward unchanged so history is never lost. Mutates ``cases`` in place.
 
     Args:
         cfg: configuration dictionary.
@@ -472,19 +518,22 @@ def merge_closed_cases(cfg, token, cases):
         None. ``cases`` is updated in place.
     """
     # redis_get already JSON-decodes, returning a dict (or {} when the key is
-    # missing or Redis is unreachable).
-    prior = libtelco5g.redis_get("cases")
-    if not prior:
-        return
+    # missing or Redis is unreachable). PostgreSQL supplies the durable universe
+    # of not-yet-closed cases (already-closed ones are excluded to keep the
+    # closure query bounded); Redis overlays it so fresher projections win.
+    prior = {**load_open_cases_postgres(), **(libtelco5g.redis_get("cases") or {})}
 
     dropped = [case for case in prior if case not in cases]
     if not dropped:
         return
 
+    # Already-closed cases carry forward unchanged (no re-verification); the rest
+    # are verified against GraphQL.
     to_verify = []
     for case in dropped:
-        if prior[case].get("status") == "Closed":
-            cases[case] = _ensure_closeddate(prior[case])
+        entry = prior[case]
+        if entry.get("status") == "Closed":
+            cases[case] = _ensure_closeddate(entry)
         else:
             to_verify.append(case)
 
@@ -505,16 +554,16 @@ def merge_closed_cases(cfg, token, cases):
         info = closure.get(case)
         if info and info.get("is_closed"):
             entry["status"] = "Closed"
+            if info.get("last_update"):
+                entry["last_update"] = normalize_timestamp(info["last_update"])
             entry["closeddate"] = (
                 normalize_timestamp(info.get("closeddate"))
                 or entry.get("last_update")
                 or entry.get("createdate")
             )
-            if info.get("last_update"):
-                entry["last_update"] = normalize_timestamp(info["last_update"])
             newly_closed += 1
-        # Still open (dropped past the result cap) or unverifiable: carry the
-        # prior projection forward unchanged so it is not lost.
+        # else: still open (dropped past the result cap) or unverifiable - carry
+        # the prior projection forward unchanged so it is not lost.
         cases[case] = entry
 
     logging.warning(
@@ -522,6 +571,78 @@ def merge_closed_cases(cfg, token, cases):
         len(dropped),
         newly_closed,
     )
+
+
+def backfill_tracked_cases(cfg, token, cases, tracked_case_numbers):
+    """Add tracked cases (those with a JIRA card) that have no projection anywhere.
+
+    ``merge_closed_cases`` can only carry forward a case that was already in the
+    Redis/Postgres universe. A case that closed *before* it was ever synced as open
+    has no stored projection - only a live JIRA card - so ``get_cards`` discards
+    its card ("card isn't associated with a case") and the dashboard never shows
+    it. The authoritative set of tracked cases is the JIRA card list itself (the
+    Postgres ``jira_cards`` table only holds cards that already had a case, so it
+    cannot surface these). For each tracked case still missing from ``cases``,
+    fetch the full projection by case number from the UIAPI (which, unlike the
+    open-only saved-search, returns closed cases), mark the closed ones "Closed"
+    with their real ClosedDate, and add them so the card survives. Mutates
+    ``cases`` in place.
+
+    Args:
+        cfg: configuration dictionary.
+        token: a valid bearer access token (reused for the projection query).
+        cases: the case projection built so far, keyed by case number.
+        tracked_case_numbers: iterable of case numbers taken from the live JIRA
+            card list.
+
+    Returns:
+        list[str]: the case numbers that were backfilled (so the caller can
+            persist just those). Empty if nothing was missing or the fetch failed.
+    """
+    missing = [case for case in set(tracked_case_numbers) if case not in cases]
+    if not missing:
+        return []
+
+    try:
+        projections = fetch_case_projection_uiapi(cfg, token, missing)
+    except Exception as e:
+        # A backfill failure must not break the card refresh; the cases already
+        # built are kept and the next run retries the still-missing ones.
+        logging.error("failed to backfill tracked cases: %s", e)
+        return []
+
+    added = []
+    closed = 0
+    for case, proj in projections.items():
+        entry = {
+            "owner": None,
+            "severity": proj["severity"],
+            "account": proj["account"],
+            "problem": proj["problem"],
+            "status": remap_case_status(proj["status"]),
+            "createdate": normalize_timestamp(proj["createdate"]),
+            "last_update": normalize_timestamp(proj["last_update"]),
+            "description": _PENDING_VALUE,
+            "product": proj["product"],
+            "product_version": None,
+        }
+        if proj["is_closed"]:
+            entry["status"] = "Closed"
+            entry["closeddate"] = (
+                normalize_timestamp(proj["closeddate"])
+                or entry["last_update"]
+                or entry["createdate"]
+            )
+            closed += 1
+        cases[case] = entry
+        added.append(case)
+
+    logging.warning(
+        "backfilled %s tracked cases missing a projection (%s closed)",
+        len(added),
+        closed,
+    )
+    return added
 
 
 def get_cases(cfg):
@@ -679,6 +800,24 @@ def get_cards(cfg, self=None, background=False):
     jira_conn = libtelco5g.jira_connection(cfg)
     card_list = _get_jira_cards_list(cfg, jira_conn)
 
+    # The card list is the authoritative set of tracked cases. Recover any whose
+    # case is missing from the cache (closed before it was ever synced as open, so
+    # it has no stored projection) - otherwise _build_card_data would discard the
+    # card below. Persist the recovered cases so the retention chain keeps them and
+    # later runs don't re-fetch.
+    tracked = {cn for card in card_list if (cn := _card_case_number(card))}
+    # Only reach for a token / the UIAPI when something is actually missing, so a
+    # steady-state refresh (every tracked case already cached) stays offline.
+    if any(case not in cases for case in tracked):
+        token = libtelco5g.get_token(cfg["offline_token"])
+        backfilled = backfill_tracked_cases(cfg, token, cases, tracked)
+        if backfilled:
+            libtelco5g.redis_set("cases", json.dumps(cases))
+            try:
+                load_cases_postgres({case: cases[case] for case in backfilled})
+            except Exception as e:
+                logging.error("Failed to persist backfilled cases: %s", e)
+
     # Process each card
     jira_cards = {}
     time_now = datetime.datetime.now(datetime.timezone.utc)
@@ -815,6 +954,16 @@ def _update_progress(self, current, total):
     )
 
 
+def _card_case_number(card):
+    """Return the 8-digit case number parsed from a card summary, or None.
+
+    Card summaries lead with the case number (``01234567: ...``); anything that
+    doesn't start with 8 digits (e.g. an automation/task card) has no case.
+    """
+    case_number = card.fields.summary.split(":")[0]
+    return case_number if re.match("[0-9]{8}", case_number) else None
+
+
 def _build_card_data(card, cases, bugs, issues, escalations, details, time_now, cfg):
     # Generated by: Cursor
     """Build complete card data for a single JIRA card
@@ -837,12 +986,12 @@ def _build_card_data(card, cases, bugs, issues, escalations, details, time_now, 
             if the card cannot be processed
     """
     # Extract case number from summary
-    case_number = card.fields.summary.split(":")[0]
-    if not re.match("[0-9]{8}", case_number):
+    case_number = _card_case_number(card)
+    if not case_number:
         logging.warning("error parsing case number for (%s)", card)
         return None
 
-    if not case_number or case_number not in cases.keys():
+    if case_number not in cases.keys():
         logging.warning("card isn't associated with a case. discarding (%s)", card)
         return None
 

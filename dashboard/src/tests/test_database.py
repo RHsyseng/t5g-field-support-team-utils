@@ -20,6 +20,7 @@ from t5gweb.database import (
     load_cases_postgres,
     load_comments_postgres,
     load_jira_card_postgres,
+    load_open_cases_postgres,
 )
 
 
@@ -702,6 +703,93 @@ class TestPerformanceAndScaling:
         # Test reverse relationship
         card = test_db_session.query(JiraCard).filter_by(jira_card_id="TEST-0").first()
         assert card.case.case_number == "12345678"
+
+
+class TestLoadOpenCasesPostgres:
+    """Tests for load_open_cases_postgres - the durable open-case universe
+    merge_closed_cases reads to carry dropped cases forward."""
+
+    def test_projects_open_case_in_get_cases_shape(self, test_db_session):
+        """An open row is returned in the same projection get_cases builds,
+        with severity stringified and summary mapped to problem."""
+        created = datetime(2026, 1, 1, 0, 0, 0, tzinfo=timezone.utc)
+        updated = datetime(2026, 2, 1, 12, 30, 0, tzinfo=timezone.utc)
+        case = create_test_case(
+            case_number="10000001",
+            owner="Eng",
+            severity=2,
+            account="ACME",
+            summary="disk full",
+            status="Waiting on Red Hat",
+            description="long description",
+            product="OpenShift 4.16",
+            product_version="4.16",
+            created_date=created,
+            last_update=updated,
+        )
+        test_db_session.add(case)
+        test_db_session.commit()
+
+        result = load_open_cases_postgres()
+
+        assert result == {
+            "10000001": {
+                "owner": "Eng",
+                "severity": "2",
+                "account": "ACME",
+                "problem": "disk full",
+                "status": "Waiting on Red Hat",
+                "createdate": "2026-01-01T00:00:00Z",
+                "last_update": "2026-02-01T12:30:00Z",
+                "closeddate": None,
+                "description": "long description",
+                "product": "OpenShift 4.16",
+                "product_version": "4.16",
+            }
+        }
+
+    def test_excludes_closed_cases(self, test_db_session):
+        """Rows already marked Closed are filtered out so the universe stays
+        bounded to still-open cases."""
+        test_db_session.add(
+            create_test_case(case_number="20000001", status="Waiting on Red Hat")
+        )
+        test_db_session.add(create_test_case(case_number="20000002", status="Closed"))
+        test_db_session.commit()
+
+        result = load_open_cases_postgres()
+
+        assert set(result) == {"20000001"}
+
+    def test_serializes_closed_date_when_present(self, test_db_session):
+        """closed_date is emitted in the canonical timestamp form when set on a
+        still-open row (e.g. a reopened case)."""
+        closed = datetime(2026, 3, 1, 10, 0, 0, tzinfo=timezone.utc)
+        case = create_test_case(case_number="30000001", status="Waiting on Customer")
+        case.closed_date = closed
+        test_db_session.add(case)
+        test_db_session.commit()
+
+        result = load_open_cases_postgres()
+
+        assert result["30000001"]["closeddate"] == "2026-03-01T10:00:00Z"
+
+    def test_empty_database_returns_empty_dict(self, test_db_session):
+        assert load_open_cases_postgres() == {}
+
+    def test_returns_empty_dict_on_database_error(self):
+        """A failure while reading degrades gracefully to an empty universe so
+        the caller falls back to the Redis cache alone (and the session is still
+        closed)."""
+        from t5gweb.database.session import db_config
+
+        failing_session = Mock()
+        failing_session.query.side_effect = RuntimeError("down")
+
+        with patch.object(db_config, "SessionLocal", return_value=failing_session):
+            assert load_open_cases_postgres() == {}
+
+        failing_session.close.assert_called_once()
 
 
 if __name__ == "__main__":
