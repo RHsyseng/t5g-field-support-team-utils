@@ -33,6 +33,7 @@ def index():
             "{}refresh/issues".format(request.base_url),
             "{}refresh/stats".format(request.base_url),
             "{}cards".format(request.base_url),
+            "{}prio-list".format(request.base_url),
             "{}cases".format(request.base_url),
             "{}bugs".format(request.base_url),
             "{}details".format(request.base_url),
@@ -103,6 +104,19 @@ def show_cards():
     """Return cached JIRA cards data in JSON format."""
     cards = redis_get("cards")
     return jsonify(cards)
+
+
+@BP.route("/prio-list")
+@login_required
+def show_prio_list():
+    """Return cards on the prio-list (escalated) from cache in JSON format."""
+    cards = redis_get("cards")
+    prio_list = {
+        card_id: card
+        for card_id, card in (cards or {}).items()
+        if card.get("escalated")
+    }
+    return jsonify(prio_list)
 
 
 @BP.route("/cases")
