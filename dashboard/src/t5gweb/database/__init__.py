@@ -12,9 +12,11 @@ from .models import Case, Comment, JiraCard, JiraComment
 
 # Import database operations
 from .operations import (
+    PgError,
     load_cases_postgres,
     load_comments_postgres,
     load_jira_card_postgres,
+    load_open_cases_postgres,
 )
 
 # Import session management components
@@ -32,7 +34,9 @@ __all__ = [
     "JiraCard",
     "JiraComment",
     # Operations
+    "PgError",
     "load_cases_postgres",
     "load_comments_postgres",
     "load_jira_card_postgres",
+    "load_open_cases_postgres",
 ]

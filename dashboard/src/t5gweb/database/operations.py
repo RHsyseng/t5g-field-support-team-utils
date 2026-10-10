@@ -12,6 +12,11 @@ from .models import Case, Comment, JiraCard, JiraComment
 from .session import db_config
 
 
+class PgError(Exception):
+    """Raised when a PostgreSQL operation fails and the caller must decide how
+    to recover (e.g. fall back to an empty result)."""
+
+
 def load_cases_postgres(cases):
     """Load or update cases data in PostgreSQL database
 
@@ -28,6 +33,7 @@ def load_cases_postgres(cases):
             - status: Current case status
             - createdate: Case creation timestamp string
             - last_update: Last modified timestamp string
+            - closeddate: Close timestamp string (optional; set on closed cases)
             - description: Case description text
             - product: Product name
             - product_version: Product version
@@ -53,6 +59,11 @@ def load_cases_postgres(cases):
                 status=cases[case]["status"],
                 created_date=case_created_date,  # Use parsed datetime
                 last_update=parser.parse(cases[case]["last_update"]),  # Parse this too
+                closed_date=(
+                    parser.parse(cases[case]["closeddate"])
+                    if cases[case].get("closeddate")
+                    else None
+                ),
                 description=cases[case]["description"],
                 product=cases[case]["product"],
                 product_version=cases[case]["product_version"],
@@ -72,6 +83,60 @@ def load_cases_postgres(cases):
     finally:
         session.close()
         logging.warning("Loaded cases to Postgres")
+
+
+def load_open_cases_postgres():
+    """Return full case projections for not-yet-closed cases known to PostgreSQL.
+
+    Unlike the Redis ``cases`` cache (overwritten wholesale on every sync), the
+    PostgreSQL ``cases`` table is never bulk-cleared, so it is the durable source
+    of truth for every case the dashboard has tracked. ``merge_closed_cases``
+    uses this as its universe of previously-known cases: a case that dropped out
+    of both the open saved-search and the Redis cache still has a row here and is
+    carried forward (and re-verified) from its stored projection - no rebuild
+    from GraphQL needed.
+
+    Cases already marked ``"Closed"`` are excluded so the universe (and the
+    downstream closure re-verification) stays bounded to still-open cases.
+
+    Returns:
+        dict: case number -> projection dict in the same shape ``get_cases``
+            builds (``owner``, ``severity``, ``account``, ``problem``,
+            ``status``, ``createdate``, ``last_update``, ``closeddate``,
+            ``description``, ``product``, ``product_version``).
+
+    Raises:
+        PgError: on any database error, so the caller can decide how to recover
+            (``merge_closed_cases`` falls back to the Redis universe alone).
+    """
+
+    def _ts(value):
+        return value.strftime("%Y-%m-%dT%H:%M:%SZ") if value else None
+
+    session = db_config.SessionLocal()
+    try:
+        rows = session.query(Case).filter(Case.status != "Closed").all()
+        return {
+            row.case_number: {
+                "owner": row.owner,
+                "severity": str(row.severity) if row.severity is not None else None,
+                "account": row.account,
+                "problem": row.summary,
+                "status": row.status,
+                "createdate": _ts(row.created_date),
+                "last_update": _ts(row.last_update),
+                "closeddate": _ts(row.closed_date),
+                "description": row.description,
+                "product": row.product,
+                "product_version": row.product_version,
+            }
+            for row in rows
+        }
+    except Exception as e:
+        logging.error(f"Failed to read open cases: {e}")
+        raise PgError(f"Failed to read open cases: {e}") from e
+    finally:
+        session.close()
 
 
 def load_comments_postgres(case_number, case_created_date, api_comments):
