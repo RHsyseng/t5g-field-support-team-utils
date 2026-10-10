@@ -33,6 +33,7 @@ def mock_jira_issue():
     mock_issue.fields.status.name = "In Progress"
     mock_issue.fields.assignee.displayName = "Test User"
     mock_issue.fields.created = "2024-01-01T00:00:00.000+0000"
+    mock_issue.fields.updated = "2024-01-02T00:00:00.000+0000"
 
     # Mock comments
     mock_comment1 = Mock()
@@ -321,6 +322,12 @@ class TestDatabaseOperations:
         assert jira_card.case_number == "12345678"
         assert jira_card.priority == "High"
         assert jira_card.status == "In Progress"
+        # last_update_date reflects the Jira issue's own last-modified time,
+        # not the sync time (SQLite drops tzinfo, so compare naive)
+        expected_updated = parser.parse("2024-01-02T00:00:00.000+0000")
+        assert jira_card.last_update_date.replace(
+            tzinfo=None
+        ) == expected_updated.replace(tzinfo=None)
 
     def test_load_jira_card_creates_comments(self, test_db_session, mock_jira_issue):
         """Test that load_jira_card_postgres creates JiraComment records"""

@@ -1,0 +1,28 @@
+{% extends "skeleton.html" %}
+{% import 'macros/macros.html' as macros %}
+{% block title %}{{ page_title }}{% endblock %}
+{% block content %}
+    <div class="container-fluid copy mt-5 pt-4">
+        <div class="row mb-4 align-items-center">
+            <div class="col-md-8">
+                <h2>My Queue</h2>
+                <p class="text-muted mb-0">Cases where customers have commented after engineering team</p>
+            </div>
+            {% if engineer_filter %}
+                <div class="col-md-4 text-md-end mt-2 mt-md-0">
+                    <span class="badge bg-info">Showing cards for: {{ engineer_filter }}</span>
+                </div>
+            {% endif %}
+        </div>
+
+        <div class="alert alert-info">
+            {% if engineer_filter %}<strong>Engineer:</strong> {{ engineer_filter }} | {% endif %}
+            <strong>Cases:</strong> {{ cases|length }}
+        </div>
+
+        {{ macros.my_queue_cases_table(cases, jira_server) }}
+    </div>
+    {{ macros.include_datatables_js_css() }}
+    {{ macros.include_datatables_plugins_js_css() }}
+    <script src="{{ url_for('static', filename='js/my_queue.js') }}"></script>
+{% endblock %}
