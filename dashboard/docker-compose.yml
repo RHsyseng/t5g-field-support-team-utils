@@ -13,7 +13,7 @@ services:
       - redis_data:/data
   ### PostgresQL
   postgresql:
-    image: docker.io/postgres:latest
+    image: pgvector/pgvector:pg17
     environment:
       - POSTGRES_USER=postgres
       - POSTGRES_PASSWORD=secret
@@ -38,8 +38,9 @@ services:
     ports:
       - 8080:8080
     environment:
-      - FLASK_LOGIN_DISABLED=true # Disable SSO Login for dev environments
+      - FLASK_LOGIN_DISABLED=true  # Disable SSO Login for dev environments
       - FLASK_DEBUG=true
+      - AI_AGENTS_API_URL=http://ai-agents:8081
     depends_on:
       redis:
         condition: service_healthy
