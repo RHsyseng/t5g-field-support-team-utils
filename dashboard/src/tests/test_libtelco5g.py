@@ -4,6 +4,7 @@ import pytest
 
 from t5gweb.libtelco5g import (
     _assign_cases_batch,
+    _handle_old_case,
     get_case_number,
     get_previous_card,
     is_bug_missing_target,
@@ -13,9 +14,12 @@ from t5gweb.libtelco5g import (
 )
 
 
-def _fake_issue(key, summary):
-    """Build a minimal stand-in for a JIRA issue with a summary field."""
-    return types.SimpleNamespace(key=key, fields=types.SimpleNamespace(summary=summary))
+def _fake_issue(key, summary, status=None):
+    """Build a minimal stand-in for a JIRA issue with summary/status fields."""
+    fields = types.SimpleNamespace(summary=summary)
+    if status is not None:
+        fields.status = types.SimpleNamespace(name=status)
+    return types.SimpleNamespace(key=key, fields=fields)
 
 
 def test_get_jira_connection(mocker):
@@ -152,6 +156,65 @@ def test_get_previous_card_returns_none_when_no_results(mocker, previous_card_cf
     result = get_previous_card(conn, previous_card_cfg, "11111111")
 
     assert result is None
+
+
+# --- _handle_old_case tests ---
+
+
+def _handle_old_case_context(mocker, previous_issue):
+    """Build the (conn, context, cfg) inputs for _handle_old_case."""
+    conn = mocker.Mock()
+    mocker.patch("t5gweb.libtelco5g.get_previous_card", return_value=previous_issue)
+    context = {"jira_conn": conn, "sprint": types.SimpleNamespace(id=42)}
+    cfg = {"project": "TESTPROJ", "max_jira_results": 100}
+    return conn, context, cfg
+
+
+def test_handle_old_case_skips_reopen_when_already_todo(mocker, monkeypatch):
+    """A card already in 'To Do' must not be reopened or commented on.
+
+    This is the hourly-spam guard: the card is linked to the case but is
+    already open, so transitioning + commenting every sync is a no-op that
+    should be suppressed.
+    """
+    monkeypatch.delenv("READ_ONLY", raising=False)
+    previous_issue = _fake_issue("TESTPROJ-1", "11111111: issue", status="To Do")
+    conn, context, cfg = _handle_old_case_context(mocker, previous_issue)
+
+    result = _handle_old_case("11111111", context, cfg)
+
+    # Handled (so no duplicate card is created) but nothing was changed/posted.
+    assert result is True
+    conn.transition_issue.assert_not_called()
+    conn.add_comment.assert_not_called()
+    conn.add_issues_to_sprint.assert_not_called()
+
+
+def test_handle_old_case_reopens_closed_card(mocker, monkeypatch):
+    """A card in a closed/done column is genuinely reopened and commented on."""
+    monkeypatch.delenv("READ_ONLY", raising=False)
+    previous_issue = _fake_issue("TESTPROJ-1", "11111111: issue", status="Closed")
+    conn, context, cfg = _handle_old_case_context(mocker, previous_issue)
+
+    result = _handle_old_case("11111111", context, cfg)
+
+    assert result is True
+    conn.add_issues_to_sprint.assert_called_once_with(42, ["TESTPROJ-1"])
+    conn.transition_issue.assert_called_once_with(previous_issue, "11")
+    conn.add_comment.assert_called_once()
+    assert "reopened" in conn.add_comment.call_args.args[1]
+
+
+def test_handle_old_case_no_previous_card(mocker, monkeypatch):
+    """No linked card -> not handled here (a new card will be created)."""
+    monkeypatch.delenv("READ_ONLY", raising=False)
+    conn, context, cfg = _handle_old_case_context(mocker, None)
+
+    result = _handle_old_case("11111111", context, cfg)
+
+    assert result is False
+    conn.transition_issue.assert_not_called()
+    conn.add_comment.assert_not_called()
 
 
 # --- _assign_cases_batch tests ---
