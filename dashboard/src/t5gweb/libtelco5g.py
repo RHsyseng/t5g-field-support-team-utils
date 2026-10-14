@@ -558,15 +558,20 @@ def _handle_old_case(case, context, cfg):
     read_only = os.getenv("READ_ONLY", "false") == "true"
 
     if previous_issue and not read_only:
-        # A card that is already in the "To Do" column was never closed, so
-        # "reopening" it makes no sense. Without this guard the dashboard re-runs
-        # the transition and re-posts the "reopened" comment on every hourly
-        # sync whenever the card is missing from the cards cache, spamming the
-        # card. Only reopen a card that is in a different (e.g. closed) column.
-        if previous_issue.fields.status.name == "To Do":
+        # Only a card that is in a genuinely closed/done column was ever closed,
+        # so only such a card should be "reopened". Any open card -- whether it
+        # is still in To Do or a human has actively advanced it (In Progress,
+        # Code Review, ...) -- was never closed. Without this guard the dashboard
+        # re-runs the transition and re-posts the "reopened" comment on every
+        # hourly sync whenever the card is missing from the cards cache (e.g. it
+        # dropped out of the active sprint), reverting the assignee's status
+        # change and spamming the card. status_map maps every done/closed
+        # workflow status to "Done"; unknown statuses are treated as open too.
+        card_status = previous_issue.fields.status.name
+        if status_map.get(card_status) != "Done":
             logging.warning(
-                f"{previous_issue.key} is already in To Do; "
-                f"not reopening case {case}."
+                f"{previous_issue.key} is in '{card_status}' (not a closed "
+                f"column); not reopening case {case}."
             )
             return True
 
