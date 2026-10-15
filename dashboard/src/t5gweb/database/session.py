@@ -1,10 +1,12 @@
 """Database session and connection management"""
 
+import logging
 import threading
 from typing import Optional
 
-from sqlalchemy import URL, create_engine
+from sqlalchemy import URL, create_engine, text
 from sqlalchemy.orm import DeclarativeBase, sessionmaker
+
 from t5gweb.utils import set_cfg
 
 
@@ -144,3 +146,25 @@ def create_postgres_tables():
         None. Tables are created in PostgreSQL database.
     """
     Base.metadata.create_all(bind=db_config.engine)
+    _apply_additive_migrations()
+
+
+def _apply_additive_migrations():
+    """Apply additive, idempotent schema changes create_all cannot make.
+
+    ``create_all`` only creates missing *tables*; it never adds a new column to
+    an existing one, and this project has no migration framework. Self-apply the
+    additive columns here with ``ADD COLUMN IF NOT EXISTS`` so an already-created
+    ``cases`` table gains ``closed_date`` on the next startup. Additive only -
+    never drop or rename (repo rule: keep original model fields). Failures are
+    logged rather than fatal so a DB that pre-dates this column still boots.
+    """
+    statements = [
+        "ALTER TABLE cases ADD COLUMN IF NOT EXISTS closed_date TIMESTAMP",
+    ]
+    try:
+        with db_config.engine.begin() as conn:
+            for statement in statements:
+                conn.execute(text(statement))
+    except Exception as e:
+        logging.error("Failed to apply additive migrations: %s", e)
