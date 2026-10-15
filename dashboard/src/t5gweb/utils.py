@@ -176,7 +176,14 @@ def set_cfg():
     # sources
     cfg["offline_token"] = os.environ.get("offline_token")  # portal
     cfg["redhat_api"] = os.environ.get("redhat_api")  # redhat api url
-    cfg["query"] = os.environ.get("case_query")
+    cfg["graphql_api"] = os.environ.get("graphql_api") or "https://graphql.redhat.com"
+    # Selection: account + product + subject saved-search.
+    # JSON blob; see cfg/sample.env for the shape.
+    cfg["saved_search"] = (
+        json.loads(os.environ.get("saved_search"))
+        if os.environ.get("saved_search")
+        else None
+    )
     cfg["max_portal_results"] = os.environ.get("max_portal_results")
     cfg["bz_key"] = os.environ.get("bz_key")
     cfg["sheet_id"] = os.environ.get("sheet_id")
@@ -329,18 +336,14 @@ def slack_notify(ini, notification_content):
 
         # Get severity #. Ex: "3 (Normal)" => "3"
         severity = re.search(r"\d+", notification_content[card]["severity"])
-        description = notification_content[card]["description"]
 
-        # Posting Summaries + reply with Description
+        # Posting Summaries
         if severity and int(severity.group()) < 3:
             channel = ini["high_severity_slack_channel"]
         else:
             channel = ini["low_severity_slack_channel"]
         try:
-            message = client.chat_postMessage(channel=channel, text=body)
-            client.chat_postMessage(
-                channel=channel, text=description, thread_ts=message["ts"]
-            )
+            client.chat_postMessage(channel=channel, text=body)
         except SlackApiError as slack_error:
             logging.warning("failed to post to slack: %s", slack_error)
 
@@ -398,6 +401,67 @@ def make_headers(token):
     """
     headers = {"Accept": "application/json", "Authorization": "Bearer " + token}
     return headers
+
+
+def int_or_none(value):
+    """Coerce a config value to a positive int, or None when unset/invalid.
+
+    ``max_portal_results`` and ``graphql_population_workers`` arrive as strings
+    from the environment; treat a missing, non-numeric or non-positive value as
+    "unset".
+
+    Args:
+        value: the raw config value (str, int or None).
+
+    Returns:
+        int or None: the positive integer, or None when there is no valid value.
+    """
+    try:
+        result = int(value)
+    except (TypeError, ValueError):
+        return None
+    return result if result > 0 else None
+
+
+def is_support_case_number(case_number):
+    """Return True if the value looks like a Red Hat support case number.
+
+    Real support cases are all-digit numbers (often zero-padded, e.g.
+    ``04542750``). The saved search occasionally also returns other record
+    types (e.g. ``EN-*`` escalation notifications) which cannot be hydrated
+    via the Hydra ``case(id)`` query (they 404) and must never become JIRA
+    cards, so they are filtered out where the cases cache is built.
+
+    Args:
+        case_number: the raw case identifier from the saved search.
+
+    Returns:
+        bool: True when the value is an all-digit support case number.
+    """
+    return isinstance(case_number, str) and case_number.isdigit()
+
+
+def chunked(items, size):
+    """Yield successive ``size``-length chunks of ``items``."""
+    for start in range(0, len(items), size):
+        yield items[start : start + size]
+
+
+def uiapi_comment_to_dict(node):
+    """Flatten a UIAPI ``RedHatSupportCaseComment`` node into a comment dict.
+
+    Args:
+        node: a ``RedHatSupportCaseComment`` node from ``CaseComments.edges``.
+
+    Returns:
+        dict: ``{"commentBody": str, "createdBy": str, "createdDate": str|None}``.
+    """
+    return {
+        "commentBody": (node.get("CommentBody") or {}).get("value") or "",
+        "createdBy": ((node.get("CreatedBy") or {}).get("Name") or {}).get("value")
+        or "unknown",
+        "createdDate": (node.get("CreatedDate") or {}).get("value"),
+    }
 
 
 def format_date(the_date):

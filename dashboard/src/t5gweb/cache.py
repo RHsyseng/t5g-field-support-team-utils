@@ -8,7 +8,7 @@ import time
 import xmlrpc
 
 import bugzilla
-import requests
+from dateutil import parser as date_parser
 from jira.exceptions import JIRAError
 
 from t5gweb import libtelco5g
@@ -17,91 +17,398 @@ from t5gweb.database import (
     load_comments_postgres,
     load_jira_card_postgres,
 )
-from t5gweb.utils import format_comment, format_date, make_headers
+from t5gweb.graphql import graphql_post, make_graphql_headers
+from t5gweb.utils import (
+    chunked,
+    format_comment,
+    format_date,
+    int_or_none,
+    is_support_case_number,
+    uiapi_comment_to_dict,
+)
+
+# Selection query. Account name is pulled inline via the
+# RedHatSupportAccount parent relationship so no separate /v1/accounts/{ref}
+# lookup is needed. This light query carries every field the case-assignment
+# path needs (account, severity, status, subject, product, dates), so get_cases
+# builds the projection straight from it. The richer fields (description, tags,
+# ...) are left blank/placeholder here; group name and comments are fetched
+# separately by get_case_details.
+GRAPHQL_SAVED_SEARCH_QUERY = """
+query SavedSearch($where: RedHatSupportCase_Filter, $after: String) {
+  redhat_support_uiapi { query {
+    RedHatSupportCase(where: $where, first: 100, after: $after,
+                      orderBy: { LastModifiedDate: { order: DESC } }) {
+      totalCount
+      pageInfo { hasNextPage endCursor }
+      edges { node {
+        CaseNumber__c { value }
+        Account_Number__c { value }
+        RedHatSupportAccount { Name { value } }
+        Status { value }
+        Priority { value }
+        Product { Name { value } }
+        Subject { value }
+        CreatedDate { value }
+        LastModifiedDate { value }
+      } }
+    }
+  } }
+}
+"""
+
+# Canonical timestamp form the downstream code expects (utils.format_date and
+# libtelco5g._is_old_case both strptime this exact pattern). The UIAPI selection
+# query returns fractional-second timestamps ("2026-09-03T12:36:12.000Z"), so
+# normalize to this form at ingest to preserve the stored contract.
+_CANONICAL_TS_FORMAT = "%Y-%m-%dT%H:%M:%SZ"
+
+# Issue property maintained by the SFDC case-linking app. Holds the linked case
+# numbers as a space separated string, in plaintext - unlike the matching
+# customfield_10979, which is encrypted at rest and only readable through
+# renderedFields.
+SFDC_CASES_PROPERTY = "sfdc-cases-links"
+
+GRAPHQL_CASE_DETAIL_UIAPI_QUERY = """
+query CaseDetailUIAPI($where: RedHatSupportCase_Filter, $after: String) {
+  redhat_support_uiapi { query {
+    RedHatSupportCase(where: $where, first: 100, after: $after) {
+      pageInfo { hasNextPage endCursor }
+      edges { node {
+        CaseNumber__c { value }
+        Group__r { Name { value } }
+        CaseComments(first: 200, orderBy: { CreatedDate: { order: ASC } }) {
+          edges { node {
+            CommentBody { value }
+            CreatedDate { value }
+            IsPublished { value }
+            CreatedBy { Name { value } }
+          } }
+        }
+      } }
+    }
+  } }
+}
+"""
+
+# Cases per detail request. The UIAPI object accepts CaseNumber__c: { in: [...] },
+# so open cases are fetched in batches (one request per chunk, plus paging) rather
+# than one round-trip per case. 100 matches the query's first:100 page size, so a
+# full chunk comes back in a single page.
+_CASE_DETAIL_CHUNK_SIZE = 100
+
+# Placeholder for projection fields the light saved-search query does not carry.
+# get_case_details (or a future per-case backfill queue) replaces the real value;
+# until then the card/dashboard shows this rather than an empty string.
+_PENDING_VALUE = "In progress - details not yet synced"
+
+
+# t5gweb.organize_cards only has {"Waiting on Red Hat", "Waiting on Customer",
+# "Closed"} columns and KeyErrors on anything else, so collapse the whole Status
+# picklist to those three buckets at ingest: closed -> "Closed", any customer-side
+# wait -> "Waiting on Customer", everything else (Red Hat is the active party) ->
+# "Waiting on Red Hat".
+def remap_case_status(status):
+    """Collapse a GraphQL case status into a display bucket.
+
+    Args:
+        status(str): the Status value returned by the GraphQL API.
+
+    Returns:
+        str: one of "Closed", "Waiting on Customer", or "Waiting on Red Hat".
+            An empty/missing status defaults to "Waiting on Red Hat" so the
+            table view never KeyErrors.
+    """
+    lowered = (status or "").lower()
+    if "closed" in lowered:
+        return "Closed"
+    if "customer" in lowered:
+        return "Waiting on Customer"
+    return "Waiting on Red Hat"
+
+
+def normalize_timestamp(value):
+    """Coerce an API timestamp to the canonical ``%Y-%m-%dT%H:%M:%SZ`` form.
+
+    The GraphQL UIAPI selection returns timestamps with a fractional-second part
+    (``.000Z``) that ``utils.format_date`` / ``_is_old_case`` cannot parse.
+    Parse leniently and reformat; return the value unchanged if it is empty or
+    cannot be parsed (so a bad value surfaces later rather than crashing ingest).
+
+    Args:
+        value: the raw timestamp string (or None).
+
+    Returns:
+        str or None: the normalized timestamp, or the original value.
+    """
+    if not value:
+        return value
+    try:
+        return date_parser.parse(value).strftime(_CANONICAL_TS_FORMAT)
+    except (ValueError, TypeError):
+        return value
+
+
+def build_where(saved_search, open_only=True):
+    """Build the GraphQL ``where`` filter from the saved-search config.
+
+    The filter is ``OR(subject-contains block, each account branch)``, each
+    branch being ``Account_Number__c IN (...)`` optionally AND-ed with the
+    product block when the branch sets ``product: true``. When ``open_only`` is
+    set the whole OR is AND-ed with ``IsClosed: {eq: false}``.
+
+    Args:
+        saved_search: dict with ``products``, ``subject_contains`` and
+            ``account_branches`` keys (see cfg/sample.env).
+        open_only: when True, restrict to non-closed cases.
+
+    Returns:
+        dict: the GraphQL ``where`` filter object.
+    """
+    products = saved_search.get("products", [])
+    subject_contains = saved_search.get("subject_contains", [])
+    product_block = (
+        {"or": [{"Product": {"Name": {"like": f"%{p}%"}}} for p in products]}
+        if products
+        else None
+    )
+
+    branches = []
+    if subject_contains:
+        branches.append(
+            {"or": [{"Subject": {"like": f"%{s}%"}} for s in subject_contains]}
+        )
+    for branch in saved_search.get("account_branches", []):
+        accounts = branch["accounts"]
+        if len(accounts) == 1:
+            account_block = {"Account_Number__c": {"eq": accounts[0]}}
+        else:
+            account_block = {"Account_Number__c": {"in": list(accounts)}}
+        if branch.get("product") and product_block:
+            branches.append({"and": [account_block, product_block]})
+        else:
+            branches.append(account_block)
+
+    where = {"or": branches}
+    if open_only:
+        where = {"and": [{"IsClosed": {"eq": False}}, where]}
+    return where
+
+
+def fetch_saved_search_cases(cfg, token, limit=None):
+    """Select the telco case set via the Red Hat GraphQL saved-search.
+
+    Cursor-pages the account+product+subject query and
+    returns the light case nodes; each is populated with the detail endpoint
+    later to build the full projection. The query is ordered by
+    ``LastModifiedDate DESC``, so when ``limit`` is set the returned list is the
+    ``limit`` most-recently-modified matches.
+
+    Args:
+        cfg: configuration dictionary (needs ``graphql_api`` and
+            ``saved_search``).
+        token: a valid bearer access token.
+        limit: maximum number of cases to return; ``None``/``0`` means no cap.
+
+    Returns:
+        list: dicts with the light projection fields (``caseNumber``, ``account``,
+            ``severity``, ``status``, ``problem``, ``product``, ``createdate``,
+            ``last_update``) - everything the case-assignment path needs.
+    """
+    url = cfg["graphql_api"]
+    headers = make_graphql_headers(token)
+    where = build_where(cfg["saved_search"])
+
+    cases = []
+    after = None
+    total = None
+    while True:
+        data = graphql_post(
+            url, headers, GRAPHQL_SAVED_SEARCH_QUERY, {"where": where, "after": after}
+        )
+        conn = data["data"]["redhat_support_uiapi"]["query"]["RedHatSupportCase"]
+        total = conn["totalCount"]
+        for edge in conn["edges"]:
+            node = edge["node"]
+            account = ((node.get("RedHatSupportAccount") or {}).get("Name") or {}).get(
+                "value"
+            )
+            product = ((node.get("Product") or {}).get("Name") or {}).get("value")
+            cases.append(
+                {
+                    "caseNumber": node["CaseNumber__c"]["value"],
+                    "account": account,
+                    "severity": (node.get("Priority") or {}).get("value"),
+                    "status": (node.get("Status") or {}).get("value"),
+                    "problem": (node.get("Subject") or {}).get("value"),
+                    "product": product,
+                    "createdate": (node.get("CreatedDate") or {}).get("value"),
+                    "last_update": (node.get("LastModifiedDate") or {}).get("value"),
+                }
+            )
+        page_info = conn["pageInfo"]
+        if limit and len(cases) >= limit:
+            cases = cases[:limit]
+            break
+        if not page_info["hasNextPage"]:
+            break
+        after = page_info["endCursor"]
+
+    logging.warning(
+        "GraphQL saved-search matched %s cases (totalCount=%s, limit=%s)",
+        len(cases),
+        total,
+        limit,
+    )
+    return cases
+
+
+def fetch_case_details_uiapi(cfg, token, case_numbers):
+    """Fetch group name and comments for open cases from the UIAPI object.
+
+    Batches ``case_numbers`` into ``CaseNumber__c: { in: <chunk> }`` filters and
+    cursor-pages each chunk, reading straight from the authoritative
+    ``RedHatSupportCase`` object (see ``GRAPHQL_CASE_DETAIL_UIAPI_QUERY``). On a
+    chunk failure the access token is refreshed once and the request retried, so
+    a long population run can outlive its access token; a chunk that still fails
+    is logged and skipped rather than aborting the whole pass.
+
+    Args:
+        cfg: configuration dictionary (needs ``graphql_api`` and
+            ``offline_token``).
+        token: a valid bearer access token.
+        case_numbers: list of open case numbers to fetch.
+
+    Returns:
+        dict: case number -> ``{"group_name": str|None, "comments": [dict, ...]}``.
+            Cases with no returned node are omitted.
+    """
+    url = cfg["graphql_api"]
+    headers = make_graphql_headers(token)
+    details = {}
+
+    for chunk in chunked(case_numbers, _CASE_DETAIL_CHUNK_SIZE):
+        where = {"CaseNumber__c": {"in": chunk}}
+        after = None
+        while True:
+            variables = {"where": where, "after": after}
+            try:
+                data = graphql_post(
+                    url, headers, GRAPHQL_CASE_DETAIL_UIAPI_QUERY, variables
+                )
+            except RuntimeError as exc:
+                # Refresh the token once and retry this page; drop the chunk if it
+                # still fails so one bad batch does not abort the whole pass.
+                logging.warning("re-authenticating after detail error: %s", exc)
+                try:
+                    headers = make_graphql_headers(
+                        libtelco5g.get_token(cfg["offline_token"])
+                    )
+                    data = graphql_post(
+                        url, headers, GRAPHQL_CASE_DETAIL_UIAPI_QUERY, variables
+                    )
+                except Exception as exc2:
+                    logging.warning(
+                        "could not fetch case details for chunk %s: %s", chunk, exc2
+                    )
+                    break
+
+            conn = data["data"]["redhat_support_uiapi"]["query"]["RedHatSupportCase"]
+            for edge in conn["edges"]:
+                node = edge["node"]
+                case_number = (node.get("CaseNumber__c") or {}).get("value")
+                if not case_number:
+                    continue
+                group_name = ((node.get("Group__r") or {}).get("Name") or {}).get(
+                    "value"
+                )
+                # CaseComments(first: 200) bounds volume; paginate the nested
+                # connection here if any case can exceed 200 comments.
+                comment_edges = (node.get("CaseComments") or {}).get("edges") or []
+                details[case_number] = {
+                    "group_name": group_name,
+                    "comments": [
+                        uiapi_comment_to_dict(e["node"]) for e in comment_edges
+                    ],
+                }
+
+            page_info = conn["pageInfo"]
+            if not page_info["hasNextPage"]:
+                break
+            after = page_info["endCursor"]
+
+    return details
 
 
 def get_cases(cfg):
-    """Get cases from Red Hat Portal API and cache them
+    """Get cases from the Red Hat GraphQL saved-search and cache them
 
-    Queries the Red Hat Portal API using configured search parameters and
-    retrieves case information. The results are stored in both PostgreSQL
-    and Redis cache.
+    Selects the telco case set with the GraphQL saved-search
+    (account + product + subject), capped at
+    ``max_portal_results`` most-recently-modified cases, and builds the case
+    projection **straight from that one light query** - no per-case case(id)
+    population. The light query already carries every field the case-assignment
+    path needs (account, severity, status, subject, product, dates); the richer
+    fields the light query cannot supply (description, tags, product_version,
+    owner) are left blank / "in progress" placeholders. Results are stored in
+    both PostgreSQL and Redis.
 
     Args:
-        cfg: Configuration dictionary containing API credentials, query
-            parameters, and field specifications
+        cfg: Configuration dictionary containing API credentials, the
+            ``saved_search`` selection, and API endpoints
 
     Returns:
         None. Results are cached in Redis under the 'cases' key.
     """
-    # https://source.redhat.com/groups/public/hydra/hydra_integration_platform_cee_integration_wiki/hydras_api_layer
+    if not cfg.get("saved_search"):
+        logging.error("no saved_search configured; skipping case selection")
+        return
 
     token = libtelco5g.get_token(cfg["offline_token"])
-    query = cfg["query"]
-    fields = ",".join(cfg["fields"])
-    query = f"({query})"
-    num_cases = cfg["max_portal_results"]
-    payload = {"q": query, "partnerSearch": "false", "rows": num_cases, "fl": fields}
-    headers = make_headers(token)
-    url = f"{cfg['redhat_api']}/search/cases"
 
-    logging.warning("searching the portal for cases")
+    logging.warning("selecting cases via the GraphQL saved-search")
     start = time.time()
-    r = requests.get(url, headers=headers, params=payload)
-    r.raise_for_status()
-    cases_json = r.json()["response"]["docs"]
-    # The case portal only allows 9999 cases to be returned by a query, so we cannot
-    # simply paginate. We must use a different query to get the remaining cases.
+    # Cap the selection at max_portal_results. The saved-search is ordered
+    # LastModifiedDate DESC, so this yields the N latest.
+    limit = int_or_none(cfg.get("max_portal_results"))
+    selected = fetch_saved_search_cases(cfg, token, limit=limit)
 
-    # Total number of cases found by query
-    num_found = int(r.json()["response"].get("numFound"))
-    # Timestamp of the 9999th case found by query
-    newest_case_timestamp = cases_json[-1]["case_createdDate"]
-    if num_found > int(num_cases):
-        # Get cases > 9999
-        date_query = (
-            f"({cfg['query']} AND case_createdDate:[{newest_case_timestamp} TO *])"
-        )
-        # Start at 1 to avoid duplicates from the first query
-        payload = {
-            "q": date_query,
-            "partnerSearch": "false",
-            "start": 1,
-            "rows": num_cases,
-            "fl": fields,
-        }
-        r = requests.get(url, headers=headers, params=payload)
-        r.raise_for_status()
-        cases_json.extend(r.json()["response"]["docs"])
-    end = time.time()
-    logging.warning("found %s cases in %s seconds", len(cases_json), end - start)
     cases = {}
-    for case in cases_json:
-        cases[case["case_number"]] = {
-            "owner": case["case_owner"],
-            "severity": case["case_severity"],
-            "account": case["case_account_name"],
-            "problem": case["case_summary"],
-            "status": case["case_status"],
-            "createdate": case["case_createdDate"],
-            "last_update": case["case_lastModifiedDate"],
-            "description": case["case_description"],
-            "product": case["case_product"][0] + " " + case["case_version"],
-            "product_version": case["case_version"],
+    skipped = []
+    for entry in selected:
+        case = entry["caseNumber"]
+        # Drop non-support records (e.g. EN-* escalation notifications) that the
+        # saved search sometimes returns; they must never become JIRA cards.
+        if not is_support_case_number(case):
+            skipped.append(case)
+            continue
+        cases[case] = {
+            # owner / tags / product_version / description are not carried by the
+            # light saved-search query; leave them blank/placeholder.
+            "owner": None,
+            "severity": entry["severity"],
+            "account": entry["account"],
+            "problem": entry["problem"],
+            # remap the status before anything buckets on the string downstream.
+            "status": remap_case_status(entry["status"]),
+            "createdate": normalize_timestamp(entry["createdate"]),
+            "last_update": normalize_timestamp(entry["last_update"]),
+            "description": _PENDING_VALUE,
+            # Product.Name from the UIAPI selection already includes the version
+            # (unlike HydraCase, which splits them), so store it as-is.
+            "product": entry["product"],
+            "product_version": None,
         }
-        # Sometimes there is no BZ attached to the case
-        if "case_bugzillaNumber" in case:
-            cases[case["case_number"]]["bug"] = case["case_bugzillaNumber"]
-        # Sometimes there is no tag attached to the case
-        if "case_tags" in case:
-            case_tags = case["case_tags"]
-            if len(case_tags) == 1:
-                tags = case_tags[0].split(";")  # csv instead of a proper list
-            else:
-                tags = case_tags
-            cases[case["case_number"]]["tags"] = tags
-        if "case_closedDate" in case:
-            cases[case["case_number"]]["closeddate"] = case["case_closedDate"]
+
+    if skipped:
+        logging.warning(
+            "skipped %s non-support records from saved search: %s",
+            len(skipped),
+            skipped,
+        )
+
+    end = time.time()
+    logging.warning("selected %s cases in %s seconds", len(cases), end - start)
 
     try:
         load_cases_postgres(cases)
@@ -119,7 +426,7 @@ def get_escalations(cfg, cases):
         cases: cases returned from portal API using the configured query
 
     Returns:
-        list: open Jira cards that have been escalated
+        list: case numbers linked to an open escalation card
     """
     if (
         cases is None
@@ -138,17 +445,14 @@ def get_escalations(cfg, cases):
         f'"{escalations_label}" AND status != "Closed"'
     )
 
-    # Use expand to decrypt the restricted custom fields
-    # Custom field: SFDC Case Links in escalations proj.
     escalated_cards = jira_conn.search_issues(
-        jira_query, 0, max_cards, fields=["customfield_10979"], expand="renderedFields"
+        jira_query, 0, max_cards, fields=["key"], properties=SFDC_CASES_PROPERTY
     )
     escalations = []
     for card in escalated_cards:
-        # Custom field: SFDC Case Links in escalations proj.
-        case = card.renderedFields.customfield_10979
-        if case is not None:
-            escalations.append(case)
+        # One card can escalate several cases at once, so each case number has
+        # to be listed on its own - callers test membership per case number.
+        escalations.extend(_linked_case_numbers(card))
     return escalations
 
 
@@ -505,12 +809,20 @@ def _get_bug_info(case_number, case_data, bugs):
     return None
 
 
+# A linked issue in the escalations/priority project counts toward the prio-list
+# only while it is actively being worked.
+PRIO_ISSUE_STATUS = "In Progress"
+
+
 def _get_escalation_info(case_number, escalations, case_issues, labels, cfg):
     # Generated by: Cursor
-    """Determine escalation status and links
+    """Determine escalation / prio-list status and links
 
     Checks if a case has been escalated and finds the associated escalation
-    JIRA link if available.
+    JIRA link if available. A case also counts as being on the prio-list when it
+    has a linked JIRA issue in the escalations/priority project
+    (``jira_escalations_project``, e.g. ``RHOCPPRIO``) whose status is
+    ``PRIO_ISSUE_STATUS`` ("In Progress").
 
     Args:
         case_number: The case number to check
@@ -525,12 +837,21 @@ def _get_escalation_info(case_number, escalations, case_issues, labels, cfg):
     """
     escalated = bool(escalations and case_number in escalations)
     escalated_link = None
+    prio_link = None
 
     if case_issues:
         for case_issue in case_issues:
             if cfg["jira_escalations_project"] in case_issue["id"]:
-                escalated_link = case_issue["url"]
-                break
+                if escalated_link is None:
+                    escalated_link = case_issue["url"]
+                if prio_link is None and case_issue.get("status") == PRIO_ISSUE_STATUS:
+                    prio_link = case_issue["url"]
+
+    # An in-progress priority issue (e.g. RHOCPPRIO-1234) puts the case on the
+    # prio-list, even when it is not tracked on the escalations board.
+    if prio_link:
+        escalated = True
+        escalated_link = escalated_link or prio_link
 
     return {"escalated": escalated, "escalated_link": escalated_link}
 
@@ -590,11 +911,13 @@ def _get_label_flags(labels, escalated):
 
 
 def get_case_details(cfg):
-    """Caches CritSit and CaseGroup from open cases
+    """Cache the group name and comments for open cases.
 
-    Retrieves detailed information for each open case from the Red Hat Portal
-    API including CritSit status, group names, notified users, and associated
-    bugzillas. Results are cached in Redis.
+    Fetches the case group and comments for each open case straight from the
+    authoritative UIAPI ``RedHatSupportCase`` object (batched by case number) and
+    caches them in Redis. This replaces the stale HydraCase ``case(id)`` resolver.
+    ``crit_sit`` and ``notified_users`` have no UIAPI equivalent, so they are no
+    longer populated (defaulted to ``False`` / ``[]``).
 
     Args:
         cfg: Configuration dictionary containing API credentials and endpoints
@@ -608,44 +931,40 @@ def get_case_details(cfg):
         libtelco5g.redis_set("case_bz", json.dumps(None))
         return
 
+    # Bugzillas are no longer carried by the case detail source; keep case_bz as
+    # an empty map so get_bz_details reads {} (its long-standing contract - the
+    # "bug" branch never fired) rather than None.
     bz_dict = {}
     token = libtelco5g.get_token(cfg["offline_token"])
-    headers = make_headers(token)
     case_details = {}
-    logging.warning("getting all bugzillas and case details")
-    for case in cases:
-        if cases[case]["status"] != "Closed":
-            case_endpoint = f"{cfg['redhat_api']}/v1/cases/{case}"
-            r_case = requests.get(case_endpoint, headers=headers)
-            if r_case.status_code == 401:
-                token = libtelco5g.get_token(cfg["offline_token"])
-                headers = make_headers(token)
-                r_case = requests.get(case_endpoint, headers=headers)
+    logging.warning("getting case details (group + comments) via UIAPI")
 
-            case_json = r_case.json()
-            crit_sit = case_json.get("critSit", False)
-            group_name = case_json.get("groupName", None)
-            notified_users = case_json.get("notifiedUsers", [])
-            relief_at = case_json.get("reliefAt", None)
-            resolved_at = case_json.get("resolvedAt", None)
+    open_cases = [case for case in cases if cases[case]["status"] != "Closed"]
+    populated = fetch_case_details_uiapi(cfg, token, open_cases)
 
-            case_details[case] = {
-                "crit_sit": crit_sit,
-                "group_name": group_name,
-                "notified_users": notified_users,
-                "relief_at": relief_at,
-                "resolved_at": resolved_at,
-            }
-            if "bug" in cases[case]:
-                bz_dict[case] = case_json["bugzillas"]
+    for case in open_cases:
+        detail = populated.get(case)
+        if not detail:
+            continue
 
-            api_comments = case_json.get("comments", [])
-            if api_comments:
-                try:
-                    case_created_date = format_date(cases[case]["createdate"])
-                    load_comments_postgres(case, case_created_date, api_comments)
-                except Exception as e:
-                    logging.error("Failed to load comments for case %s: %s", case, e)
+        case_details[case] = {
+            # crit_sit / notified_users have no UIAPI field (dropped when the
+            # stale HydraCase case(id) resolver was retired).
+            "crit_sit": False,
+            "group_name": detail["group_name"],
+            "notified_users": [],
+            # relief_at / resolved_at have no source field.
+            "relief_at": None,
+            "resolved_at": None,
+        }
+
+        api_comments = detail["comments"]
+        if api_comments:
+            try:
+                case_created_date = format_date(cases[case]["createdate"])
+                load_comments_postgres(case, case_created_date, api_comments)
+            except Exception as e:
+                logging.error("Failed to load comments for case %s: %s", case, e)
 
     libtelco5g.redis_set("details", json.dumps(case_details))
     libtelco5g.redis_set("case_bz", json.dumps(bz_dict))
@@ -704,16 +1023,36 @@ def get_bz_details(cfg):
     libtelco5g.redis_set("bugs", json.dumps(bz_dict))
 
 
+# JIRA fields needed to build an issue record. Requested explicitly so that a
+# single search returns everything, rather than a follow-up jira_conn.issue()
+# call per result.
+ISSUE_SEARCH_FIELDS = [
+    "summary",
+    "status",
+    "updated",
+    "priority",
+    "assignee",
+    "fixVersions",
+    "issuetype",
+    "customfield_10470",  # QA Contact
+    "customfield_10840",  # Severity
+    "customfield_11087",  # RH Private Keywords
+]
+
+# Case numbers per JQL query. Each case contributes an OR clause, and the GET
+# form of search/jql starts rejecting the URL past roughly 100 of them.
+_ISSUE_QUERY_CHUNK_SIZE = 50
+
+
 def get_issue_details(cfg):
     """Cache issues associated with cases
 
-    Retrieves all JIRA issues associated with open cases from the Red Hat
-    Portal API and JIRA, extracting detailed information for each issue.
-    Results are cached in Redis.
+    Retrieves all JIRA issues linked to open cases by querying JIRA for the
+    case numbers, and extracts detailed information for each issue. Results
+    are cached in Redis.
 
     Args:
-        cfg: Configuration dictionary containing API credentials and JIRA
-            connection parameters
+        cfg: Configuration dictionary containing JIRA connection parameters
 
     Returns:
         None. Results are cached in Redis under the 'issues' key.
@@ -725,161 +1064,123 @@ def get_issue_details(cfg):
         libtelco5g.redis_set("issues", json.dumps(None))
         return
 
-    # Setup authentication and JIRA connection
-    token, headers, jira_conn = _setup_issue_processing(cfg)
+    jira_conn = libtelco5g.jira_connection(cfg)
 
-    # Process issues for all open cases
     jira_issues = {}
     open_cases = [case for case in cases if cases[case]["status"] != "Closed"]
 
-    for case in open_cases:
+    for chunk in chunked(open_cases, _ISSUE_QUERY_CHUNK_SIZE):
         try:
-            case_issues = _process_case_issues(case, cfg, token, headers, jira_conn)
-            if case_issues:
-                jira_issues[case] = case_issues
+            issues = _search_issues_by_cases(jira_conn, chunk)
         except Exception as e:
-            logging.warning("Error processing issues for case %s: %s", case, str(e))
+            # A failed chunk drops every case in it, not just one, so make it
+            # obvious which cases are missing from this refresh.
+            logging.warning("Error searching issues for cases %s: %s", chunk, str(e))
             continue
+        _collect_issues_by_case(issues, set(open_cases), jira_issues, cfg)
 
     # Cache the results
     libtelco5g.redis_set("issues", json.dumps(jira_issues))
     logging.warning("issues cached")
 
 
-def _setup_issue_processing(cfg):
-    # Generated by: Cursor
-    """Setup authentication and JIRA connection for issue processing
-
-    Initializes the necessary authentication tokens and JIRA connection
-    objects for processing issues.
+def _search_issues_by_cases(jira_conn, case_numbers):
+    """Find every JIRA issue linked to any of the given cases
 
     Args:
-        cfg: Configuration dictionary containing API credentials and JIRA
-            connection parameters
+        jira_conn: Active JIRA connection object
+        case_numbers: List of case numbers to search for
 
     Returns:
-        tuple: A 3-tuple containing (token, headers, jira_conn) for API access
+        ResultList: Matching JIRA issues, with the fields in
+            ISSUE_SEARCH_FIELDS and the SFDC case property populated
     """
-    # Reuse the existing libtelco5g setup pattern for consistency
-    token = libtelco5g.get_token(cfg["offline_token"])
-    headers = make_headers(token)
-    jira_conn = libtelco5g.jira_connection(cfg)
+    # SFDC_Cases_Links is the searchable alias the case-linking app exposes. It
+    # accepts only '~', and matches only the zero padded case number. The
+    # space separated "SFDC Cases Links" custom field is the encrypted one and
+    # silently matches nothing.
+    jql = " OR ".join(f'SFDC_Cases_Links ~ "{case}"' for case in case_numbers)
 
-    return token, headers, jira_conn
+    # maxResults=False pages through the whole result set via nextPageToken.
+    # search_issues() can't be used here: against JIRA Cloud it only works when
+    # startAt is 0, so it can't return more than one page.
+    return jira_conn.enhanced_search_issues(
+        jql,
+        maxResults=False,
+        fields=ISSUE_SEARCH_FIELDS,
+        expand="renderedFields",
+        properties=SFDC_CASES_PROPERTY,
+    )
 
 
-def _process_case_issues(case, cfg, token, headers, jira_conn):
-    # Generated by: Cursor
-    """Process all issues for a specific case
-
-    Retrieves issues from the API for a case and processes each one to extract
-    detailed JIRA information.
+def _linked_case_numbers(issue):
+    """Read the case numbers linked to a JIRA issue
 
     Args:
-        case: Case number to process
+        issue: JIRA issue object fetched with the SFDC case property
+
+    Returns:
+        set: Linked case numbers, empty if the issue has no linked cases
+    """
+    properties = issue.raw.get("properties") or {}
+    value = (properties.get(SFDC_CASES_PROPERTY) or {}).get("value")
+    if not value:
+        return set()
+    return set(str(value).split())
+
+
+def _collect_issues_by_case(issues, open_cases, jira_issues, cfg):
+    """Map search results onto the cases they belong to
+
+    Args:
+        issues: JIRA issues returned by a case search
+        open_cases: Set of open case numbers being cached
+        jira_issues: Dictionary of case number to issue list, updated in place
         cfg: Configuration dictionary
-        token: Authentication token for Red Hat Portal API
-        headers: HTTP headers for API requests
-        jira_conn: Active JIRA connection object
 
     Returns:
-        list: List of processed issue dictionaries, or None if no valid issues
-            found
+        None. 'jira_issues' is updated in place.
     """
-    # Get issues from API
-    issues_data = _get_case_issues_from_api(case, cfg, token, headers)
-    if not issues_data:
-        return None
+    for issue in issues:
+        # An issue can be linked to several cases, so rather than trusting the
+        # '~' text match it is mapped back through the property it matched on.
+        matched = _linked_case_numbers(issue) & open_cases
+        if not matched:
+            continue
 
-    case_issues = []
-    for issue in issues_data:
-        if "title" in issue.keys():
-            try:
-                processed_issue = _process_single_jira_issue(issue, jira_conn)
-                if processed_issue:
-                    case_issues.append(processed_issue)
-            except JIRAError:
-                logging.warning("Can't access %s", issue["resourceKey"])
-                continue
-            except Exception as e:
-                logging.warning(
-                    "Error processing issue %s: %s",
-                    issue.get("resourceKey", "unknown"),
-                    str(e),
-                )
-                continue
+        try:
+            issue_data = _build_issue_data(issue, cfg)
+        except Exception as e:
+            logging.warning("Error processing issue %s: %s", issue.key, str(e))
+            continue
 
-    return case_issues if case_issues else None
+        for case in matched:
+            case_issues = jira_issues.setdefault(case, [])
+            # A multi-case issue comes back once per chunk covering any of its
+            # cases, so guard against listing it against a case twice.
+            if not any(existing["id"] == issue_data["id"] for existing in case_issues):
+                case_issues.append(issue_data)
 
 
-def _get_case_issues_from_api(case, cfg, token, headers):
-    # Generated by: Cursor
-    """Get issues for a case from the Red Hat API
-
-    Makes an API request to retrieve all JIRA issues associated with a
-    specific case. Handles 401 authentication errors with retry.
+def _build_issue_data(issue, cfg):
+    """Build the issue record consumed by the dashboard
 
     Args:
-        case: Case number to query
-        cfg: Configuration dictionary containing API endpoint
-        token: Authentication token for Red Hat Portal API
-        headers: HTTP headers for API requests
+        issue: JIRA issue object fetched with ISSUE_SEARCH_FIELDS
+        cfg: Configuration dictionary containing the JIRA server URL
 
     Returns:
-        list: List of issue data from API, or None if no issues found or
-            request fails
+        dict: Complete issue data dictionary with all extracted fields
     """
-    issues_url = f"{cfg['redhat_api']}/cases/{case}/jiras"
-    issues = requests.get(issues_url, headers=headers)
-
-    # Handle 401 authorization errors
-    if issues.status_code == 401:
-        token = libtelco5g.get_token(cfg["offline_token"])
-        headers = make_headers(token)
-        issues = requests.get(issues_url, headers=headers)
-
-    if issues.status_code == 200 and len(issues.json()) > 0:
-        return issues.json()
-
-    return None
-
-
-def _process_single_jira_issue(issue, jira_conn):
-    # Generated by: Cursor
-    """Process a single JIRA issue and extract all relevant fields
-
-    Retrieves full details for a JIRA issue and extracts all relevant fields
-    including status, QA contact, severity, assignee, and more.
-
-    Args:
-        issue: Issue data dictionary from Red Hat API containing resourceKey
-            and other basic info
-        jira_conn: Active JIRA connection object
-
-    Returns:
-        dict: Complete issue data dictionary with all extracted fields, or
-            None if issue cannot be accessed
-    """
-    try:
-        bug = jira_conn.issue(issue["resourceKey"], expand="renderedFields")
-    except JIRAError:
-        logging.warning("Can't access %s", issue["resourceKey"])
-        return None
-
-    # Extract all JIRA fields
-    jira_fields = _extract_jira_fields(bug)
-
-    # Build the complete issue data
     return {
-        "id": issue["resourceKey"],
-        "url": issue["resourceURL"],
-        "title": issue["title"],
-        "status": issue["status"],
-        "updated": datetime.datetime.strftime(
-            format_date(str(issue["lastModifiedDate"])),
-            "%Y-%m-%d",
-        ),
-        **jira_fields,
+        "id": issue.key,
+        "url": "{}/browse/{}".format(cfg["server"].rstrip("/"), issue.key),
+        "title": issue.fields.summary,
+        "status": issue.fields.status.name,
+        # JIRA timestamps carry milliseconds and a numeric UTC offset, which
+        # utils.format_date's fixed format doesn't accept.
+        "updated": date_parser.parse(issue.fields.updated).strftime("%Y-%m-%d"),
+        **_extract_jira_fields(issue),
     }
 
 
@@ -989,7 +1290,11 @@ def _extract_assignee_email(bug):
         str: Assignee email address, or None if not assigned
     """
     if bug.fields.assignee is not None:
-        return bug.fields.assignee.emailAddress
+        # Atlassian hides emailAddress under GDPR privacy settings, so the
+        # assignee User can lack the attribute entirely. Degrade to None
+        # instead of raising - otherwise _collect_issues_by_case drops the
+        # issue from every case it is linked to.
+        return getattr(bug.fields.assignee, "emailAddress", None)
     return None
 
 

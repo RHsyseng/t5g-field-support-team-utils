@@ -35,6 +35,7 @@ portal2jira_sevs = {
     "1 (Urgent)": "Critical",
     "2 (High)": "Major",
     "3 (Normal)": "Normal",
+    "3 (Medium)": "Normal",  # GraphQL UIAPI uses "Medium" where v1 used "Normal"
     "4 (Low)": "Minor",
 }
 
@@ -557,6 +558,23 @@ def _handle_old_case(case, context, cfg):
     read_only = os.getenv("READ_ONLY", "false") == "true"
 
     if previous_issue and not read_only:
+        # Only a card that is in a genuinely closed/done column was ever closed,
+        # so only such a card should be "reopened". Any open card -- whether it
+        # is still in To Do or a human has actively advanced it (In Progress,
+        # Code Review, ...) -- was never closed. Without this guard the dashboard
+        # re-runs the transition and re-posts the "reopened" comment on every
+        # hourly sync whenever the card is missing from the cards cache (e.g. it
+        # dropped out of the active sprint), reverting the assignee's status
+        # change and spamming the card. status_map maps every done/closed
+        # workflow status to "Done"; unknown statuses are treated as open too.
+        card_status = previous_issue.fields.status.name
+        if status_map.get(card_status) != "Done":
+            logging.warning(
+                f"{previous_issue.key} is in '{card_status}' (not a closed "
+                f"column); not reopening case {case}."
+            )
+            return True
+
         logging.warning(
             f"Updating: {previous_issue.key} rather than creating new card."
         )

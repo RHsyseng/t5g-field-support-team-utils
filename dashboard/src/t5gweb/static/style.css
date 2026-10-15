@@ -90,7 +90,8 @@ ul.highlight:hover {
   border-radius: 5px;
 }
 
-.severity.normal {
+.severity.normal,
+.severity.medium {
   background-color: var(--bs-yellow);
   border-radius: 5px;
 }
