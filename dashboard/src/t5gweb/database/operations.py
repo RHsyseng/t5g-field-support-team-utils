@@ -235,6 +235,11 @@ def load_jira_card_postgres(cases, case_number, issue):
                         if issue.fields.assignee
                         else None
                     ),
+                    assignee_email=(
+                        getattr(issue.fields.assignee, "emailAddress", None)
+                        if issue.fields.assignee
+                        else None
+                    ),
                     sprint=sprint_value,
                     severity=severity_int,
                 )
@@ -268,6 +273,11 @@ def load_jira_card_postgres(cases, case_number, issue):
             jira_card.status = issue.fields.status.name
             jira_card.assignee = (
                 issue.fields.assignee.displayName if issue.fields.assignee else None
+            )
+            jira_card.assignee_email = (
+                getattr(issue.fields.assignee, "emailAddress", None)
+                if issue.fields.assignee
+                else None
             )
             jira_card.sprint = sprint_value
 
@@ -334,7 +344,7 @@ def load_jira_card_postgres(cases, case_number, issue):
     return card_processed, card_comments  # Return both values
 
 
-def get_my_queue_cases(active_sprint_name=None, engineer_filter=None):
+def get_my_queue_cases(active_sprint_name=None, engineer_email=None):
     """Query cases in the engineer's queue that need attention.
 
     Filters cases based on:
@@ -345,7 +355,8 @@ def get_my_queue_cases(active_sprint_name=None, engineer_filter=None):
 
     Args:
         active_sprint_name: Name/ID of the sprint to filter by (optional)
-        engineer_filter: Engineer name to filter by (optional)
+        engineer_email: Engineer email address to match against the JIRA
+            assignee email (optional)
 
     Returns:
         dict: Cases needing attention, keyed by case_number, with structure:
@@ -391,10 +402,10 @@ def get_my_queue_cases(active_sprint_name=None, engineer_filter=None):
         else:
             sprint_msg = "all sprints"
 
-        # Apply engineer filter if provided
-        if engineer_filter:
-            cases_query = cases_query.filter(JiraCard.assignee == engineer_filter)
-            engineer_msg = f", engineer '{engineer_filter}'"
+        # Apply engineer filter if provided (match on the JIRA assignee email)
+        if engineer_email:
+            cases_query = cases_query.filter(JiraCard.assignee_email == engineer_email)
+            engineer_msg = f", engineer '{engineer_email}'"
         else:
             engineer_msg = ""
 

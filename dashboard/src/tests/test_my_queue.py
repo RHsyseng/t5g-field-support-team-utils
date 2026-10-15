@@ -28,13 +28,21 @@ def _case(case_number="10000001", status="Open", severity=3, **kwargs):
     return Case(case_number=case_number, status=status, severity=severity, **defaults)
 
 
+_UNSET = object()
+
+
 def _card(
     jira_card_id="CARD-1",
     case_number="10000001",
     assignee="engineer1",
+    assignee_email=_UNSET,
     sprint="Sprint 1",
     **kwargs,
 ):
+    # My Queue matches on the assignee email; by default mirror the assignee
+    # so tests can keep expressing the engineer with a single value.
+    if assignee_email is _UNSET:
+        assignee_email = assignee
     defaults = dict(
         created_date=CASE_DATE,
         last_update_date=CASE_DATE,
@@ -48,6 +56,7 @@ def _card(
         jira_card_id=jira_card_id,
         case_number=case_number,
         assignee=assignee,
+        assignee_email=assignee_email,
         sprint=sprint,
         **defaults,
     )
@@ -233,7 +242,7 @@ class TestGetMyQueueCasesFilters:
     def test_filter_by_engineer(self, test_db_session):
         self._seed_two_cases(test_db_session)
 
-        result = get_my_queue_cases(engineer_filter="Bob")
+        result = get_my_queue_cases(engineer_email="Bob")
         assert "10000002" in result
         assert "10000001" not in result
 
@@ -242,7 +251,7 @@ class TestGetMyQueueCasesFilters:
 
         result = get_my_queue_cases(
             active_sprint_name="Sprint 1",
-            engineer_filter="Alice",
+            engineer_email="Alice",
         )
         assert "10000001" in result
         assert len(result) == 1
@@ -252,7 +261,7 @@ class TestGetMyQueueCasesFilters:
 
         result = get_my_queue_cases(
             active_sprint_name="Sprint 1",
-            engineer_filter="Bob",
+            engineer_email="Bob",
         )
         assert len(result) == 0
 
@@ -271,8 +280,30 @@ class TestGetMyQueueCasesFilters:
     def test_nonexistent_engineer_returns_empty(self, test_db_session):
         self._seed_two_cases(test_db_session)
 
-        result = get_my_queue_cases(engineer_filter="Nobody")
+        result = get_my_queue_cases(engineer_email="Nobody")
         assert len(result) == 0
+
+    def test_filter_matches_on_email_not_display_name(self, test_db_session):
+        # Regression: the engineer filter must match the assignee email, not
+        # the display name. A user whose SAML login omits the surname (so the
+        # display name differs from JIRA) must still find their cards by email.
+        _seed(
+            test_db_session,
+            [
+                _case(case_number="10000001"),
+                _card(
+                    case_number="10000001",
+                    assignee="Firstname Lastname",
+                    assignee_email="engineer@example.com",
+                ),
+            ],
+        )
+
+        # Matching by the display name must NOT work...
+        assert get_my_queue_cases(engineer_email="Firstname") == {}
+        # ...but matching by email must.
+        result = get_my_queue_cases(engineer_email="engineer@example.com")
+        assert "10000001" in result
 
 
 class TestGetMyQueueCasesReturnStructure:
@@ -489,7 +520,7 @@ class TestGetMyQueueCasesEdgeCases:
             ],
         )
 
-        result = get_my_queue_cases(engineer_filter="Alice")
+        result = get_my_queue_cases(engineer_email="Alice")
         assert "10000001" not in result
 
     def test_null_assignee_returned_without_filter(self, test_db_session):

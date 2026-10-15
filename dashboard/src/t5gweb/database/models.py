@@ -119,7 +119,10 @@ class JiraCard(Base):
         summary: Card title/summary
         priority: Card priority level
         status: Current card status
-        assignee: JIRA username of assignee
+        assignee: JIRA display name of assignee
+        assignee_email: JIRA email address of assignee (used to match the
+            logged-in engineer against their cards; nullable when the JIRA
+            assignee email is unset or GDPR-hidden)
         sprint: Sprint name or identifier
         severity: Severity level as integer (1-4)
         no_update_date: When the case was last marked "no update needed"
@@ -151,6 +154,9 @@ class JiraCard(Base):
     assignee: Mapped[Optional[str]] = mapped_column(
         String, nullable=True
     )  # Changed from fe_in_charge to assignee
+    assignee_email: Mapped[Optional[str]] = mapped_column(
+        String, nullable=True
+    )  # JIRA assignee email; used to match the logged-in engineer
     sprint: Mapped[Optional[str]] = mapped_column(String, nullable=True)
     severity: Mapped[Optional[int]] = mapped_column(
         Integer, nullable=True

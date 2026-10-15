@@ -32,6 +32,7 @@ def mock_jira_issue():
     mock_issue.fields.priority.name = "High"
     mock_issue.fields.status.name = "In Progress"
     mock_issue.fields.assignee.displayName = "Test User"
+    mock_issue.fields.assignee.emailAddress = "testuser@redhat.com"
     mock_issue.fields.created = "2024-01-01T00:00:00.000+0000"
     mock_issue.fields.updated = "2024-01-02T00:00:00.000+0000"
 

@@ -648,27 +648,31 @@ def my_queue_view():
     """Display the logged-in engineer's queue of cases needing attention.
 
     Shows only the current user's cases where customers have commented after
-    the engineering team. The engineer filter is derived from the SAML login
-    or from the ENGINEER_OVERRIDE env var for local testing.
+    the engineering team. Cards are matched on the engineer's email address
+    (the JIRA assignee email), derived from the SAML login or from the
+    ENGINEER_OVERRIDE env var (an email address) for local testing.
     """
     cfg = set_cfg()
 
     engineer_override = os.getenv("ENGINEER_OVERRIDE")
     if engineer_override:
-        engineer_filter = engineer_override
+        engineer_email = engineer_override
+        engineer_label = engineer_override
     elif current_user.is_authenticated:
-        engineer_filter = current_user.display_name
+        engineer_email = current_user.mail
+        engineer_label = current_user.display_name
     else:
-        engineer_filter = None
+        engineer_email = None
+        engineer_label = None
 
-    my_queue_cases = get_my_queue_cases(engineer_filter=engineer_filter)
+    my_queue_cases = get_my_queue_cases(engineer_email=engineer_email)
 
     return render_template(
         "ui/my_queue.html",
         cases=my_queue_cases,
         jira_server=cfg["server"],
         page_title="My Queue",
-        engineer_filter=engineer_filter,
+        engineer_filter=engineer_label,
     )
 
 
