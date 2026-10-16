@@ -1,6 +1,7 @@
 """utils.py: utility functions for the t5gweb"""
 
 import datetime
+import html
 import json
 import logging
 import os
@@ -465,8 +466,12 @@ def uiapi_comment_to_dict(node):
         created_by_type = "Associate"
     else:
         created_by_type = "Internal"
+    # Body__c comes back HTML-entity-escaped (``&lt;p&gt;...``); unescape to real
+    # HTML so the frontend (which renders the body as HTML) displays it formatted
+    # instead of showing literal tags.
+    body = (node.get("Body__c") or {}).get("value") or ""
     return {
-        "commentBody": (node.get("Body__c") or {}).get("value") or "",
+        "commentBody": html.unescape(body),
         "createdBy": ((node.get("CreatedBy") or {}).get("Name") or {}).get("value")
         or "unknown",
         "createdByType": created_by_type,

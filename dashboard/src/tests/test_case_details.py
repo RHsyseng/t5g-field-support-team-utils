@@ -106,6 +106,10 @@ class TestUiapiCommentToDict:
             "createdDate": "2026-09-01T00:00:00.000Z",
         }
 
+    def test_body_is_html_unescaped(self):
+        node = _comment_node("1", body="&lt;p&gt;Hi&lt;/p&gt;&amp; more")
+        assert uiapi_comment_to_dict(node)["commentBody"] == "<p>Hi</p>& more"
+
     def test_associate_comment_type(self):
         node = _comment_node("1", is_associate=True)
         assert uiapi_comment_to_dict(node)["createdByType"] == "Associate"
