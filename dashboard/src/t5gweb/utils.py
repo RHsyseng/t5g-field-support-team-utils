@@ -10,6 +10,7 @@ import smtplib
 from email.message import EmailMessage
 
 import requests
+from markdownify import markdownify
 from slack_sdk import WebClient
 from slack_sdk.errors import SlackApiError
 
@@ -457,8 +458,8 @@ def uiapi_comment_to_dict(node):
 
     Returns:
         dict: ``{"commentBody": str, "createdBy": str, "createdByType": str,
-        "createdDate": str|None}``. ``createdByType`` is "Customer",
-        "Associate", or "Internal".
+        "createdDate": str|None}``. ``commentBody`` is Markdown.
+        ``createdByType`` is "Customer", "Associate", or "Internal".
     """
     if (node.get("IsCustomer__c") or {}).get("value"):
         created_by_type = "Customer"
@@ -466,12 +467,13 @@ def uiapi_comment_to_dict(node):
         created_by_type = "Associate"
     else:
         created_by_type = "Internal"
-    # Body__c comes back HTML-entity-escaped (``&lt;p&gt;...``); unescape to real
-    # HTML so the frontend (which renders the body as HTML) displays it formatted
-    # instead of showing literal tags.
+    # Body__c comes back HTML-entity-escaped (``&lt;p&gt;...``). Unescape to real
+    # HTML, then convert to Markdown so the frontend renders clean, consistent
+    # formatting (and never injects raw customer HTML). script/style are dropped.
     body = (node.get("Body__c") or {}).get("value") or ""
+    markdown_body = markdownify(html.unescape(body), strip=["script", "style"])
     return {
-        "commentBody": html.unescape(body),
+        "commentBody": markdown_body.strip(),
         "createdBy": ((node.get("CreatedBy") or {}).get("Name") or {}).get("value")
         or "unknown",
         "createdByType": created_by_type,

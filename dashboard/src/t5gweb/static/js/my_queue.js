@@ -1,5 +1,20 @@
 // My Queue DataTable initialization
-/* globals $ */ // eslint-disable-line no-redeclare
+/* globals $, marked */ // eslint-disable-line no-redeclare
+
+/**
+ * Render a Markdown string to HTML. Portal comment bodies are stored as
+ * Markdown (converted from the portal's HTML server-side); render them with
+ * marked when available, falling back to the raw text if it isn't loaded.
+ * @param {string} text - Markdown source
+ * @returns {string} HTML string
+ */
+function renderMarkdown (text) {
+  if (!text) return ''
+  if (typeof marked !== 'undefined') {
+    return marked.parse(text)
+  }
+  return text
+}
 
 /**
  * Format child row content with two-column layout for portal and JIRA comments
@@ -35,7 +50,7 @@ function format (data) {
         (typeLabel ? ' <span class=\'fw-normal text-muted\'>(' + typeLabel + ')</span>' : '') + '</div>'
       result += '<div class=\'text-muted small\'>' +
         (comment.date ? comment.date.substring(0, 19).replace('T', ' ') : 'No date') + '</div>'
-      result += '<div class=\'mt-2\'>' + (comment.body || '') + '</div>'
+      result += '<div class=\'mt-2\'>' + renderMarkdown(comment.body) + '</div>'
       result += '</div>'
     }
     result += '</div>'
