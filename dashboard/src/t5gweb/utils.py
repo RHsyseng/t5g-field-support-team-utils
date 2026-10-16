@@ -1,6 +1,7 @@
 """utils.py: utility functions for the t5gweb"""
 
 import datetime
+import html
 import json
 import logging
 import os
@@ -9,6 +10,7 @@ import smtplib
 from email.message import EmailMessage
 
 import requests
+from markdownify import markdownify
 from slack_sdk import WebClient
 from slack_sdk.errors import SlackApiError
 
@@ -448,18 +450,37 @@ def chunked(items, size):
 
 
 def uiapi_comment_to_dict(node):
-    """Flatten a UIAPI ``RedHatSupportCaseComment`` node into a comment dict.
+    """Flatten a UIAPI ``RedHatSupportCaseComment__c`` node into a comment dict.
 
     Args:
-        node: a ``RedHatSupportCaseComment`` node from ``CaseComments.edges``.
+        node: a ``RedHatSupportCaseComment__c`` node (``Body__c`` /
+            ``IsCustomer__c`` / ``IsAssociate__c`` / ``CreatedDate`` / ...).
 
     Returns:
-        dict: ``{"commentBody": str, "createdBy": str, "createdDate": str|None}``.
+        dict: ``{"commentBody": str, "createdBy": str, "createdByType": str,
+        "isPublic": bool, "createdDate": str|None}``. ``commentBody`` is
+        Markdown. ``createdByType`` is "Customer", "Associate", or "Internal".
+        ``isPublic`` is ``Visibility__c == "Public"`` (customer-visible).
     """
+    if (node.get("IsCustomer__c") or {}).get("value"):
+        created_by_type = "Customer"
+    elif (node.get("IsAssociate__c") or {}).get("value"):
+        created_by_type = "Associate"
+    else:
+        created_by_type = "Internal"
+    # Body__c comes back HTML-entity-escaped (``&lt;p&gt;...``). Unescape to real
+    # HTML, then convert to Markdown so the frontend renders clean, consistent
+    # formatting (and never injects raw customer HTML). script/style are dropped.
+    body = (node.get("Body__c") or {}).get("value") or ""
+    markdown_body = markdownify(html.unescape(body), strip=["script", "style"])
     return {
-        "commentBody": (node.get("CommentBody") or {}).get("value") or "",
+        "commentBody": markdown_body.strip(),
         "createdBy": ((node.get("CreatedBy") or {}).get("Name") or {}).get("value")
         or "unknown",
+        "createdByType": created_by_type,
+        # Visibility__c is the authoritative public/private picklist; anything
+        # other than "Public" (incl. null) is treated as private.
+        "isPublic": (node.get("Visibility__c") or {}).get("value") == "Public",
         "createdDate": (node.get("CreatedDate") or {}).get("value"),
     }
 

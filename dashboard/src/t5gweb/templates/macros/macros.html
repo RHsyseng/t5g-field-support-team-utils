@@ -359,3 +359,50 @@
     <script type="text/javascript" charset="utf8"
         src="{{ url_for('static', filename='node_modules/plotly.js-cartesian-dist-min/plotly-cartesian.min.js') }}"></script>
 {%- endmacro %}
+
+{% macro my_queue_cases_table(cases, jira_server) -%}
+    <div class="loading text-center fs-3" style="display: none;">Loading Table...</div>
+    <div class="my-queue-table">
+        <table class="table table-bordered table-hover table-responsive mt-5 w-100" id="my-queue-data">
+            <caption style="caption-side: top; text-align: center;">Cases in your queue needing attention</caption>
+            <thead>
+                <tr>
+                    <th scope="col" class="text-center"></th>
+                    <th scope="col" class="text-center">Case#</th>
+                    <th scope="col" class="text-center">Severity</th>
+                    <th scope="col" class="text-center">Summary</th>
+                    <th scope="col" class="text-center">Field Engineer</th>
+                    <th scope="col" class="text-center">Most Recent Comment</th>
+                    <th scope="col" class="text-center">Portal Status</th>
+                    <th scope="col" class="text-center">Jira Status</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for case_number, case_data in cases.items() %}
+                <tr data-case-number="{{ case_number }}">
+                    <td class="align-middle dt-control"></td>
+                    <td class="align-middle text-center">
+                        <a href="https://access.redhat.com/support/cases/#/case/{{ case_number }}" target="_blank">
+                            {{ case_number }}
+                        </a>
+                    </td>
+                    <td class="align-middle text-center">
+                        <span class="badge bg-secondary">{{ case_data.severity }}</span>
+                    </td>
+                    <td class="align-middle">{{ case_data.summary | e }}</td>
+                    <td class="align-middle text-center">{{ case_data.field_engineer or "None" }}</td>
+                    <td class="align-middle">
+                        {% if case_data.most_recent_jira_comment %}
+                            <span class="fw-bold fst-italic">{{ case_data.most_recent_jira_comment.updated[:10] }}</span> - {{ case_data.most_recent_jira_comment.body[:100] | e }}{% if case_data.most_recent_jira_comment.body | length > 100 %}...{% endif %}
+                        {% else %}
+                            No comments
+                        {% endif %}
+                    </td>
+                    <td class="align-middle text-center">{{ case_data.portal_status }}</td>
+                    <td class="align-middle text-center">{{ case_data.jira_status }}</td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
+{%- endmacro %}
