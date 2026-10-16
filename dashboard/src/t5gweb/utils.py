@@ -448,18 +448,28 @@ def chunked(items, size):
 
 
 def uiapi_comment_to_dict(node):
-    """Flatten a UIAPI ``RedHatSupportCaseComment`` node into a comment dict.
+    """Flatten a UIAPI ``RedHatSupportCaseComment__c`` node into a comment dict.
 
     Args:
-        node: a ``RedHatSupportCaseComment`` node from ``CaseComments.edges``.
+        node: a ``RedHatSupportCaseComment__c`` node (``Body__c`` /
+            ``IsCustomer__c`` / ``IsAssociate__c`` / ``CreatedDate`` / ...).
 
     Returns:
-        dict: ``{"commentBody": str, "createdBy": str, "createdDate": str|None}``.
+        dict: ``{"commentBody": str, "createdBy": str, "createdByType": str,
+        "createdDate": str|None}``. ``createdByType`` is "Customer",
+        "Associate", or "Internal".
     """
+    if (node.get("IsCustomer__c") or {}).get("value"):
+        created_by_type = "Customer"
+    elif (node.get("IsAssociate__c") or {}).get("value"):
+        created_by_type = "Associate"
+    else:
+        created_by_type = "Internal"
     return {
-        "commentBody": (node.get("CommentBody") or {}).get("value") or "",
+        "commentBody": (node.get("Body__c") or {}).get("value") or "",
         "createdBy": ((node.get("CreatedBy") or {}).get("Name") or {}).get("value")
         or "unknown",
+        "createdByType": created_by_type,
         "createdDate": (node.get("CreatedDate") or {}).get("value"),
     }
 

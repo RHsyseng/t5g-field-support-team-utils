@@ -77,14 +77,30 @@ query CaseDetailUIAPI($where: RedHatSupportCase_Filter, $after: String) {
       edges { node {
         CaseNumber__c { value }
         Group__r { Name { value } }
-        CaseComments(first: 200, orderBy: { CreatedDate: { order: ASC } }) {
-          edges { node {
-            CommentBody { value }
-            CreatedDate { value }
-            IsPublished { value }
-            CreatedBy { Name { value } }
-          } }
-        }
+      } }
+    }
+  } }
+}
+"""
+
+# Comments are sourced from the top-level RedHatSupportCaseComment__c object
+# (filtered by Case__r.CaseNumber__c), NOT the RedHatSupportCase.CaseComments
+# nested connection -- that connection comes back empty, whereas this object
+# returns the authoritative Body__c / Visibility__c / author-type fields.
+GRAPHQL_CASE_COMMENTS_UIAPI_QUERY = """
+query CaseCommentsUIAPI($where: RedHatSupportCaseComment__c_Filter, $after: String) {
+  redhat_support_uiapi { query {
+    RedHatSupportCaseComment__c(where: $where, first: 100, after: $after,
+                                orderBy: { CreatedDate: { order: DESC } }) {
+      pageInfo { hasNextPage endCursor }
+      edges { node {
+        Case__r { CaseNumber__c { value } }
+        Body__c { value }
+        CreatedBy { Name { value } }
+        CreatedDate { value }
+        Visibility__c { value }
+        IsCustomer__c { value }
+        IsAssociate__c { value }
       } }
     }
   } }
@@ -322,22 +338,88 @@ def fetch_case_details_uiapi(cfg, token, case_numbers):
                 group_name = ((node.get("Group__r") or {}).get("Name") or {}).get(
                     "value"
                 )
-                # CaseComments(first: 200) bounds volume; paginate the nested
-                # connection here if any case can exceed 200 comments.
-                comment_edges = (node.get("CaseComments") or {}).get("edges") or []
-                details[case_number] = {
-                    "group_name": group_name,
-                    "comments": [
-                        uiapi_comment_to_dict(e["node"]) for e in comment_edges
-                    ],
-                }
+                details[case_number] = {"group_name": group_name, "comments": []}
 
             page_info = conn["pageInfo"]
             if not page_info["hasNextPage"]:
                 break
             after = page_info["endCursor"]
 
+    # Comments come from the RedHatSupportCaseComment__c object, not the (empty)
+    # nested CaseComments connection above. Fetch them separately and merge.
+    comments_by_case = _fetch_case_comments_uiapi(cfg, headers, list(details.keys()))
+    for case_number, comments in comments_by_case.items():
+        if case_number in details:
+            details[case_number]["comments"] = comments
+
     return details
+
+
+def _fetch_case_comments_uiapi(cfg, headers, case_numbers):
+    """Fetch portal comments for cases via RedHatSupportCaseComment__c.
+
+    The RedHatSupportCase.CaseComments nested connection returns empty, so
+    comments are queried wholesale from the top-level comment object, filtered by
+    Case__r.CaseNumber__c and batched like the detail query.
+
+    Args:
+        cfg: Configuration dict (API endpoint + offline token for re-auth).
+        headers: GraphQL request headers (already carrying a bearer token).
+        case_numbers: Case numbers to fetch comments for.
+
+    Returns:
+        dict: case number -> list of comment dicts (see uiapi_comment_to_dict).
+            Cases with no comments are omitted.
+    """
+    url = cfg["graphql_api"]
+    comments_by_case = {}
+
+    for chunk in chunked(case_numbers, _CASE_DETAIL_CHUNK_SIZE):
+        where = {"Case__r": {"CaseNumber__c": {"in": chunk}}}
+        after = None
+        while True:
+            variables = {"where": where, "after": after}
+            try:
+                data = graphql_post(
+                    url, headers, GRAPHQL_CASE_COMMENTS_UIAPI_QUERY, variables
+                )
+            except RuntimeError as exc:
+                # Refresh the token once and retry; drop the chunk if it still
+                # fails so one bad batch does not abort the whole pass.
+                logging.warning("re-authenticating after comment error: %s", exc)
+                try:
+                    headers = make_graphql_headers(
+                        libtelco5g.get_token(cfg["offline_token"])
+                    )
+                    data = graphql_post(
+                        url, headers, GRAPHQL_CASE_COMMENTS_UIAPI_QUERY, variables
+                    )
+                except Exception as exc2:
+                    logging.warning(
+                        "could not fetch comments for chunk %s: %s", chunk, exc2
+                    )
+                    break
+
+            conn = data["data"]["redhat_support_uiapi"]["query"][
+                "RedHatSupportCaseComment__c"
+            ]
+            for edge in conn["edges"]:
+                node = edge["node"]
+                case_number = (
+                    (node.get("Case__r") or {}).get("CaseNumber__c") or {}
+                ).get("value")
+                if not case_number:
+                    continue
+                comments_by_case.setdefault(case_number, []).append(
+                    uiapi_comment_to_dict(node)
+                )
+
+            page_info = conn["pageInfo"]
+            if not page_info["hasNextPage"]:
+                break
+            after = page_info["endCursor"]
+
+    return comments_by_case
 
 
 def get_cases(cfg):
