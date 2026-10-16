@@ -79,15 +79,18 @@ $(document).ready(function () {
     return
   }
 
-  console.log('Table found, rows:', tableElement.find('tbody tr').length)
+  const bodyRowCount = tableElement.find('tbody tr').length
+  console.log('Table found, rows:', bodyRowCount)
 
-  // Debug: Check column counts
+  // Debug: Check column counts. Only meaningful when the queue has rows; an
+  // empty queue renders no <td> cells, which is valid (DataTables shows its
+  // own "no data" message) and must not trip the mismatch guard.
   const headerCount = tableElement.find('thead tr th').length
   const firstRowColCount = tableElement.find('tbody tr:first td').length
   console.log('Header columns:', headerCount)
   console.log('First row columns:', firstRowColCount)
 
-  if (headerCount !== firstRowColCount) {
+  if (bodyRowCount > 0 && headerCount !== firstRowColCount) {
     console.error('COLUMN MISMATCH! Headers:', headerCount, 'Cells:', firstRowColCount)
     alert('Table structure error: ' + headerCount + ' headers but ' + firstRowColCount + ' cells in first row')
     return
