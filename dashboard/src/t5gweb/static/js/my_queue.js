@@ -1,19 +1,51 @@
 // My Queue DataTable initialization
-/* globals $, marked */ // eslint-disable-line no-redeclare
+/* globals $, marked, DOMPurify */ // eslint-disable-line no-redeclare
 
 /**
- * Render a Markdown string to HTML. Portal comment bodies are stored as
- * Markdown (converted from the portal's HTML server-side); render them with
- * marked when available, falling back to the raw text if it isn't loaded.
- * @param {string} text - Markdown source
- * @returns {string} HTML string
+ * HTML-escape a plain-text string for safe insertion into innerHTML.
+ * @param {string} text - untrusted plain text
+ * @returns {string} escaped text
+ */
+function escapeHtml (text) {
+  if (text === null || text === undefined) return ''
+  return String(text)
+    .replace(/&/g, '&amp;')
+    .replace(/</g, '&lt;')
+    .replace(/>/g, '&gt;')
+    .replace(/"/g, '&quot;')
+    .replace(/'/g, '&#39;')
+}
+
+/**
+ * Sanitize an HTML string before it is injected via innerHTML. Comment content
+ * is authored by customers / external parties, so it must be sanitized to
+ * prevent stored/DOM XSS. Falls back to HTML-escaping (never raw injection) if
+ * DOMPurify is not loaded.
+ * @param {string} htmlStr - untrusted HTML
+ * @returns {string} sanitized HTML
+ */
+function sanitizeHtml (htmlStr) {
+  if (!htmlStr) return ''
+  if (typeof DOMPurify !== 'undefined') {
+    return DOMPurify.sanitize(htmlStr)
+  }
+  return escapeHtml(htmlStr)
+}
+
+/**
+ * Render a Markdown string to sanitized HTML. Portal comment bodies are stored
+ * as Markdown (converted from the portal's HTML server-side); render them with
+ * marked and run the result through DOMPurify. Falls back to escaped text if
+ * marked is not loaded.
+ * @param {string} text - Markdown source (untrusted)
+ * @returns {string} sanitized HTML string
  */
 function renderMarkdown (text) {
   if (!text) return ''
   if (typeof marked !== 'undefined') {
-    return marked.parse(text)
+    return sanitizeHtml(marked.parse(text))
   }
-  return text
+  return escapeHtml(text)
 }
 
 /**
@@ -46,10 +78,10 @@ function format (data) {
       }
 
       result += '<div class=\'mb-3 p-2\' style=\'border-left: 3px solid ' + borderColor + ';\'>'
-      result += '<div class=\'fw-bold\'>' + (comment.author || 'Unknown') +
-        (typeLabel ? ' <span class=\'fw-normal text-muted\'>(' + typeLabel + ')</span>' : '') + '</div>'
+      result += '<div class=\'fw-bold\'>' + escapeHtml(comment.author || 'Unknown') +
+        (typeLabel ? ' <span class=\'fw-normal text-muted\'>(' + escapeHtml(typeLabel) + ')</span>' : '') + '</div>'
       result += '<div class=\'text-muted small\'>' +
-        (comment.date ? comment.date.substring(0, 19).replace('T', ' ') : 'No date') + '</div>'
+        (comment.date ? escapeHtml(comment.date.substring(0, 19).replace('T', ' ')) : 'No date') + '</div>'
       result += '<div class=\'mt-2\'>' + renderMarkdown(comment.body) + '</div>'
       result += '</div>'
     }
@@ -67,10 +99,10 @@ function format (data) {
     for (let i = 0; i < data.jira_comments.length; i++) {
       const comment = data.jira_comments[i]
       result += '<div class=\'mb-3 p-2 border-start border-3 border-success\'>'
-      result += '<div class=\'fw-bold\'>' + (comment.author || 'Unknown') + '</div>'
+      result += '<div class=\'fw-bold\'>' + escapeHtml(comment.author || 'Unknown') + '</div>'
       result += '<div class=\'text-muted small\'>' +
-        (comment.updated ? comment.updated.substring(0, 19).replace('T', ' ') : 'No date') + '</div>'
-      result += '<div class=\'mt-2\'>' + (comment.body || '') + '</div>'
+        (comment.updated ? escapeHtml(comment.updated.substring(0, 19).replace('T', ' ')) : 'No date') + '</div>'
+      result += '<div class=\'mt-2\'>' + sanitizeHtml(comment.body) + '</div>'
       result += '</div>'
     }
     result += '</div>'

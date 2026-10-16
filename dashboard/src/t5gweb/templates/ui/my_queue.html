@@ -25,5 +25,6 @@
     {{ macros.include_datatables_js_css() }}
     {{ macros.include_datatables_plugins_js_css() }}
     <script src="{{ url_for('static', filename='node_modules/marked/marked.min.js') }}"></script>
+    <script src="{{ url_for('static', filename='node_modules/dompurify/dist/purify.min.js') }}"></script>
     <script src="{{ url_for('static', filename='js/my_queue.js') }}"></script>
 {% endblock %}

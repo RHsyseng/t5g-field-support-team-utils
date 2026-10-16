@@ -25,6 +25,7 @@
     "datatables.net-bs5": "^1.11.5",
     "datatables.net-searchpanes-bs5": "^2.0.0",
     "datatables.net-select-bs5": "^1.3.4",
+    "dompurify": "^3.4.17",
     "marked": "^12.0.2",
     "plotly.js-cartesian-dist-min": "^2.24.2"
   }
