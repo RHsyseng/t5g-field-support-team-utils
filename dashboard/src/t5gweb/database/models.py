@@ -4,6 +4,7 @@ from datetime import datetime
 from typing import List, Optional
 
 from sqlalchemy import (
+    Boolean,
     DateTime,
     ForeignKey,
     ForeignKeyConstraint,
@@ -76,8 +77,11 @@ class Comment(Base):
         case_number: Reference to parent case number
         created_date: Case creation date for foreign key relationship
         author: Comment author name
+        comment_type: Author type (Customer/Associate/Internal/Bug)
         comment_text: Full comment text content
         commented_at: Date comment was posted
+        is_public: Whether the comment is customer-visible (public) vs internal
+            (private). Nullable; NULL is treated as public downstream.
         case: Relationship to parent Case record
     """
 
@@ -93,6 +97,9 @@ class Comment(Base):
     comment_type: Mapped[Optional[str]] = mapped_column(String, nullable=True)
     comment_text: Mapped[str] = mapped_column(Text, nullable=False)
     commented_at: Mapped[datetime] = mapped_column(DateTime, nullable=False)
+    is_public: Mapped[Optional[bool]] = mapped_column(
+        Boolean, nullable=True
+    )  # Visibility__c == "Public"; NULL treated as public
 
     __table_args__ = (
         ForeignKeyConstraint(

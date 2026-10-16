@@ -35,13 +35,14 @@ def _comment_node(
     created="2026-09-01T00:00:00.000Z",
     is_customer=False,
     is_associate=False,
+    visibility="Public",
 ):
     """Build a RedHatSupportCaseComment__c node like the comment query returns."""
     return {
         "Case__r": {"CaseNumber__c": {"value": case_number}},
         "Body__c": {"value": body},
         "CreatedDate": {"value": created},
-        "Visibility__c": {"value": "Public"},
+        "Visibility__c": {"value": visibility},
         "IsCustomer__c": {"value": is_customer},
         "IsAssociate__c": {"value": is_associate},
         "CreatedBy": {"Name": {"value": author}},
@@ -103,8 +104,20 @@ class TestUiapiCommentToDict:
             "commentBody": "hello",
             "createdBy": "Jane Doe",
             "createdByType": "Customer",
+            "isPublic": True,
             "createdDate": "2026-09-01T00:00:00.000Z",
         }
+
+    def test_is_public_from_visibility(self):
+        assert uiapi_comment_to_dict(_comment_node("1"))["isPublic"] is True
+        assert (
+            uiapi_comment_to_dict(_comment_node("1", visibility="Private"))["isPublic"]
+            is False
+        )
+        # Null/missing visibility is treated as private (not "Public").
+        node = _comment_node("1")
+        node["Visibility__c"] = None
+        assert uiapi_comment_to_dict(node)["isPublic"] is False
 
     def test_body_html_converted_to_markdown(self):
         # Body__c is entity-escaped HTML; it is unescaped then converted to MD.
@@ -179,6 +192,7 @@ class TestFetchCaseDetailsUiapi:
                         "commentBody": "first",
                         "createdBy": "Jane",
                         "createdByType": "Customer",
+                        "isPublic": True,
                         "createdDate": "2026-09-01T00:00:00.000Z",
                     }
                 ],

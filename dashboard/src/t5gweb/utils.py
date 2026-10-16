@@ -458,8 +458,9 @@ def uiapi_comment_to_dict(node):
 
     Returns:
         dict: ``{"commentBody": str, "createdBy": str, "createdByType": str,
-        "createdDate": str|None}``. ``commentBody`` is Markdown.
-        ``createdByType`` is "Customer", "Associate", or "Internal".
+        "isPublic": bool, "createdDate": str|None}``. ``commentBody`` is
+        Markdown. ``createdByType`` is "Customer", "Associate", or "Internal".
+        ``isPublic`` is ``Visibility__c == "Public"`` (customer-visible).
     """
     if (node.get("IsCustomer__c") or {}).get("value"):
         created_by_type = "Customer"
@@ -477,6 +478,9 @@ def uiapi_comment_to_dict(node):
         "createdBy": ((node.get("CreatedBy") or {}).get("Name") or {}).get("value")
         or "unknown",
         "createdByType": created_by_type,
+        # Visibility__c is the authoritative public/private picklist; anything
+        # other than "Public" (incl. null) is treated as private.
+        "isPublic": (node.get("Visibility__c") or {}).get("value") == "Public",
         "createdDate": (node.get("CreatedDate") or {}).get("value"),
     }
 

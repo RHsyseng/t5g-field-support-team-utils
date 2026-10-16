@@ -105,6 +105,9 @@ def load_comments_postgres(case_number, case_created_date, api_comments):
             author = api_comment.get("createdBy", "unknown")
             body = api_comment.get("commentBody", "")
             comment_type = api_comment.get("createdByType")
+            # Default a missing visibility flag to public (matches the reference
+            # pipeline's .get("isPublic", True) convention).
+            is_public = bool(api_comment.get("isPublic", True))
             commented_at_str = api_comment.get("createdDate")
             if not commented_at_str:
                 continue
@@ -128,10 +131,14 @@ def load_comments_postgres(case_number, case_created_date, api_comments):
                     comment_type=comment_type,
                     comment_text=body,
                     commented_at=commented_at,
+                    is_public=is_public,
                 )
                 session.add(comment)
-            elif existing.comment_type is None and comment_type:
-                existing.comment_type = comment_type
+            else:
+                if existing.comment_type is None and comment_type:
+                    existing.comment_type = comment_type
+                if existing.is_public is None:
+                    existing.is_public = is_public
 
         session.commit()
     except Exception as e:
@@ -495,6 +502,10 @@ def get_my_queue_cases(active_sprint_name=None, engineer_email=None):
                     "author": comment.author,
                     "date": comment.commented_at.isoformat(),
                     "body": comment.comment_text,
+                    "comment_type": comment.comment_type,
+                    "is_public": (
+                        True if comment.is_public is None else comment.is_public
+                    ),
                 }
                 for comment in portal_comments
             ]

@@ -78,8 +78,14 @@ function format (data) {
       }
 
       result += '<div class=\'mb-3 p-2\' style=\'border-left: 3px solid ' + borderColor + ';\'>'
+      // Private (internal, not customer-visible) comments are labeled, not
+      // hidden - matches the reference dashboards. Default/missing = public.
+      const privateBadge = comment.is_public === false
+        ? ' <span class=\'badge bg-warning text-dark\'>🔒 Private</span>'
+        : ''
       result += '<div class=\'fw-bold\'>' + escapeHtml(comment.author || 'Unknown') +
-        (typeLabel ? ' <span class=\'fw-normal text-muted\'>(' + escapeHtml(typeLabel) + ')</span>' : '') + '</div>'
+        (typeLabel ? ' <span class=\'fw-normal text-muted\'>(' + escapeHtml(typeLabel) + ')</span>' : '') +
+        privateBadge + '</div>'
       result += '<div class=\'text-muted small\'>' +
         (comment.date ? escapeHtml(comment.date.substring(0, 19).replace('T', ' ')) : 'No date') + '</div>'
       result += '<div class=\'mt-2\'>' + renderMarkdown(comment.body) + '</div>'

@@ -731,6 +731,8 @@ def get_case_comments(case_number):
                 "date": c.commented_at.isoformat(),
                 "comment_type": c.comment_type,
                 "body": c.comment_text,
+                # NULL visibility is treated as public (matches reference model).
+                "is_public": True if c.is_public is None else c.is_public,
             }
             for c in portal_comments
         ]
