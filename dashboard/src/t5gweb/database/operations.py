@@ -417,7 +417,7 @@ def get_my_queue_cases(active_sprint_name=None, engineer_email=None):
             engineer_msg = ""
 
         all_cases = cases_query.all()
-        logging.warning(
+        logging.debug(
             "Found %d total cases (not closed, %s%s)",
             len(all_cases),
             sprint_msg,
@@ -535,34 +535,15 @@ def get_my_queue_cases(active_sprint_name=None, engineer_email=None):
                 ),
             }
 
-        logging.warning(
+        logging.debug(
             "Filtering results: %d cases need attention " "out of %d total",
             filtered_count,
             len(all_cases),
         )
-        logging.warning(
-            "  - No JIRA comments (included): %d",
-            included_no_jira,
-        )
-        logging.warning(
-            "  - No portal comments: %d",
-            no_portal_comments,
-        )
-        logging.warning(
-            "  - JIRA comment newer (excluded): %d",
-            jira_newer,
-        )
-        logging.warning(
-            "  - Marked no update needed (excluded): %d",
-            no_update_marked,
-        )
-
-        from collections import Counter
-
-        engineer_counts = Counter(
-            case_data["field_engineer"] for case_data in my_queue_cases.values()
-        )
-        logging.warning("Cases by engineer: %s", dict(engineer_counts))
+        logging.debug("  - No JIRA comments (included): %d", included_no_jira)
+        logging.debug("  - No portal comments: %d", no_portal_comments)
+        logging.debug("  - JIRA comment newer (excluded): %d", jira_newer)
+        logging.debug("  - Marked no update needed (excluded): %d", no_update_marked)
 
     except Exception as e:
         logging.error(f"Failed to get my queue cases: {e}")

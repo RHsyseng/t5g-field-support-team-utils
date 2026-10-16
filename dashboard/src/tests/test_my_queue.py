@@ -68,6 +68,7 @@ def _portal_comment(
     author="customer1",
     text="portal comment",
     comment_type=None,
+    is_public=None,
 ):
     if commented_at is None:
         commented_at = CASE_DATE + timedelta(days=1)
@@ -78,6 +79,7 @@ def _portal_comment(
         comment_type=comment_type,
         comment_text=text,
         commented_at=commented_at,
+        is_public=is_public,
     )
 
 
@@ -358,6 +360,27 @@ class TestGetMyQueueCasesReturnStructure:
         assert pc["author"] == "customer"
         assert pc["body"] == "Help me"
         assert "2024-01-06T00:00:00" in pc["date"]
+        assert "comment_type" in pc
+        # No stored visibility -> treated as public.
+        assert pc["is_public"] is True
+
+    def test_portal_comment_private_flag_preserved(self, test_db_session):
+        ts = CASE_DATE + timedelta(days=5)
+        _seed(
+            test_db_session,
+            [
+                _case(),
+                _card(),
+                _portal_comment(
+                    commented_at=ts, comment_type="Associate", is_public=False
+                ),
+                _jira_comment(last_update_date=CASE_DATE + timedelta(days=3)),
+            ],
+        )
+
+        pc = get_my_queue_cases()["10000001"]["portal_comments"][0]
+        assert pc["is_public"] is False
+        assert pc["comment_type"] == "Associate"
 
     def test_jira_comment_structure(self, test_db_session):
         ts = CASE_DATE + timedelta(days=3)

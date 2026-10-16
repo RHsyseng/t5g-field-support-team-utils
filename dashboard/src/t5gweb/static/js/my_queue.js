@@ -123,29 +123,20 @@ function format (data) {
 
 // Initialize DataTable
 $(document).ready(function () {
-  console.log('My Queue: DOM ready')
-
-  // Check if table exists
   const tableElement = $('#my-queue-data')
   if (tableElement.length === 0) {
-    console.error('My Queue table #my-queue-data not found!')
+    console.error('My Queue table #my-queue-data not found')
     return
   }
 
+  // Guard against a header/body column-count mismatch (a template bug). Skip
+  // for an empty queue, which legitimately has no body cells (DataTables shows
+  // its own "no data" message).
   const bodyRowCount = tableElement.find('tbody tr').length
-  console.log('Table found, rows:', bodyRowCount)
-
-  // Debug: Check column counts. Only meaningful when the queue has rows; an
-  // empty queue renders no <td> cells, which is valid (DataTables shows its
-  // own "no data" message) and must not trip the mismatch guard.
   const headerCount = tableElement.find('thead tr th').length
   const firstRowColCount = tableElement.find('tbody tr:first td').length
-  console.log('Header columns:', headerCount)
-  console.log('First row columns:', firstRowColCount)
-
   if (bodyRowCount > 0 && headerCount !== firstRowColCount) {
-    console.error('COLUMN MISMATCH! Headers:', headerCount, 'Cells:', firstRowColCount)
-    alert('Table structure error: ' + headerCount + ' headers but ' + firstRowColCount + ' cells in first row')
+    console.error('My Queue table column mismatch:', headerCount, 'headers vs', firstRowColCount, 'cells')
     return
   }
 
@@ -156,7 +147,6 @@ $(document).ready(function () {
     deferRender: true, // Improve performance for large datasets
 
     initComplete: function (settings, json) { // eslint-disable-line no-unused-vars
-      console.log('DataTable initComplete called')
       $('div.loading').hide()
     },
     columnDefs: [
@@ -175,15 +165,12 @@ $(document).ready(function () {
     ]
   }
 
-  // Initialize Table with options and error handling
+  // Initialize Table
   let table
   try {
-    console.log('Initializing DataTable...')
     table = $('#my-queue-data').DataTable(options)
-    console.log('DataTable initialized successfully')
   } catch (error) {
-    console.error('DataTable initialization error:', error)
-    alert('Error initializing table: ' + error.message + '. Check console for details.')
+    console.error('My Queue DataTable initialization failed:', error)
     return
   }
 
