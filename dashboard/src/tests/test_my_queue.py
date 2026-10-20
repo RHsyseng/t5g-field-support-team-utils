@@ -209,6 +209,51 @@ class TestGetMyQueueCasesInclusion:
         result = get_my_queue_cases()
         assert "10000001" not in result
 
+    def test_no_update_newer_than_portal_excluded(self, test_db_session):
+        _seed(
+            test_db_session,
+            [
+                _case(),
+                _card(no_update_date=CASE_DATE + timedelta(days=5)),
+                _portal_comment(commented_at=CASE_DATE + timedelta(days=3)),
+                _jira_comment(last_update_date=CASE_DATE + timedelta(days=1)),
+            ],
+        )
+
+        result = get_my_queue_cases()
+        assert "10000001" not in result
+
+    def test_no_update_older_than_portal_included(self, test_db_session):
+        _seed(
+            test_db_session,
+            [
+                _case(),
+                _card(no_update_date=CASE_DATE + timedelta(days=1)),
+                _portal_comment(commented_at=CASE_DATE + timedelta(days=3)),
+            ],
+        )
+
+        result = get_my_queue_cases()
+        assert "10000001" in result
+
+    def test_no_update_newer_than_portal_no_jira_comments_excluded(
+        self, test_db_session
+    ):
+        # Regression: a card marked "no update needed" must be excluded even
+        # when it has zero JIRA comments (the check used to live inside the
+        # branch that only runs when JIRA comments exist).
+        _seed(
+            test_db_session,
+            [
+                _case(),
+                _card(no_update_date=CASE_DATE + timedelta(days=5)),
+                _portal_comment(commented_at=CASE_DATE + timedelta(days=3)),
+            ],
+        )
+
+        result = get_my_queue_cases()
+        assert "10000001" not in result
+
 
 class TestGetMyQueueCasesFilters:
     """Test sprint and engineer filtering."""

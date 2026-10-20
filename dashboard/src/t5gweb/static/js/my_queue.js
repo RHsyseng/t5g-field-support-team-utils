@@ -143,7 +143,7 @@ $(document).ready(function () {
   // General Options for DataTable
   const options = {
     pageLength: 50,
-    order: [[2, 'desc']], // Sort by severity descending by default
+    order: [[2, 'asc']], // Sort by severity, most urgent first (1 = Urgent .. 4 = Low)
     deferRender: true, // Improve performance for large datasets
 
     initComplete: function (settings, json) { // eslint-disable-line no-unused-vars

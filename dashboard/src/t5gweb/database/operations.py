@@ -453,40 +453,41 @@ def get_my_queue_cases(active_sprint_name=None, engineer_email=None):
             if not portal_comments:
                 no_portal_comments += 1
 
+            # Most recent portal comment date (tz-aware), epoch if none exist
+            portal_comment_last_update = (
+                portal_comments[0].commented_at
+                if portal_comments
+                else datetime(1970, 1, 1, tzinfo=timezone.utc)
+            )
+            if portal_comment_last_update.tzinfo is None:
+                portal_comment_last_update = portal_comment_last_update.replace(
+                    tzinfo=timezone.utc
+                )
+
+            # Exclude if the case was marked "no update needed" more recently
+            # than the newest portal comment. Checked up front so it applies
+            # whether or not the card has JIRA comments.
+            # (Vue: if noUpdate >= portal, exclude)
+            no_update_date = jira_card.no_update_date
+            if no_update_date is not None:
+                if no_update_date.tzinfo is None:
+                    no_update_date = no_update_date.replace(tzinfo=timezone.utc)
+                if no_update_date >= portal_comment_last_update:
+                    no_update_marked += 1
+                    continue
+
             # If no JIRA comments exist, INCLUDE the case (Vue behavior line 50)
             if not jira_comments:
                 no_jira_comments += 1
                 included_no_jira += 1
                 # Fall through to add this case
             else:
-                # Get most recent comment dates
+                # Get most recent JIRA comment date (tz-aware)
                 jira_comment_last_update = jira_comments[0].last_update_date
-                portal_comment_last_update = (
-                    portal_comments[0].commented_at
-                    if portal_comments
-                    else datetime(1970, 1, 1, tzinfo=timezone.utc)
-                )
-
-                # Ensure both datetimes are timezone-aware for comparison
                 if jira_comment_last_update.tzinfo is None:
                     jira_comment_last_update = jira_comment_last_update.replace(
                         tzinfo=timezone.utc
                     )
-                if portal_comment_last_update.tzinfo is None:
-                    portal_comment_last_update = portal_comment_last_update.replace(
-                        tzinfo=timezone.utc
-                    )
-
-                # Exclude if the case was marked "no update needed" more
-                # recently than the newest portal comment
-                # (Vue: if noUpdate >= portal, exclude)
-                no_update_date = jira_card.no_update_date
-                if no_update_date is not None:
-                    if no_update_date.tzinfo is None:
-                        no_update_date = no_update_date.replace(tzinfo=timezone.utc)
-                    if no_update_date >= portal_comment_last_update:
-                        no_update_marked += 1
-                        continue
 
                 # Only include if portal comment is newer than JIRA comment
                 # (Vue line 41: if jira >= portal, exclude)
