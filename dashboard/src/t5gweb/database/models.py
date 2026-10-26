@@ -32,6 +32,7 @@ class Case(Base):
         status: Current status (Open, Waiting, Closed, etc.)
         created_date: Case creation timestamp
         last_update: Last modification timestamp
+        closed_date: Timestamp the case was closed (None while still open)
         description: Full case description text
         product: Product name
         product_version: Product version string
@@ -50,6 +51,7 @@ class Case(Base):
     status: Mapped[Optional[str]] = mapped_column(String)
     created_date: Mapped[datetime] = mapped_column(DateTime, primary_key=True)
     last_update: Mapped[Optional[datetime]] = mapped_column(DateTime)
+    closed_date: Mapped[Optional[datetime]] = mapped_column(DateTime)
     description: Mapped[Optional[str]] = mapped_column(String)
     product: Mapped[Optional[str]] = mapped_column(String)
     product_version: Mapped[Optional[str]] = mapped_column(String)
