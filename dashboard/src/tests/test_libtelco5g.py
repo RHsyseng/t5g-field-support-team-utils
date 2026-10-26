@@ -11,6 +11,7 @@ from t5gweb.libtelco5g import (
     jira_connection,
     redis_get,
     redis_set,
+    sync_portal_to_jira,
 )
 
 
@@ -222,6 +223,47 @@ def test_handle_old_case_no_previous_card(mocker, monkeypatch):
     assert result is False
     conn.transition_issue.assert_not_called()
     conn.add_comment.assert_not_called()
+
+
+# --- sync_portal_to_jira tests ---
+
+
+def _sync_context(mocker, cases):
+    """Patch sync_portal_to_jira's config and caches; return the create_cards mock."""
+    mocker.patch(
+        "t5gweb.libtelco5g.set_cfg",
+        return_value={"max_to_create": 10, "subject": "New Cards"},
+    )
+    mocker.patch(
+        "t5gweb.libtelco5g.redis_get",
+        side_effect=lambda key: cases if key == "cases" else {},
+    )
+    return mocker.patch("t5gweb.libtelco5g.create_cards", return_value=({}, {}, []))
+
+
+def test_sync_portal_to_jira_skips_non_support_records(mocker):
+    """EN-* records carried forward in the cache must never become JIRA cards."""
+    cases = {
+        "00000001": {"status": "Waiting on Red Hat"},
+        "EN-00001": {"status": "Waiting on Red Hat"},
+        "EN-00002": {"status": "Waiting on Red Hat"},
+    }
+    create_cards = _sync_context(mocker, cases)
+
+    sync_portal_to_jira()
+
+    create_cards.assert_called_once()
+    assert create_cards.call_args.args[1] == ["00000001"]
+
+
+def test_sync_portal_to_jira_creates_nothing_when_only_non_support_records(mocker):
+    cases = {"EN-00001": {"status": "Waiting on Red Hat"}}
+    create_cards = _sync_context(mocker, cases)
+
+    result = sync_portal_to_jira()
+
+    create_cards.assert_not_called()
+    assert result == {"cards_created": 0}
 
 
 # --- _assign_cases_batch tests ---

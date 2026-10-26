@@ -25,6 +25,7 @@ from t5gweb.utils import (
     exists_or_zero,
     format_date,
     get_token,
+    is_support_case_number,
     make_headers,
     set_cfg,
     slack_notify,
@@ -1381,7 +1382,18 @@ def sync_portal_to_jira():
     open_cases = [case for case in cases if cases[case]["status"] != "Closed"]
     card_cases = [cards[card]["case_number"] for card in cards]
     logging.warning("found {} cases in JIRA".format(len(card_cases)))
-    new_cases = [case for case in open_cases if case not in card_cases]
+    # Non-support records (EN-* escalation notifications) must never become JIRA
+    # cards. get_cases filters them out when it builds the selection, but they
+    # can still reach the Redis cache by being carried forward from a prior one,
+    # and they can never be verified closed (Hydra case(id) 404s on them), so
+    # they would stay "open" and be re-created here on every run. This is the
+    # last point before creation, so guard it here too rather than trusting the
+    # cache to be clean.
+    new_cases = [
+        case
+        for case in open_cases
+        if case not in card_cases and is_support_case_number(case)
+    ]
     logging.warning("new cases: {}".format(new_cases))
 
     response = {"cards_created": 0}
