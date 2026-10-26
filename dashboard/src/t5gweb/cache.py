@@ -27,10 +27,10 @@ from t5gweb.utils import (
     format_date,
     int_or_none,
     is_support_case_number,
-    unescape_api_text,
     severity_label,
     severity_text,
     uiapi_comment_to_dict,
+    unescape_api_text,
 )
 
 # Selection query. Account name is pulled inline via the

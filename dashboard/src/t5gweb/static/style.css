@@ -236,7 +236,6 @@ span.anchor {
    so the fixed columns keep their space. */
 .my-queue-table td.queue-text {
   overflow-wrap: anywhere;
-  word-break: break-word;
   max-width: 28rem;
   min-width: 12rem;
 }
@@ -252,7 +251,6 @@ span.anchor {
    screen before this. Make every long thing inside the panel wrap instead. */
 .my-queue-table .queue-child {
   overflow-wrap: anywhere;
-  word-break: break-word;
 }
 
 .my-queue-table .queue-child pre,
