@@ -4,7 +4,7 @@ import logging
 import threading
 from typing import Optional
 
-from sqlalchemy import URL, create_engine, text
+from sqlalchemy import URL, create_engine, inspect, text
 from sqlalchemy.orm import DeclarativeBase, sessionmaker
 
 from t5gweb.utils import set_cfg
@@ -140,31 +140,74 @@ def create_postgres_tables():
     """Create all database tables defined in models
 
     Uses SQLAlchemy metadata to create all tables that don't already exist.
-    Safe to call multiple times - only creates missing tables.
+    Also adds any new columns to existing tables so that schema changes
+    deploy without manual migration.
+    Safe to call multiple times.
 
     Returns:
-        None. Tables are created in PostgreSQL database.
+        None. Tables are created/updated in PostgreSQL database.
     """
     Base.metadata.create_all(bind=db_config.engine)
-    _apply_additive_migrations()
+    _migrate_add_missing_columns()
 
 
-def _apply_additive_migrations():
-    """Apply additive, idempotent schema changes create_all cannot make.
+def _migrate_add_missing_columns():
+    """Add columns defined in models but missing from existing tables.
 
     ``create_all`` only creates missing *tables*; it never adds a new column to
-    an existing one, and this project has no migration framework. Self-apply the
-    additive columns here with ``ADD COLUMN IF NOT EXISTS`` so an already-created
-    ``cases`` table gains ``closed_date`` on the next startup. Additive only -
-    never drop or rename (repo rule: keep original model fields). Failures are
-    logged rather than fatal so a DB that pre-dates this column still boots.
+    an existing one, and this project has no migration framework. Compare the
+    SQLAlchemy model metadata against the live database schema and issue
+    ALTER TABLE ADD COLUMN for any gaps, so an already-created table gains new
+    model columns (``cases.closed_date``, ``comments.comment_type``, ...) on the
+    next startup. Additive only - never drops or renames - and the added columns
+    are nullable, which is safe for existing rows.
+
+    Every gunicorn worker and Celery process runs this at startup, so two of them
+    can race on the same column: each ALTER therefore uses ``IF NOT EXISTS`` and
+    commits on its own, so a loser in the race cannot abort the columns that come
+    after it in the loop. Failures are logged rather than fatal so a DB that
+    pre-dates these columns still boots.
     """
-    statements = [
-        "ALTER TABLE cases ADD COLUMN IF NOT EXISTS closed_date TIMESTAMP",
-    ]
     try:
-        with db_config.engine.begin() as conn:
-            for statement in statements:
-                conn.execute(text(statement))
+        inspector = inspect(db_config.engine)
+        missing = []
+        for table in Base.metadata.sorted_tables:
+            if not inspector.has_table(table.name):
+                continue
+            existing = {c["name"] for c in inspector.get_columns(table.name)}
+            missing += [
+                (table.name, col) for col in table.columns if col.name not in existing
+            ]
     except Exception as e:
-        logging.error("Failed to apply additive migrations: %s", e)
+        logging.warning("Column migration check skipped: %s", e)
+        return
+
+    dialect = db_config.engine.dialect
+    for table_name, col in missing:
+        # Only the column type is emitted, so a NOT NULL / UNIQUE column would
+        # be created without its constraint and the database would quietly stop
+        # matching the model. Those need a real migration; refuse them loudly
+        # instead of half-applying them.
+        if not col.nullable or col.unique or col.primary_key:
+            logging.error(
+                "Column %s.%s is missing but cannot be added automatically "
+                "(not nullable / unique); it needs a manual migration",
+                table_name,
+                col.name,
+            )
+            continue
+
+        col_type = col.type.compile(dialect)
+        logging.warning(
+            "Adding missing column %s.%s (%s)", table_name, col.name, col_type
+        )
+        try:
+            with db_config.engine.begin() as conn:
+                conn.execute(
+                    text(
+                        f"ALTER TABLE {table_name} "
+                        f"ADD COLUMN IF NOT EXISTS {col.name} {col_type}"
+                    )
+                )
+        except Exception as e:
+            logging.warning("Could not add column %s.%s: %s", table_name, col.name, e)

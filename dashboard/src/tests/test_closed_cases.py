@@ -229,6 +229,24 @@ class TestMergeClosedCases:
         # The still-open case already in this run is untouched.
         assert cases["open1"]["status"] == "Waiting on Red Hat"
 
+    def test_carried_forward_severity_is_repaired(self, monkeypatch):
+        # A projection that came back through PostgreSQL carries a bare "3".
+        # It must be re-expanded here: the Redis copy wins over PostgreSQL and
+        # is rewritten at the end of the sync, so a stale value would carry
+        # itself forward forever and _build_card_data would lose the card.
+        degraded = _open_entry("done")
+        degraded["status"] = "Closed"
+        degraded["closeddate"] = "2026-02-15T00:00:00Z"
+        degraded["severity"] = "3"
+        monkeypatch.setattr(
+            cache.libtelco5g, "redis_get", lambda key: {"done": degraded}
+        )
+
+        cases = {}
+        merge_closed_cases({"graphql_api": "x"}, "tok", cases)
+
+        assert cases["done"]["severity"] == "3 (Medium)"
+
     def test_already_closed_case_carried_without_verifying(self, monkeypatch):
         closed = _open_entry("done")
         closed["status"] = "Closed"

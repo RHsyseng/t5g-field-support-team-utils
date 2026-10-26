@@ -14,6 +14,7 @@ from jira.exceptions import JIRAError
 from t5gweb import libtelco5g
 from t5gweb.database import (
     PgError,
+    comment_watermarks_postgres,
     load_cases_postgres,
     load_comments_postgres,
     load_jira_card_postgres,
@@ -26,7 +27,10 @@ from t5gweb.utils import (
     format_date,
     int_or_none,
     is_support_case_number,
+    severity_label,
+    severity_text,
     uiapi_comment_to_dict,
+    unescape_api_text,
 )
 
 # Selection query. Account name is pulled inline via the
@@ -79,14 +83,30 @@ query CaseDetailUIAPI($where: RedHatSupportCase_Filter, $after: String) {
       edges { node {
         CaseNumber__c { value }
         Group__r { Name { value } }
-        CaseComments(first: 200, orderBy: { CreatedDate: { order: ASC } }) {
-          edges { node {
-            CommentBody { value }
-            CreatedDate { value }
-            IsPublished { value }
-            CreatedBy { Name { value } }
-          } }
-        }
+      } }
+    }
+  } }
+}
+"""
+
+# Comments are sourced from the top-level RedHatSupportCaseComment__c object
+# (filtered by Case__r.CaseNumber__c), NOT the RedHatSupportCase.CaseComments
+# nested connection -- that connection comes back empty, whereas this object
+# returns the authoritative Body__c / Visibility__c / author-type fields.
+GRAPHQL_CASE_COMMENTS_UIAPI_QUERY = """
+query CaseCommentsUIAPI($where: RedHatSupportCaseComment__c_Filter, $after: String) {
+  redhat_support_uiapi { query {
+    RedHatSupportCaseComment__c(where: $where, first: 100, after: $after,
+                                orderBy: { CreatedDate: { order: DESC } }) {
+      pageInfo { hasNextPage endCursor }
+      edges { node {
+        Case__r { CaseNumber__c { value } }
+        Body__c { value }
+        CreatedBy { Name { value } }
+        CreatedDate { value }
+        Visibility__c { value }
+        IsCustomer__c { value }
+        IsAssociate__c { value }
       } }
     }
   } }
@@ -284,11 +304,13 @@ def fetch_saved_search_cases(cfg, token, limit=None):
             cases.append(
                 {
                     "caseNumber": node["CaseNumber__c"]["value"],
-                    "account": account,
+                    "account": unescape_api_text(account),
                     "severity": (node.get("Priority") or {}).get("value"),
                     "status": (node.get("Status") or {}).get("value"),
-                    "problem": (node.get("Subject") or {}).get("value"),
-                    "product": product,
+                    "problem": unescape_api_text(
+                        (node.get("Subject") or {}).get("value")
+                    ),
+                    "product": unescape_api_text(product),
                     "createdate": (node.get("CreatedDate") or {}).get("value"),
                     "last_update": (node.get("LastModifiedDate") or {}).get("value"),
                 }
@@ -388,17 +410,21 @@ def fetch_case_details_uiapi(cfg, token, case_numbers):
 
     def parse(node):
         group_name = ((node.get("Group__r") or {}).get("Name") or {}).get("value")
-        # CaseComments(first: 200) bounds volume; paginate the nested connection
-        # here if any case can exceed 200 comments.
-        comment_edges = (node.get("CaseComments") or {}).get("edges") or []
-        return {
-            "group_name": group_name,
-            "comments": [uiapi_comment_to_dict(e["node"]) for e in comment_edges],
-        }
+        return {"group_name": group_name, "comments": []}
 
-    return _fetch_uiapi_by_case_number(
+    details = _fetch_uiapi_by_case_number(
         cfg, token, GRAPHQL_CASE_DETAIL_UIAPI_QUERY, case_numbers, parse, "case details"
     )
+
+    # Comments come from the RedHatSupportCaseComment__c object, not the (empty)
+    # RedHatSupportCase.CaseComments nested connection. Fetch them separately and
+    # merge.
+    comments_by_case = _fetch_case_comments_uiapi(cfg, token, list(details.keys()))
+    for case_number, comments in comments_by_case.items():
+        if case_number in details:
+            details[case_number]["comments"] = comments
+
+    return details
 
 
 def fetch_case_closure_uiapi(cfg, token, case_numbers):
@@ -460,11 +486,11 @@ def fetch_case_projection_uiapi(cfg, token, case_numbers):
         )
         product = ((node.get("Product") or {}).get("Name") or {}).get("value")
         return {
-            "account": account,
+            "account": unescape_api_text(account),
             "severity": (node.get("Priority") or {}).get("value"),
             "status": (node.get("Status") or {}).get("value"),
-            "problem": (node.get("Subject") or {}).get("value"),
-            "product": product,
+            "problem": unescape_api_text((node.get("Subject") or {}).get("value")),
+            "product": unescape_api_text(product),
             "createdate": (node.get("CreatedDate") or {}).get("value"),
             "last_update": (node.get("LastModifiedDate") or {}).get("value"),
             "is_closed": bool((node.get("IsClosed") or {}).get("value")),
@@ -533,6 +559,14 @@ def merge_closed_cases(cfg, token, cases):
     dropped = [case for case in prior if case not in cases]
     if not dropped:
         return
+
+    # A projection that went through PostgreSQL lost the severity label ("3"
+    # rather than "3 (Medium)"). Those values are also already sitting in the
+    # Redis cache, which wins over PostgreSQL above and is rewritten at the end
+    # of the sync - so without repairing them here they would carry themselves
+    # forward indefinitely.
+    for case in dropped:
+        prior[case]["severity"] = severity_text(prior[case].get("severity"))
 
     # Already-closed cases carry forward unchanged (no re-verification); the rest
     # are verified against GraphQL.
@@ -650,6 +684,187 @@ def backfill_tracked_cases(cfg, token, cases, tracked_case_numbers):
         closed,
     )
     return added
+
+
+def _fetch_case_comments_uiapi(cfg, token, case_numbers):
+    """Fetch portal comments for cases via RedHatSupportCaseComment__c.
+
+    The RedHatSupportCase.CaseComments nested connection returns empty, so
+    comments are queried wholesale from the top-level comment object, filtered by
+    Case__r.CaseNumber__c and batched like the detail query.
+
+    Comments already stored in PostgreSQL are not re-fetched: cases that have
+    stored comments are swept with a ``CreatedDate`` floor (the oldest of their
+    newest-stored timestamps), while cases with none are swept in full. Without
+    that floor every run re-reads the complete history of every open case - one
+    page per 100 comments, i.e. hundreds of sequential requests against an API
+    whose real limit is WAF throttling. The floor is best-effort: if the API
+    rejects the filter, the sweep falls back to the unfiltered query.
+
+    Args:
+        cfg: Configuration dict (API endpoint + offline token for re-auth).
+        token: a valid bearer access token.
+        case_numbers: Case numbers to fetch comments for.
+
+    Returns:
+        dict: case number -> list of comment dicts (see uiapi_comment_to_dict).
+            Cases with no new comments are omitted.
+    """
+    case_numbers = list(case_numbers)
+    try:
+        watermarks = comment_watermarks_postgres(case_numbers)
+    except Exception as e:
+        # No watermarks available (PostgreSQL down, or not reachable from this
+        # process) - fall back to fetching everything.
+        logging.warning("comment watermarks unavailable, full fetch: %s", e)
+        watermarks = {}
+
+    unknown = [case for case in case_numbers if case not in watermarks]
+    # One floor per chunk, and the chunk's own oldest watermark at that - so
+    # sort by watermark first. A single floor over all known cases would
+    # collapse to the oldest one (there is always a quiet case whose last
+    # comment is months old) and re-read almost everything anyway.
+    known = sorted(
+        (case for case in case_numbers if case in watermarks),
+        key=lambda case: watermarks[case],
+    )
+
+    comments_by_case = {}
+    state = {"headers": make_graphql_headers(token), "floor_rejected": False}
+    # Cases with nothing stored need their full history; the rest only need
+    # what arrived since their own watermark.
+    _sweep_case_comments(cfg, state, unknown, None, comments_by_case)
+    _sweep_case_comments(cfg, state, known, watermarks, comments_by_case)
+    return comments_by_case
+
+
+def _sweep_case_comments(cfg, state, case_numbers, watermarks, comments_by_case):
+    """Page the comment object for ``case_numbers``, into ``comments_by_case``.
+
+    Args:
+        cfg: configuration dictionary (needs ``graphql_api`` / ``offline_token``).
+        state: mutable dict carrying the current ``headers`` and whether the API
+            has already rejected the ``CreatedDate`` floor (so the remaining
+            chunks stop sending it).
+        case_numbers: case numbers to sweep.
+        watermarks: newest stored comment per case, used to floor each chunk at
+            its own oldest watermark, or None to fetch full histories.
+        comments_by_case: result dict, appended to in place.
+
+    Returns:
+        None.
+    """
+    url = cfg["graphql_api"]
+
+    for chunk in chunked(case_numbers, _CASE_DETAIL_CHUNK_SIZE):
+        since = min(watermarks[case] for case in chunk) if watermarks else None
+        after = None
+        # Collect per chunk, not straight into the result: dropping the floor
+        # restarts the chunk from its first page, and pages already read would
+        # otherwise be appended a second time (load_comments_postgres cannot
+        # catch that - its de-dup query does not see the un-flushed inserts).
+        collected = {}
+        while True:
+            variables = {
+                "where": _comment_where(
+                    chunk, None if state["floor_rejected"] else since
+                ),
+                "after": after,
+            }
+            try:
+                data = graphql_post(
+                    url,
+                    state["headers"],
+                    GRAPHQL_CASE_COMMENTS_UIAPI_QUERY,
+                    variables,
+                )
+            except RuntimeError as exc:
+                # Refresh the token once and retry; drop the chunk if it still
+                # fails so one bad batch does not abort the whole pass.
+                logging.warning("re-authenticating after comment error: %s", exc)
+                try:
+                    state["headers"] = make_graphql_headers(
+                        libtelco5g.get_token(cfg["offline_token"])
+                    )
+                    data = graphql_post(
+                        url,
+                        state["headers"],
+                        GRAPHQL_CASE_COMMENTS_UIAPI_QUERY,
+                        variables,
+                    )
+                except Exception as exc2:
+                    if (
+                        since is not None
+                        and not state["floor_rejected"]
+                        and _is_filter_rejection(exc2)
+                    ):
+                        # The API refused the floor itself; redo this chunk
+                        # (and every later one) unfiltered rather than losing
+                        # the comments.
+                        logging.warning(
+                            "comment query rejected with a CreatedDate floor "
+                            "(%s); retrying without it",
+                            exc2,
+                        )
+                        state["floor_rejected"] = True
+                        after = None
+                        collected = {}
+                        continue
+                    logging.warning(
+                        "could not fetch comments for chunk %s: %s", chunk, exc2
+                    )
+                    break
+
+            conn = data["data"]["redhat_support_uiapi"]["query"][
+                "RedHatSupportCaseComment__c"
+            ]
+            for edge in conn["edges"]:
+                node = edge["node"]
+                case_number = (
+                    (node.get("Case__r") or {}).get("CaseNumber__c") or {}
+                ).get("value")
+                if not case_number:
+                    continue
+                collected.setdefault(case_number, []).append(
+                    uiapi_comment_to_dict(node)
+                )
+
+            page_info = conn["pageInfo"]
+            if not page_info["hasNextPage"]:
+                break
+            after = page_info["endCursor"]
+
+        for case_number, comments in collected.items():
+            comments_by_case.setdefault(case_number, []).extend(comments)
+
+
+def _comment_where(chunk, since):
+    """Build the comment query filter for a chunk, optionally floored by date.
+
+    ``gte`` takes a ``RedHatSupportDateTimeInput``, i.e. ``{"value": <ISO Z>}``
+    and not a bare string - passing the string is rejected with
+    ``VALIDATION_INVALID_TYPE_VARIABLE``. ``_CANONICAL_TS_FORMAT`` already emits
+    the trailing Z the API insists on.
+    """
+    case_filter = {"Case__r": {"CaseNumber__c": {"in": chunk}}}
+    if since is None:
+        return case_filter
+    floor = since.strftime(_CANONICAL_TS_FORMAT)
+    return {"and": [case_filter, {"CreatedDate": {"gte": {"value": floor}}}]}
+
+
+# A rejected CreatedDate floor is a GraphQL validation error naming the field
+# (or its input type) we added; a 403/WAF throttle, a connection reset, or any
+# other validation error that merely mentions $where is not. Only the former
+# means "this API cannot do the floor" - dropping it for anything else re-reads
+# every comment of every case, and the flag is sticky for the whole run.
+_FILTER_REJECTION_MARKERS = ("createddate", "datetimeinput")
+
+
+def _is_filter_rejection(exc):
+    """True when the error looks like the API refusing the CreatedDate floor."""
+    text = str(exc).lower()
+    return any(marker in text for marker in _FILTER_REJECTION_MARKERS)
 
 
 def get_cases(cfg):
@@ -971,6 +1186,26 @@ def _card_case_number(card):
     return case_number if re.match("[0-9]{8}", case_number) else None
 
 
+def _card_severity(case_number, severity):
+    """Return the severity label a card is stored with ("2 (High)" -> "High").
+
+    Readers downstream (``portal2jira_sevs`` in particular) key off the label,
+    so an unreadable severity must not propagate - but it must not cost the
+    card either: a projection carried forward from PostgreSQL used to arrive as
+    a bare "3", and the regex returning None discarded the whole card, losing
+    exactly the tracked cases the closed-case retention work exists to keep.
+    """
+    label = severity_label(severity)
+    if label:
+        return label
+    logging.warning(
+        "case %s has an unreadable severity (%r); treating it as Medium",
+        case_number,
+        severity,
+    )
+    return "Medium"
+
+
 def _build_card_data(card, cases, bugs, issues, escalations, details, time_now, cfg):
     # Generated by: Cursor
     """Build complete card data for a single JIRA card
@@ -1045,7 +1280,7 @@ def _build_card_data(card, cases, bugs, issues, escalations, details, time_now, 
         "labels": card.fields.labels,
         "bugzilla": bugzilla,
         "issues": case_issues,
-        "severity": re.search(r"[a-zA-Z]+", case_data["severity"]).group(),
+        "severity": _card_severity(case_number, case_data["severity"]),
         "priority": card.fields.priority.name,
         "escalated": escalation_info["escalated"],
         "escalated_link": escalation_info["escalated_link"],

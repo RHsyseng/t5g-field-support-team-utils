@@ -22,6 +22,7 @@ from t5gweb.database import (
     load_jira_card_postgres,
     load_open_cases_postgres,
 )
+from t5gweb.database.operations import _sprint_name, _utc_naive
 
 
 @pytest.fixture
@@ -33,7 +34,9 @@ def mock_jira_issue():
     mock_issue.fields.priority.name = "High"
     mock_issue.fields.status.name = "In Progress"
     mock_issue.fields.assignee.displayName = "Test User"
+    mock_issue.fields.assignee.emailAddress = "testuser@redhat.com"
     mock_issue.fields.created = "2024-01-01T00:00:00.000+0000"
+    mock_issue.fields.updated = "2024-01-02T00:00:00.000+0000"
 
     # Mock comments
     mock_comment1 = Mock()
@@ -322,6 +325,12 @@ class TestDatabaseOperations:
         assert jira_card.case_number == "12345678"
         assert jira_card.priority == "High"
         assert jira_card.status == "In Progress"
+        # last_update_date reflects the Jira issue's own last-modified time,
+        # not the sync time (SQLite drops tzinfo, so compare naive)
+        expected_updated = parser.parse("2024-01-02T00:00:00.000+0000")
+        assert jira_card.last_update_date.replace(
+            tzinfo=None
+        ) == expected_updated.replace(tzinfo=None)
 
     def test_load_jira_card_creates_comments(self, test_db_session, mock_jira_issue):
         """Test that load_jira_card_postgres creates JiraComment records"""
@@ -486,6 +495,108 @@ class TestLoadCommentsPostgres:
         case = test_db_session.query(Case).filter_by(case_number="12345678").first()
         assert len(case.comments) == 1
         assert case.comments[0].author == "engineer1"
+
+
+class TestLoadCommentsRefreshAndDedup:
+    """A re-synced comment is corrected, and a batch never double-inserts."""
+
+    @staticmethod
+    def _comment(body="body", created="2024-01-01T10:00:00Z", **kwargs):
+        comment = {
+            "createdBy": "customer1",
+            "commentBody": body,
+            "createdDate": created,
+        }
+        comment.update(kwargs)
+        return comment
+
+    def test_duplicate_in_one_batch_inserted_once(self, test_db_session):
+        # The de-dup query cannot see rows added earlier in the same
+        # (autoflush=False) session, so the batch has to guard itself.
+        load_cases_postgres(create_test_case_data())
+        created = parser.parse("2024-01-01T00:00:00Z")
+
+        load_comments_postgres("12345678", created, [self._comment(), self._comment()])
+
+        assert test_db_session.query(Comment).count() == 1
+
+    def test_comment_timestamp_stored_in_utc(self, test_db_session):
+        # A non-UTC offset must not be stored as wall clock: the watermark is
+        # read back and sent to the API as a "...Z" floor, so a shifted value
+        # would permanently skip comments inside the offset window.
+        load_cases_postgres(create_test_case_data())
+        created = parser.parse("2024-01-01T00:00:00Z")
+
+        load_comments_postgres(
+            "12345678", created, [self._comment(created="2024-01-02T10:00:00+02:00")]
+        )
+
+        stored = test_db_session.query(Comment).one().commented_at
+        assert stored.replace(tzinfo=None) == datetime(2024, 1, 2, 8, 0, 0)
+
+    def test_distinct_comments_in_the_same_second_both_stored(self, test_db_session):
+        # Automation accounts post several comments within one second; the
+        # batch guard must key on the body too, or the second is swallowed.
+        load_cases_postgres(create_test_case_data())
+        created = parser.parse("2024-01-01T00:00:00Z")
+
+        load_comments_postgres(
+            "12345678",
+            created,
+            [
+                self._comment(body="advisory date changed", author="Bugzilla Bot"),
+                self._comment(body="removed from batch", author="Bugzilla Bot"),
+            ],
+        )
+
+        bodies = {c.comment_text for c in test_db_session.query(Comment).all()}
+        assert bodies == {"advisory date changed", "removed from batch"}
+
+    def test_same_second_comments_survive_a_resync(self, test_db_session):
+        # Re-syncing must match each stored row by body rather than
+        # overwriting one with the other.
+        load_cases_postgres(create_test_case_data())
+        created = parser.parse("2024-01-01T00:00:00Z")
+        batch = [
+            self._comment(body="first", author="Bugzilla Bot"),
+            self._comment(body="second", author="Bugzilla Bot"),
+        ]
+
+        load_comments_postgres("12345678", created, batch)
+        load_comments_postgres("12345678", created, batch)
+
+        bodies = [c.comment_text for c in test_db_session.query(Comment).all()]
+        assert sorted(bodies) == ["first", "second"]
+
+    def test_later_sync_refreshes_body_and_flags(self, test_db_session):
+        load_cases_postgres(create_test_case_data())
+        created = parser.parse("2024-01-01T00:00:00Z")
+
+        load_comments_postgres(
+            "12345678",
+            created,
+            [self._comment(body="<p>raw html</p>", isPublic=False)],
+        )
+        load_comments_postgres(
+            "12345678",
+            created,
+            [self._comment(body="markdown", createdByType="Customer", isPublic=True)],
+        )
+
+        comment = test_db_session.query(Comment).one()
+        assert comment.comment_text == "markdown"
+        assert comment.comment_type == "Customer"
+        assert comment.is_public is True
+
+    def test_unknown_visibility_never_overwrites_a_known_one(self, test_db_session):
+        load_cases_postgres(create_test_case_data())
+        created = parser.parse("2024-01-01T00:00:00Z")
+
+        load_comments_postgres("12345678", created, [self._comment(isPublic=False)])
+        # isPublic absent -> the API could not tell us; keep what we know.
+        load_comments_postgres("12345678", created, [self._comment()])
+
+        assert test_db_session.query(Comment).one().is_public is False
 
 
 class TestDataIntegrity:
@@ -711,7 +822,8 @@ class TestLoadOpenCasesPostgres:
 
     def test_projects_open_case_in_get_cases_shape(self, test_db_session):
         """An open row is returned in the same projection get_cases builds,
-        with severity stringified and summary mapped to problem."""
+        with severity re-expanded to the portal form and summary mapped to
+        problem."""
         created = datetime(2026, 1, 1, 0, 0, 0, tzinfo=timezone.utc)
         updated = datetime(2026, 2, 1, 12, 30, 0, tzinfo=timezone.utc)
         case = create_test_case(
@@ -735,7 +847,7 @@ class TestLoadOpenCasesPostgres:
         assert result == {
             "10000001": {
                 "owner": "Eng",
-                "severity": "2",
+                "severity": "2 (High)",
                 "account": "ACME",
                 "problem": "disk full",
                 "status": "Waiting on Red Hat",
@@ -792,6 +904,95 @@ class TestLoadOpenCasesPostgres:
                 load_open_cases_postgres()
 
         failing_session.close.assert_called_once()
+
+
+class TestCardUpdateRefreshesSeverity:
+    def test_raised_severity_is_written_on_update(
+        self, test_db_session, mock_jira_issue
+    ):
+        """A card stored at severity 3 must follow the case when it is raised;
+        the update branch used to leave severity at its insert-time value."""
+        case_data = create_test_case_data()
+        case_data["12345678"]["severity"] = "3 (Medium)"
+        load_cases_postgres(case_data)
+
+        with patch(
+            "t5gweb.database.operations.format_comment", side_effect=lambda x: x.body
+        ):
+            load_jira_card_postgres(case_data, "12345678", mock_jira_issue)
+            case_data["12345678"]["severity"] = "1 (Urgent)"
+            load_jira_card_postgres(case_data, "12345678", mock_jira_issue)
+
+        card = test_db_session.query(JiraCard).filter_by(jira_card_id="TEST-123").one()
+        assert card.severity == 1
+
+
+class TestSprintName:
+    """The stored sprint keeps the board's own name."""
+
+    @staticmethod
+    def _issue(sprint):
+        issue = Mock()
+        issue.fields.customfield_10020 = sprint
+        return issue
+
+    def test_no_sprint(self):
+        assert _sprint_name(self._issue(None)) is None
+        assert _sprint_name(self._issue([])) is None
+
+    def test_uses_the_sprint_object_name(self):
+        sprint = Mock()
+        sprint.name = "T5GFE Sprint 42"
+        assert _sprint_name(self._issue([sprint])) == "T5GFE Sprint 42"
+
+    def test_other_boards_keep_their_own_name(self):
+        # Regression: the name used to be rebuilt as f"T5GFE Sprint {n}",
+        # silently filing every board's sprints under the T5GFE board.
+        sprint = Mock()
+        sprint.name = "CNF Sprint 7"
+        assert _sprint_name(self._issue([sprint])) == "CNF Sprint 7"
+
+    def test_name_extracted_from_serialized_blob(self):
+        blob = (
+            "com.atlassian.greenhopper.service.sprint.Sprint@1f["
+            "id=5,rapidViewId=9,state=ACTIVE,name=CNF Sprint 7,"
+            "startDate=2026-01-01T00:00:00.000Z]"
+        )
+        issue = self._issue([blob])
+        assert _sprint_name(issue) == "CNF Sprint 7"
+
+    def test_latest_sprint_wins(self):
+        old, new = Mock(), Mock()
+        old.name, new.name = "T5GFE Sprint 1", "T5GFE Sprint 2"
+        assert _sprint_name(self._issue([old, new])) == "T5GFE Sprint 2"
+
+
+class TestUtcNaive:
+    """JIRA timestamps are stored as true UTC wall-clock values."""
+
+    def test_offset_converted_to_utc(self):
+        value = parser.parse("2024-01-02T10:00:00.000+0200")
+        assert _utc_naive(value) == datetime(2024, 1, 2, 8, 0, 0)
+
+    def test_naive_and_none_pass_through(self):
+        naive = datetime(2024, 1, 2, 10, 0, 0)
+        assert _utc_naive(naive) == naive
+        assert _utc_naive(None) is None
+
+    def test_card_update_stored_in_utc(self, test_db_session, mock_jira_issue):
+        """A +02:00 'updated' must not be stored two hours ahead of the portal
+        timestamps get_my_queue_cases compares it against."""
+        mock_jira_issue.fields.updated = "2024-01-02T10:00:00.000+0200"
+        case_data = create_test_case_data()
+        load_cases_postgres(case_data)
+
+        with patch(
+            "t5gweb.database.operations.format_comment", side_effect=lambda x: x.body
+        ):
+            load_jira_card_postgres(case_data, "12345678", mock_jira_issue)
+
+        card = test_db_session.query(JiraCard).filter_by(jira_card_id="TEST-123").one()
+        assert card.last_update_date == datetime(2024, 1, 2, 8, 0, 0)
 
 
 if __name__ == "__main__":

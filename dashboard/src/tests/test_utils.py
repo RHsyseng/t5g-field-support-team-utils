@@ -1,7 +1,14 @@
 import pytest
 
-from t5gweb.cache import build_where, remap_case_status
-from t5gweb.utils import exists_or_zero, is_support_case_number, set_defaults
+from t5gweb.cache import _card_severity, build_where, remap_case_status
+from t5gweb.utils import (
+    exists_or_zero,
+    is_support_case_number,
+    set_defaults,
+    severity_label,
+    severity_text,
+    unescape_api_text,
+)
 
 
 @pytest.mark.parametrize(
@@ -168,3 +175,71 @@ def test_build_where_single_account_uses_eq():
 
     # no subject block, single account -> eq, no IsClosed wrapper
     assert where == {"or": [{"Account_Number__c": {"eq": "3456789"}}]}
+
+
+class TestSeverity:
+    """Severity survives the PostgreSQL round-trip (Integer column)."""
+
+    @pytest.mark.parametrize(
+        "value,expected",
+        [
+            ("2 (High)", "High"),
+            ("3 (Normal)", "Normal"),
+            ("3 (Medium)", "Medium"),
+            # The database hands back a bare number; readers need the label.
+            ("1", "Urgent"),
+            (4, "Low"),
+            (None, None),
+            ("", None),
+        ],
+    )
+    def test_severity_label(self, value, expected):
+        assert severity_label(value) == expected
+
+    @pytest.mark.parametrize(
+        "value,expected",
+        [
+            (2, "2 (High)"),
+            ("3", "3 (Medium)"),
+            # Already in portal form, or unrecognisable: passed through.
+            ("1 (Urgent)", "1 (Urgent)"),
+            ("9", "9"),
+            (None, None),
+        ],
+    )
+    def test_severity_text(self, value, expected):
+        assert severity_text(value) == expected
+
+
+class TestCardSeverity:
+    """A card is never discarded over an unreadable severity."""
+
+    def test_portal_form(self):
+        assert _card_severity("10000001", "2 (High)") == "High"
+
+    def test_bare_number_from_a_carried_forward_projection(self):
+        # Regression: merge_closed_cases carries projections rebuilt from
+        # PostgreSQL, whose severity used to arrive as "3"; the old regex
+        # returned None and the whole card was thrown away.
+        assert _card_severity("10000001", "3") == "Medium"
+
+    def test_unreadable_severity_defaults_without_raising(self, caplog):
+        assert _card_severity("10000001", None) == "Medium"
+        assert "unreadable severity" in caplog.text
+
+
+class TestUnescapeApiText:
+    """Free-text API fields arrive HTML-entity-encoded."""
+
+    def test_entities_are_decoded(self):
+        assert (
+            unescape_api_text("Mirroring fails with &quot;manifest invalid&quot;")
+            == 'Mirroring fails with "manifest invalid"'
+        )
+        # Otherwise the template escapes the & again and the page shows the
+        # entity itself.
+        assert unescape_api_text("AT&amp;T") == "AT&T"
+
+    def test_plain_and_missing_values_pass_through(self):
+        assert unescape_api_text("plain subject") == "plain subject"
+        assert unescape_api_text(None) is None

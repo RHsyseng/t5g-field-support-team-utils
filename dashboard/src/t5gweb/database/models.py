@@ -4,6 +4,7 @@ from datetime import datetime
 from typing import List, Optional
 
 from sqlalchemy import (
+    Boolean,
     DateTime,
     ForeignKey,
     ForeignKeyConstraint,
@@ -78,8 +79,11 @@ class Comment(Base):
         case_number: Reference to parent case number
         created_date: Case creation date for foreign key relationship
         author: Comment author name
+        comment_type: Author type (Customer/Associate/Internal/Bug)
         comment_text: Full comment text content
         commented_at: Date comment was posted
+        is_public: Whether the comment is customer-visible (public) vs internal
+            (private). Nullable; NULL is treated as public downstream.
         case: Relationship to parent Case record
     """
 
@@ -92,8 +96,12 @@ class Comment(Base):
     )  # Same as in Case
 
     author: Mapped[str] = mapped_column(String, nullable=False)
+    comment_type: Mapped[Optional[str]] = mapped_column(String, nullable=True)
     comment_text: Mapped[str] = mapped_column(Text, nullable=False)
     commented_at: Mapped[datetime] = mapped_column(DateTime, nullable=False)
+    is_public: Mapped[Optional[bool]] = mapped_column(
+        Boolean, nullable=True
+    )  # Visibility__c == "Public"; NULL treated as public
 
     __table_args__ = (
         ForeignKeyConstraint(
@@ -120,9 +128,14 @@ class JiraCard(Base):
         summary: Card title/summary
         priority: Card priority level
         status: Current card status
-        assignee: JIRA username of assignee
+        assignee: JIRA display name of assignee
+        assignee_email: JIRA email address of assignee (used to match the
+            logged-in engineer against their cards; nullable when the JIRA
+            assignee email is unset or GDPR-hidden)
         sprint: Sprint name or identifier
         severity: Severity level as integer (1-4)
+        no_update_date: When the case was last marked "no update needed"
+            (nullable; used to drop the case from the My Queue view)
         case: Relationship to parent Case record
         comments: Relationship to JiraComment records
     """
@@ -150,10 +163,16 @@ class JiraCard(Base):
     assignee: Mapped[Optional[str]] = mapped_column(
         String, nullable=True
     )  # Changed from fe_in_charge to assignee
+    assignee_email: Mapped[Optional[str]] = mapped_column(
+        String, nullable=True
+    )  # JIRA assignee email; used to match the logged-in engineer
     sprint: Mapped[Optional[str]] = mapped_column(String, nullable=True)
     severity: Mapped[Optional[int]] = mapped_column(
         Integer, nullable=True
     )  # Made nullable since it might not always be available
+    no_update_date: Mapped[Optional[datetime]] = mapped_column(
+        DateTime, nullable=True
+    )  # Set when the case is marked "no update needed"; excludes it from view
 
     __table_args__ = (
         ForeignKeyConstraint(

@@ -18,10 +18,17 @@ from flask import (
     session,
     url_for,
 )
-from flask_login import LoginManager, UserMixin, login_required, login_user
+from flask_login import (
+    LoginManager,
+    UserMixin,
+    current_user,
+    login_required,
+    login_user,
+)
 from onelogin.saml2.auth import OneLogin_Saml2_Auth
 from onelogin.saml2.utils import OneLogin_Saml2_Utils
 
+from t5gweb.database.operations import get_my_queue_cases
 from t5gweb.libtelco5g import (
     generate_histogram_stats,
     generate_stats,
@@ -53,7 +60,16 @@ class User(UserMixin):
         user = users[user_id]
         self.id = user_id
         self.given_name = user["givenName"][0]
+        # Some IdPs send the attribute with no value at all ({"sn": []}), so a
+        # plain .get(..., [""]) default still indexes into an empty list.
+        self.sn = (user.get("sn") or [""])[0]
         self.mail = user["mail"][0]
+
+    @property
+    def display_name(self):
+        if self.given_name and self.sn:
+            return f"{self.given_name} {self.sn}"
+        return self.given_name
 
 
 def is_safe_url(target):
@@ -626,3 +642,114 @@ def get_engineer(engineer):
         engineer_view=True,
         sla_settings=cfg["sla_settings"],
     )
+
+
+@BP.route("/my-queue")
+@login_required
+def my_queue_view():
+    """Display the logged-in engineer's queue of cases needing attention.
+
+    Shows only the current user's cases where customers have commented after
+    the engineering team. Cards are matched on the engineer's email address
+    (the JIRA assignee email) taken from the SAML login, falling back to the
+    ENGINEER_OVERRIDE env var (an email address) only when there is no logged-in
+    user - local testing. The override deliberately does not outrank a real
+    session: leaked into a deployed environment it would otherwise show every
+    engineer the same person's queue.
+    """
+    cfg = set_cfg()
+
+    if current_user.is_authenticated and current_user.mail:
+        engineer_email = current_user.mail
+        engineer_label = current_user.display_name
+    else:
+        # No usable identity: filter on the override, or on "" - which matches
+        # no card - rather than passing None and listing every engineer's cases.
+        engineer_email = os.getenv("ENGINEER_OVERRIDE", "")
+        engineer_label = engineer_email or None
+
+    my_queue_cases = get_my_queue_cases(engineer_email=engineer_email)
+
+    return render_template(
+        "ui/my_queue.html",
+        cases=my_queue_cases,
+        jira_server=cfg["server"],
+        page_title="My Queue",
+        engineer_filter=engineer_label,
+    )
+
+
+@BP.route("/api/my-queue/case/<case_number>/comments")
+@login_required
+def get_case_comments(case_number):
+    """API endpoint to fetch comments for a specific case
+
+    Returns JSON with portal_comments and jira_comments arrays. A case can be
+    tracked by more than one JIRA card, so the JIRA history covers every card
+    linked to the case - picking just one would show a different conversation
+    from the one the queue row summarised.
+    """
+    from t5gweb.database.models import Case, Comment, JiraCard, JiraComment
+    from t5gweb.database.session import db_config
+
+    session = db_config.SessionLocal()
+    try:
+        # Get the case and jira card
+        case = session.query(Case).filter(Case.case_number == case_number).first()
+
+        if not case:
+            return jsonify({"error": "Case not found"}), 404
+
+        # Get portal comments
+        portal_comments = (
+            session.query(Comment)
+            .filter(Comment.case_number == case_number)
+            .order_by(Comment.commented_at.desc())
+            .all()
+        )
+
+        # Get the comments of every JIRA card tracking this case
+        card_ids = [
+            row[0]
+            for row in session.query(JiraCard.jira_card_id)
+            .filter(JiraCard.case_number == case_number)
+            .all()
+        ]
+
+        jira_comments = []
+        if card_ids:
+            jira_comments_query = (
+                session.query(JiraComment)
+                .filter(JiraComment.jira_card_id.in_(card_ids))
+                .order_by(JiraComment.last_update_date.desc())
+                .all()
+            )
+
+            jira_comments = [
+                {
+                    "author": c.author,
+                    "updated": c.last_update_date.isoformat(),
+                    "body": c.body,
+                    "jira_card_id": c.jira_card_id,
+                }
+                for c in jira_comments_query
+            ]
+
+        portal_comments_data = [
+            {
+                "author": c.author,
+                "date": c.commented_at.isoformat(),
+                "comment_type": c.comment_type,
+                "body": c.comment_text,
+                # NULL visibility is treated as public (matches reference model).
+                "is_public": True if c.is_public is None else c.is_public,
+            }
+            for c in portal_comments
+        ]
+
+        return jsonify(
+            {"portal_comments": portal_comments_data, "jira_comments": jira_comments}
+        )
+
+    finally:
+        session.close()

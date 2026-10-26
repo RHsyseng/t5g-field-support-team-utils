@@ -13,6 +13,7 @@ from .models import Case, Comment, JiraCard, JiraComment
 # Import database operations
 from .operations import (
     PgError,
+    comment_watermarks_postgres,
     load_cases_postgres,
     load_comments_postgres,
     load_jira_card_postgres,
@@ -35,6 +36,7 @@ __all__ = [
     "JiraComment",
     # Operations
     "PgError",
+    "comment_watermarks_postgres",
     "load_cases_postgres",
     "load_comments_postgres",
     "load_jira_card_postgres",

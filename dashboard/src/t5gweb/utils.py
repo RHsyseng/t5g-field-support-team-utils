@@ -1,6 +1,7 @@
 """utils.py: utility functions for the t5gweb"""
 
 import datetime
+import html
 import json
 import logging
 import os
@@ -9,8 +10,47 @@ import smtplib
 from email.message import EmailMessage
 
 import requests
+from markdownify import markdownify
 from slack_sdk import WebClient
 from slack_sdk.errors import SlackApiError
+
+# The portal reports a case severity as "<n> (<Label>)". PostgreSQL keeps only
+# <n> (``Case.severity`` is an Integer), so a projection rebuilt from the
+# database - what merge_closed_cases carries forward - has to re-expand it:
+# readers key off the label (``_build_card_data``, ``portal2jira_sevs``) and a
+# letter-less value used to make them fail.
+SEVERITY_LABELS = {1: "Urgent", 2: "High", 3: "Medium", 4: "Low"}
+
+
+def severity_label(severity):
+    """Return the label of a case severity, or None if there is none to find.
+
+    Accepts the portal form ("2 (High)"), the bare number stored in PostgreSQL
+    (``2`` or ``"2"``), and None.
+    """
+    if severity is None:
+        return None
+    text = str(severity)
+    match = re.search(r"[a-zA-Z]+", text)
+    if match:
+        return match.group()
+    number = re.search(r"\d+", text)
+    return SEVERITY_LABELS.get(int(number.group())) if number else None
+
+
+def severity_text(severity):
+    """Return the portal form of a severity (``2`` -> ``"2 (High)"``).
+
+    Already-labelled values and unrecognisable ones are passed through
+    unchanged; None stays None.
+    """
+    if severity is None:
+        return None
+    text = str(severity)
+    if re.search(r"[a-zA-Z]", text):
+        return text
+    label = severity_label(text)
+    return f"{text} ({label})" if label else text
 
 
 def email_notify(ini, message_content, recipient=None, subject=None):
@@ -447,19 +487,80 @@ def chunked(items, size):
         yield items[start : start + size]
 
 
+def unescape_api_text(value):
+    """Unescape an HTML-entity-encoded string from the API.
+
+    Free-text fields come back entity-encoded (``&quot;manifest invalid&quot;``)
+    exactly as ``Body__c`` does. Stored raw, the template escapes the ampersand
+    again and the dashboard literally shows ``&quot;``.
+    """
+    return html.unescape(value) if isinstance(value, str) else value
+
+
+def _comment_author_type(node):
+    """Classify a comment's author as Customer, Associate or Internal.
+
+    Returns None when neither flag came back at all. Defaulting that to
+    "Internal" would be dangerous: My Queue discards Red Hat-side comments, so
+    a field-level-security change that stopped returning these flags would
+    class every portal comment as internal and silently empty every engineer's
+    queue. Both flags present and false is a real internal comment.
+    """
+    customer = (node.get("IsCustomer__c") or {}).get("value")
+    associate = (node.get("IsAssociate__c") or {}).get("value")
+    if customer:
+        return "Customer"
+    if associate:
+        return "Associate"
+    if customer is None and associate is None:
+        return None
+    return "Internal"
+
+
+def _visibility_to_is_public(node):
+    """Map a comment node's ``Visibility__c`` picklist to a public/private flag.
+
+    Returns True for "Public", False for any other value the API sends, and None
+    when the field is absent or null (unknown, not "private").
+    """
+    visibility = (node.get("Visibility__c") or {}).get("value")
+    if visibility is None:
+        return None
+    return visibility == "Public"
+
+
 def uiapi_comment_to_dict(node):
-    """Flatten a UIAPI ``RedHatSupportCaseComment`` node into a comment dict.
+    """Flatten a UIAPI ``RedHatSupportCaseComment__c`` node into a comment dict.
 
     Args:
-        node: a ``RedHatSupportCaseComment`` node from ``CaseComments.edges``.
+        node: a ``RedHatSupportCaseComment__c`` node (``Body__c`` /
+            ``IsCustomer__c`` / ``IsAssociate__c`` / ``CreatedDate`` / ...).
 
     Returns:
-        dict: ``{"commentBody": str, "createdBy": str, "createdDate": str|None}``.
+        dict: ``{"commentBody": str, "createdBy": str, "createdByType": str|None,
+        "isPublic": bool|None, "createdDate": str|None}``. ``commentBody`` is
+        Markdown. ``createdByType`` is "Customer", "Associate", "Internal", or
+        None when the author flags are absent.
+        ``isPublic`` is ``Visibility__c == "Public"`` (customer-visible), or
+        ``None`` when the field carries no value at all.
     """
+    created_by_type = _comment_author_type(node)
+    # Body__c comes back HTML-entity-escaped (``&lt;p&gt;...``). Unescape to real
+    # HTML, then convert to Markdown so the frontend renders clean, consistent
+    # formatting (and never injects raw customer HTML). script/style are dropped.
+    body = (node.get("Body__c") or {}).get("value") or ""
+    markdown_body = markdownify(html.unescape(body), strip=["script", "style"])
     return {
-        "commentBody": (node.get("CommentBody") or {}).get("value") or "",
+        "commentBody": markdown_body.strip(),
         "createdBy": ((node.get("CreatedBy") or {}).get("Name") or {}).get("value")
         or "unknown",
+        "createdByType": created_by_type,
+        # Visibility__c is the authoritative public/private picklist: "Public"
+        # -> public, any other value -> private. A missing/null field means the
+        # API told us nothing, which is reported as None (unknown) rather than
+        # as "private" - storing a guessed False would badge the whole history
+        # "private" if the field ever stops being returned.
+        "isPublic": _visibility_to_is_public(node),
         "createdDate": (node.get("CreatedDate") or {}).get("value"),
     }
 
