@@ -274,19 +274,31 @@ def load_comments_postgres(case_number, case_created_date, api_comments):
 
             commented_at = parser.parse(commented_at_str)
 
-            if (author, commented_at) in seen:
+            if (author, commented_at, body) in seen:
                 continue
-            seen.add((author, commented_at))
+            seen.add((author, commented_at, body))
 
-            existing = (
+            # Author and timestamp alone do not identify a comment: automation
+            # accounts post several distinct comments within the same second,
+            # and matching on them would merge those into one. Prefer the row
+            # with the same body; fall back to the single row that differs only
+            # in text, which is the same comment edited (or re-rendered in the
+            # newer Markdown format).
+            same_timestamp = (
                 session.query(Comment)
                 .filter_by(
                     case_number=case_number,
                     author=author,
                     commented_at=commented_at,
                 )
-                .first()
+                .all()
             )
+            existing = next(
+                (row for row in same_timestamp if row.comment_text == body), None
+            )
+            if existing is None and len(same_timestamp) == 1:
+                existing = same_timestamp[0]
+
             if existing is None:
                 comment = Comment(
                     case_number=case_number,

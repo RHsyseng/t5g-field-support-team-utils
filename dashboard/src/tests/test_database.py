@@ -520,6 +520,40 @@ class TestLoadCommentsRefreshAndDedup:
 
         assert test_db_session.query(Comment).count() == 1
 
+    def test_distinct_comments_in_the_same_second_both_stored(self, test_db_session):
+        # Automation accounts post several comments within one second; the
+        # batch guard must key on the body too, or the second is swallowed.
+        load_cases_postgres(create_test_case_data())
+        created = parser.parse("2024-01-01T00:00:00Z")
+
+        load_comments_postgres(
+            "12345678",
+            created,
+            [
+                self._comment(body="advisory date changed", author="Bugzilla Bot"),
+                self._comment(body="removed from batch", author="Bugzilla Bot"),
+            ],
+        )
+
+        bodies = {c.comment_text for c in test_db_session.query(Comment).all()}
+        assert bodies == {"advisory date changed", "removed from batch"}
+
+    def test_same_second_comments_survive_a_resync(self, test_db_session):
+        # Re-syncing must match each stored row by body rather than
+        # overwriting one with the other.
+        load_cases_postgres(create_test_case_data())
+        created = parser.parse("2024-01-01T00:00:00Z")
+        batch = [
+            self._comment(body="first", author="Bugzilla Bot"),
+            self._comment(body="second", author="Bugzilla Bot"),
+        ]
+
+        load_comments_postgres("12345678", created, batch)
+        load_comments_postgres("12345678", created, batch)
+
+        bodies = [c.comment_text for c in test_db_session.query(Comment).all()]
+        assert sorted(bodies) == ["first", "second"]
+
     def test_later_sync_refreshes_body_and_flags(self, test_db_session):
         load_cases_postgres(create_test_case_data())
         created = parser.parse("2024-01-01T00:00:00Z")

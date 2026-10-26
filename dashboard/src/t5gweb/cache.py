@@ -28,6 +28,7 @@ from t5gweb.utils import (
     int_or_none,
     is_support_case_number,
     severity_label,
+    severity_text,
     uiapi_comment_to_dict,
 )
 
@@ -555,6 +556,14 @@ def merge_closed_cases(cfg, token, cases):
     dropped = [case for case in prior if case not in cases]
     if not dropped:
         return
+
+    # A projection that went through PostgreSQL lost the severity label ("3"
+    # rather than "3 (Medium)"). Those values are also already sitting in the
+    # Redis cache, which wins over PostgreSQL above and is rewritten at the end
+    # of the sync - so without repairing them here they would carry themselves
+    # forward indefinitely.
+    for case in dropped:
+        prior[case]["severity"] = severity_text(prior[case].get("severity"))
 
     # Already-closed cases carry forward unchanged (no re-verification); the rest
     # are verified against GraphQL.
