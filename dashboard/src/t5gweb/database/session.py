@@ -154,10 +154,14 @@ def create_postgres_tables():
 def _migrate_add_missing_columns():
     """Add columns defined in models but missing from existing tables.
 
-    Compares the SQLAlchemy model metadata against the live database schema
-    and issues ALTER TABLE ADD COLUMN for any gaps. Only handles nullable
-    columns (safe for existing rows). Runs inside create_postgres_tables()
-    so production deploys pick up schema changes automatically.
+    ``create_all`` only creates missing *tables*; it never adds a new column to
+    an existing one, and this project has no migration framework. Compare the
+    SQLAlchemy model metadata against the live database schema and issue
+    ALTER TABLE ADD COLUMN for any gaps, so an already-created table gains new
+    model columns (``cases.closed_date``, ``comments.comment_type``, ...) on the
+    next startup. Additive only - never drops or renames - and the added columns
+    are nullable, which is safe for existing rows. Failures are logged rather
+    than fatal so a DB that pre-dates these columns still boots.
     """
     try:
         inspector = inspect(db_config.engine)

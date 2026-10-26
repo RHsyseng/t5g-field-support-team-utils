@@ -278,3 +278,6 @@ cython_debug/
 planv3.md
 graphql-definition.graphql
 probe_*.py
+
+# Local extracted production data (real customer data — never commit)
+.local-data/
