@@ -375,11 +375,13 @@ class TestCommentFetchIsIncremental:
 
         # Both cases are known, so a single swept chunk floored at the oldest
         # of the two watermarks - never re-reading what is already stored.
+        # gte takes a RedHatSupportDateTimeInput ({"value": <ISO Z>}); a bare
+        # string is rejected with VALIDATION_INVALID_TYPE_VARIABLE.
         assert wheres == [
             {
                 "and": [
                     {"Case__r": {"CaseNumber__c": {"in": ["1", "2"]}}},
-                    {"CreatedDate": {"gte": "2026-09-10T08:00:00Z"}},
+                    {"CreatedDate": {"gte": {"value": "2026-09-10T08:00:00Z"}}},
                 ]
             }
         ]
@@ -391,6 +393,84 @@ class TestCommentFetchIsIncremental:
         # 2's watermark, or it would never be fetched at all.
         assert wheres[0] == {"Case__r": {"CaseNumber__c": {"in": ["1"]}}}
         assert wheres[1]["and"][0] == {"Case__r": {"CaseNumber__c": {"in": ["2"]}}}
+
+    def test_throttling_does_not_disable_the_floor(self, monkeypatch):
+        # A 403/WAF throttle must not be read as "the API refuses the floor":
+        # dropping it would re-read every comment of every case while the API
+        # is already pushing back. The chunk is skipped, the floor stays on.
+        monkeypatch.setattr(cache, "_CASE_DETAIL_CHUNK_SIZE", 1)
+        monkeypatch.setattr(cache, "make_graphql_headers", lambda token: {})
+        monkeypatch.setattr(cache.libtelco5g, "get_token", lambda token: "fresh")
+        monkeypatch.setattr(
+            cache,
+            "comment_watermarks_postgres",
+            lambda cases: {
+                "1": datetime(2026, 9, 10, 8, 0, 0),
+                "2": datetime(2026, 9, 10, 8, 0, 0),
+            },
+        )
+        comment_wheres = []
+
+        def fake_post(url, headers, query, variables):
+            if not _is_comment_query(query):
+                cns = variables["where"]["CaseNumber__c"]["in"]
+                return _detail_page([_detail_node(cn) for cn in cns])
+            comment_wheres.append(variables["where"])
+            raise RuntimeError("GraphQL error: 403 Forbidden")
+
+        monkeypatch.setattr(cache, "graphql_post", fake_post)
+        fetch_case_details_uiapi(
+            {"graphql_api": "u", "offline_token": "t"}, "tok", ["1", "2"]
+        )
+
+        # Two chunks, two attempts each (initial + token refresh), floored
+        # throughout - never retried bare.
+        assert len(comment_wheres) == 4
+        assert all("and" in where for where in comment_wheres)
+
+    def test_floor_retry_does_not_duplicate_collected_comments(self, monkeypatch):
+        # The retry restarts the chunk at its first page, so comments read
+        # before the rejection must not be kept as well.
+        monkeypatch.setattr(cache, "make_graphql_headers", lambda token: {})
+        monkeypatch.setattr(cache.libtelco5g, "get_token", lambda token: "fresh")
+        monkeypatch.setattr(
+            cache,
+            "comment_watermarks_postgres",
+            lambda cases: {"1": datetime(2026, 9, 10, 8, 0, 0)},
+        )
+
+        def fake_post(url, headers, query, variables):
+            if not _is_comment_query(query):
+                return _detail_page([_detail_node("1")])
+            if "and" in variables["where"]:
+                if variables["after"] is None:
+                    # First floored page succeeds...
+                    return _comments_page(
+                        [_comment_node("1", body="first page")],
+                        has_next=True,
+                        end_cursor="cursor-1",
+                    )
+                # ...the second is refused, so the chunk restarts unfloored.
+                raise RuntimeError(
+                    "GraphQL error: invalid input value at `$where.and[1]."
+                    "CreatedDate.gte`"
+                )
+            return _comments_page(
+                [
+                    _comment_node("1", body="first page"),
+                    _comment_node("1", body="second page"),
+                ]
+            )
+
+        monkeypatch.setattr(cache, "graphql_post", fake_post)
+        result = fetch_case_details_uiapi(
+            {"graphql_api": "u", "offline_token": "t"}, "tok", ["1"]
+        )
+
+        assert [c["commentBody"] for c in result["1"]["comments"]] == [
+            "first page",
+            "second page",
+        ]
 
     def test_falls_back_to_unfiltered_when_floor_rejected(self, monkeypatch):
         wheres = self._collect(

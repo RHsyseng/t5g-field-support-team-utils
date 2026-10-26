@@ -14,6 +14,44 @@ from markdownify import markdownify
 from slack_sdk import WebClient
 from slack_sdk.errors import SlackApiError
 
+# The portal reports a case severity as "<n> (<Label>)". PostgreSQL keeps only
+# <n> (``Case.severity`` is an Integer), so a projection rebuilt from the
+# database - what merge_closed_cases carries forward - has to re-expand it:
+# readers key off the label (``_build_card_data``, ``portal2jira_sevs``) and a
+# letter-less value used to make them fail.
+SEVERITY_LABELS = {1: "Urgent", 2: "High", 3: "Medium", 4: "Low"}
+
+
+def severity_label(severity):
+    """Return the label of a case severity, or None if there is none to find.
+
+    Accepts the portal form ("2 (High)"), the bare number stored in PostgreSQL
+    (``2`` or ``"2"``), and None.
+    """
+    if severity is None:
+        return None
+    text = str(severity)
+    match = re.search(r"[a-zA-Z]+", text)
+    if match:
+        return match.group()
+    number = re.search(r"\d+", text)
+    return SEVERITY_LABELS.get(int(number.group())) if number else None
+
+
+def severity_text(severity):
+    """Return the portal form of a severity (``2`` -> ``"2 (High)"``).
+
+    Already-labelled values and unrecognisable ones are passed through
+    unchanged; None stays None.
+    """
+    if severity is None:
+        return None
+    text = str(severity)
+    if re.search(r"[a-zA-Z]", text):
+        return text
+    label = severity_label(text)
+    return f"{text} ({label})" if label else text
+
 
 def email_notify(ini, message_content, recipient=None, subject=None):
     """Send email notification about new cases or updates

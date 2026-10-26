@@ -497,6 +497,60 @@ class TestLoadCommentsPostgres:
         assert case.comments[0].author == "engineer1"
 
 
+class TestLoadCommentsRefreshAndDedup:
+    """A re-synced comment is corrected, and a batch never double-inserts."""
+
+    @staticmethod
+    def _comment(body="body", created="2024-01-01T10:00:00Z", **kwargs):
+        comment = {
+            "createdBy": "customer1",
+            "commentBody": body,
+            "createdDate": created,
+        }
+        comment.update(kwargs)
+        return comment
+
+    def test_duplicate_in_one_batch_inserted_once(self, test_db_session):
+        # The de-dup query cannot see rows added earlier in the same
+        # (autoflush=False) session, so the batch has to guard itself.
+        load_cases_postgres(create_test_case_data())
+        created = parser.parse("2024-01-01T00:00:00Z")
+
+        load_comments_postgres("12345678", created, [self._comment(), self._comment()])
+
+        assert test_db_session.query(Comment).count() == 1
+
+    def test_later_sync_refreshes_body_and_flags(self, test_db_session):
+        load_cases_postgres(create_test_case_data())
+        created = parser.parse("2024-01-01T00:00:00Z")
+
+        load_comments_postgres(
+            "12345678",
+            created,
+            [self._comment(body="<p>raw html</p>", isPublic=False)],
+        )
+        load_comments_postgres(
+            "12345678",
+            created,
+            [self._comment(body="markdown", createdByType="Customer", isPublic=True)],
+        )
+
+        comment = test_db_session.query(Comment).one()
+        assert comment.comment_text == "markdown"
+        assert comment.comment_type == "Customer"
+        assert comment.is_public is True
+
+    def test_unknown_visibility_never_overwrites_a_known_one(self, test_db_session):
+        load_cases_postgres(create_test_case_data())
+        created = parser.parse("2024-01-01T00:00:00Z")
+
+        load_comments_postgres("12345678", created, [self._comment(isPublic=False)])
+        # isPublic absent -> the API could not tell us; keep what we know.
+        load_comments_postgres("12345678", created, [self._comment()])
+
+        assert test_db_session.query(Comment).one().is_public is False
+
+
 class TestDataIntegrity:
     """Test data integrity and edge cases"""
 
@@ -720,7 +774,8 @@ class TestLoadOpenCasesPostgres:
 
     def test_projects_open_case_in_get_cases_shape(self, test_db_session):
         """An open row is returned in the same projection get_cases builds,
-        with severity stringified and summary mapped to problem."""
+        with severity re-expanded to the portal form and summary mapped to
+        problem."""
         created = datetime(2026, 1, 1, 0, 0, 0, tzinfo=timezone.utc)
         updated = datetime(2026, 2, 1, 12, 30, 0, tzinfo=timezone.utc)
         case = create_test_case(
@@ -744,7 +799,7 @@ class TestLoadOpenCasesPostgres:
         assert result == {
             "10000001": {
                 "owner": "Eng",
-                "severity": "2",
+                "severity": "2 (High)",
                 "account": "ACME",
                 "problem": "disk full",
                 "status": "Waiting on Red Hat",

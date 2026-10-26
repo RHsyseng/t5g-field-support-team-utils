@@ -184,6 +184,19 @@ def _migrate_add_missing_columns():
 
     dialect = db_config.engine.dialect
     for table_name, col in missing:
+        # Only the column type is emitted, so a NOT NULL / UNIQUE column would
+        # be created without its constraint and the database would quietly stop
+        # matching the model. Those need a real migration; refuse them loudly
+        # instead of half-applying them.
+        if not col.nullable or col.unique or col.primary_key:
+            logging.error(
+                "Column %s.%s is missing but cannot be added automatically "
+                "(not nullable / unique); it needs a manual migration",
+                table_name,
+                col.name,
+            )
+            continue
+
         col_type = col.type.compile(dialect)
         logging.warning(
             "Adding missing column %s.%s (%s)", table_name, col.name, col_type

@@ -27,6 +27,7 @@ from t5gweb.utils import (
     format_date,
     int_or_none,
     is_support_case_number,
+    severity_label,
     uiapi_comment_to_dict,
 )
 
@@ -744,6 +745,11 @@ def _sweep_case_comments(cfg, state, case_numbers, since, comments_by_case):
 
     for chunk in chunked(case_numbers, _CASE_DETAIL_CHUNK_SIZE):
         after = None
+        # Collect per chunk, not straight into the result: dropping the floor
+        # restarts the chunk from its first page, and pages already read would
+        # otherwise be appended a second time (load_comments_postgres cannot
+        # catch that - its de-dup query does not see the un-flushed inserts).
+        collected = {}
         while True:
             variables = {
                 "where": _comment_where(
@@ -773,10 +779,14 @@ def _sweep_case_comments(cfg, state, case_numbers, since, comments_by_case):
                         variables,
                     )
                 except Exception as exc2:
-                    if since is not None and not state["floor_rejected"]:
-                        # The CreatedDate floor is the only unusual thing in this
-                        # query; assume the API dislikes it and redo the sweep
-                        # without it rather than losing the comments.
+                    if (
+                        since is not None
+                        and not state["floor_rejected"]
+                        and _is_filter_rejection(exc2)
+                    ):
+                        # The API refused the floor itself; redo this chunk
+                        # (and every later one) unfiltered rather than losing
+                        # the comments.
                         logging.warning(
                             "comment query rejected with a CreatedDate floor "
                             "(%s); retrying without it",
@@ -784,6 +794,7 @@ def _sweep_case_comments(cfg, state, case_numbers, since, comments_by_case):
                         )
                         state["floor_rejected"] = True
                         after = None
+                        collected = {}
                         continue
                     logging.warning(
                         "could not fetch comments for chunk %s: %s", chunk, exc2
@@ -800,7 +811,7 @@ def _sweep_case_comments(cfg, state, case_numbers, since, comments_by_case):
                 ).get("value")
                 if not case_number:
                     continue
-                comments_by_case.setdefault(case_number, []).append(
+                collected.setdefault(case_number, []).append(
                     uiapi_comment_to_dict(node)
                 )
 
@@ -809,14 +820,37 @@ def _sweep_case_comments(cfg, state, case_numbers, since, comments_by_case):
                 break
             after = page_info["endCursor"]
 
+        for case_number, comments in collected.items():
+            comments_by_case.setdefault(case_number, []).extend(comments)
+
 
 def _comment_where(chunk, since):
-    """Build the comment query filter for a chunk, optionally floored by date."""
+    """Build the comment query filter for a chunk, optionally floored by date.
+
+    ``gte`` takes a ``RedHatSupportDateTimeInput``, i.e. ``{"value": <ISO Z>}``
+    and not a bare string - passing the string is rejected with
+    ``VALIDATION_INVALID_TYPE_VARIABLE``. ``_CANONICAL_TS_FORMAT`` already emits
+    the trailing Z the API insists on.
+    """
     case_filter = {"Case__r": {"CaseNumber__c": {"in": chunk}}}
     if since is None:
         return case_filter
     floor = since.strftime(_CANONICAL_TS_FORMAT)
-    return {"and": [case_filter, {"CreatedDate": {"gte": floor}}]}
+    return {"and": [case_filter, {"CreatedDate": {"gte": {"value": floor}}}]}
+
+
+# A rejected CreatedDate floor is a GraphQL *validation* error naming the
+# filter; a 403/WAF throttle or a connection reset is not. Only the former means
+# "this API cannot do the floor" - retrying a throttled chunk without the floor
+# just re-reads every comment of every case while the API is already pushing
+# back.
+_FILTER_REJECTION_MARKERS = ("createddate", "$where", "validation")
+
+
+def _is_filter_rejection(exc):
+    """True when the error looks like the API refusing the CreatedDate floor."""
+    text = str(exc).lower()
+    return any(marker in text for marker in _FILTER_REJECTION_MARKERS)
 
 
 def get_cases(cfg):
@@ -1138,6 +1172,26 @@ def _card_case_number(card):
     return case_number if re.match("[0-9]{8}", case_number) else None
 
 
+def _card_severity(case_number, severity):
+    """Return the severity label a card is stored with ("2 (High)" -> "High").
+
+    Readers downstream (``portal2jira_sevs`` in particular) key off the label,
+    so an unreadable severity must not propagate - but it must not cost the
+    card either: a projection carried forward from PostgreSQL used to arrive as
+    a bare "3", and the regex returning None discarded the whole card, losing
+    exactly the tracked cases the closed-case retention work exists to keep.
+    """
+    label = severity_label(severity)
+    if label:
+        return label
+    logging.warning(
+        "case %s has an unreadable severity (%r); treating it as Medium",
+        case_number,
+        severity,
+    )
+    return "Medium"
+
+
 def _build_card_data(card, cases, bugs, issues, escalations, details, time_now, cfg):
     # Generated by: Cursor
     """Build complete card data for a single JIRA card
@@ -1212,7 +1266,7 @@ def _build_card_data(card, cases, bugs, issues, escalations, details, time_now, 
         "labels": card.fields.labels,
         "bugzilla": bugzilla,
         "issues": case_issues,
-        "severity": re.search(r"[a-zA-Z]+", case_data["severity"]).group(),
+        "severity": _card_severity(case_number, case_data["severity"]),
         "priority": card.fields.priority.name,
         "escalated": escalation_info["escalated"],
         "escalated_link": escalation_info["escalated_link"],

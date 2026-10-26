@@ -7,7 +7,7 @@ from datetime import datetime, timezone
 from dateutil import parser
 from sqlalchemy import func, or_
 
-from t5gweb.utils import format_comment
+from t5gweb.utils import format_comment, severity_text
 
 from .models import Case, Comment, JiraCard, JiraComment
 from .session import db_config
@@ -164,7 +164,10 @@ def load_open_cases_postgres():
         return {
             row.case_number: {
                 "owner": row.owner,
-                "severity": str(row.severity) if row.severity is not None else None,
+                # Re-expand "3" to "3 (Medium)": the column holds only the
+                # number, but every reader of a projection expects the portal
+                # form and breaks on a letter-less severity.
+                "severity": severity_text(row.severity),
                 "account": row.account,
                 "problem": row.summary,
                 "status": row.status,
@@ -249,6 +252,12 @@ def load_comments_postgres(case_number, case_created_date, api_comments):
             )
             return
 
+        # The de-dup query below cannot see rows added earlier in this same
+        # loop (the session is autoflush=False), so a batch that carries the
+        # same comment twice - e.g. a sweep that re-read a page - would insert
+        # it twice. Track what this batch has already handled.
+        seen = set()
+
         for api_comment in api_comments:
             author = api_comment.get("createdBy", "unknown")
             body = api_comment.get("commentBody", "")
@@ -264,6 +273,10 @@ def load_comments_postgres(case_number, case_created_date, api_comments):
                 continue
 
             commented_at = parser.parse(commented_at_str)
+
+            if (author, commented_at) in seen:
+                continue
+            seen.add((author, commented_at))
 
             existing = (
                 session.query(Comment)
@@ -286,15 +299,19 @@ def load_comments_postgres(case_number, case_created_date, api_comments):
                 )
                 session.add(comment)
             else:
-                # The API is authoritative for both flags, so refresh them on
-                # every sync: a row written before these columns existed (NULL)
-                # gets backfilled, and one written from a wrong/guessed value is
-                # corrected instead of staying wrong forever. A value the API
-                # cannot supply (None) never overwrites a known one.
+                # The API is authoritative, so refresh the stored row on every
+                # sync: one written before these columns existed (NULL) gets
+                # backfilled, one written from a wrong/guessed value is
+                # corrected instead of staying wrong forever, and a body stored
+                # in an older format (raw HTML, before the Markdown conversion)
+                # is rewritten. A value the API cannot supply (None) never
+                # overwrites a known one.
                 if comment_type:
                     existing.comment_type = comment_type
                 if is_public is not None:
                     existing.is_public = is_public
+                if body:
+                    existing.comment_text = body
 
         session.commit()
     except Exception as e:
@@ -427,6 +444,13 @@ def load_jira_card_postgres(cases, case_number, issue):
 
         # Only process comments if the card was successfully processed
         if card_processed:
+            # Commit the card before touching comments. A comment that fails to
+            # store rolls the session back and continues; with the card still
+            # pending, that rollback silently discarded its field updates
+            # (assignee_email above all) while still reporting success - and a
+            # card with no assignee_email never shows up in anyone's queue.
+            session.commit()
+
             # Process comments in batches to avoid holding transaction too long
             comments = issue.fields.comment.comments
 
