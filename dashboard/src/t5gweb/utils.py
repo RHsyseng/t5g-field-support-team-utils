@@ -487,6 +487,26 @@ def chunked(items, size):
         yield items[start : start + size]
 
 
+def _comment_author_type(node):
+    """Classify a comment's author as Customer, Associate or Internal.
+
+    Returns None when neither flag came back at all. Defaulting that to
+    "Internal" would be dangerous: My Queue discards Red Hat-side comments, so
+    a field-level-security change that stopped returning these flags would
+    class every portal comment as internal and silently empty every engineer's
+    queue. Both flags present and false is a real internal comment.
+    """
+    customer = (node.get("IsCustomer__c") or {}).get("value")
+    associate = (node.get("IsAssociate__c") or {}).get("value")
+    if customer:
+        return "Customer"
+    if associate:
+        return "Associate"
+    if customer is None and associate is None:
+        return None
+    return "Internal"
+
+
 def _visibility_to_is_public(node):
     """Map a comment node's ``Visibility__c`` picklist to a public/private flag.
 
@@ -507,18 +527,14 @@ def uiapi_comment_to_dict(node):
             ``IsCustomer__c`` / ``IsAssociate__c`` / ``CreatedDate`` / ...).
 
     Returns:
-        dict: ``{"commentBody": str, "createdBy": str, "createdByType": str,
+        dict: ``{"commentBody": str, "createdBy": str, "createdByType": str|None,
         "isPublic": bool|None, "createdDate": str|None}``. ``commentBody`` is
-        Markdown. ``createdByType`` is "Customer", "Associate", or "Internal".
+        Markdown. ``createdByType`` is "Customer", "Associate", "Internal", or
+        None when the author flags are absent.
         ``isPublic`` is ``Visibility__c == "Public"`` (customer-visible), or
         ``None`` when the field carries no value at all.
     """
-    if (node.get("IsCustomer__c") or {}).get("value"):
-        created_by_type = "Customer"
-    elif (node.get("IsAssociate__c") or {}).get("value"):
-        created_by_type = "Associate"
-    else:
-        created_by_type = "Internal"
+    created_by_type = _comment_author_type(node)
     # Body__c comes back HTML-entity-escaped (``&lt;p&gt;...``). Unescape to real
     # HTML, then convert to Markdown so the frontend renders clean, consistent
     # formatting (and never injects raw customer HTML). script/style are dropped.

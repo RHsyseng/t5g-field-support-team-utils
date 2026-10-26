@@ -116,6 +116,22 @@ class TestUiapiCommentToDict:
             is False
         )
 
+    def test_author_type_unknown_when_both_flags_absent(self):
+        # Defaulting to "Internal" would be dangerous: My Queue drops Red Hat
+        # comments, so losing these flags would empty every engineer's queue.
+        node = _comment_node("1")
+        node["IsCustomer__c"] = None
+        node["IsAssociate__c"] = None
+        assert uiapi_comment_to_dict(node)["createdByType"] is None
+
+        del node["IsCustomer__c"]
+        del node["IsAssociate__c"]
+        assert uiapi_comment_to_dict(node)["createdByType"] is None
+
+    def test_author_type_internal_when_both_flags_are_false(self):
+        node = _comment_node("1", is_customer=False, is_associate=False)
+        assert uiapi_comment_to_dict(node)["createdByType"] == "Internal"
+
     def test_is_public_unknown_when_visibility_absent(self):
         # Null/missing visibility means "the API told us nothing": report None
         # so it is stored as NULL (rendered public) rather than badging the
@@ -393,6 +409,22 @@ class TestCommentFetchIsIncremental:
         # 2's watermark, or it would never be fetched at all.
         assert wheres[0] == {"Case__r": {"CaseNumber__c": {"in": ["1"]}}}
         assert wheres[1]["and"][0] == {"Case__r": {"CaseNumber__c": {"in": ["2"]}}}
+
+    def test_each_chunk_is_floored_at_its_own_watermark(self, monkeypatch):
+        # A single floor across all known cases would collapse to the oldest
+        # watermark and re-read nearly everything; cases are sorted by
+        # watermark so each chunk carries its own.
+        monkeypatch.setattr(cache, "_CASE_DETAIL_CHUNK_SIZE", 1)
+        wheres = self._collect(
+            monkeypatch,
+            {
+                "1": datetime(2020, 1, 1, 0, 0, 0),
+                "2": datetime(2026, 9, 12, 8, 0, 0),
+            },
+        )
+
+        floors = [where["and"][1]["CreatedDate"]["gte"]["value"] for where in wheres]
+        assert floors == ["2020-01-01T00:00:00Z", "2026-09-12T08:00:00Z"]
 
     def test_throttling_does_not_disable_the_floor(self, monkeypatch):
         # A 403/WAF throttle must not be read as "the API refuses the floor":

@@ -520,6 +520,20 @@ class TestLoadCommentsRefreshAndDedup:
 
         assert test_db_session.query(Comment).count() == 1
 
+    def test_comment_timestamp_stored_in_utc(self, test_db_session):
+        # A non-UTC offset must not be stored as wall clock: the watermark is
+        # read back and sent to the API as a "...Z" floor, so a shifted value
+        # would permanently skip comments inside the offset window.
+        load_cases_postgres(create_test_case_data())
+        created = parser.parse("2024-01-01T00:00:00Z")
+
+        load_comments_postgres(
+            "12345678", created, [self._comment(created="2024-01-02T10:00:00+02:00")]
+        )
+
+        stored = test_db_session.query(Comment).one().commented_at
+        assert stored.replace(tzinfo=None) == datetime(2024, 1, 2, 8, 0, 0)
+
     def test_distinct_comments_in_the_same_second_both_stored(self, test_db_session):
         # Automation accounts post several comments within one second; the
         # batch guard must key on the body too, or the second is swallowed.
@@ -890,6 +904,27 @@ class TestLoadOpenCasesPostgres:
                 load_open_cases_postgres()
 
         failing_session.close.assert_called_once()
+
+
+class TestCardUpdateRefreshesSeverity:
+    def test_raised_severity_is_written_on_update(
+        self, test_db_session, mock_jira_issue
+    ):
+        """A card stored at severity 3 must follow the case when it is raised;
+        the update branch used to leave severity at its insert-time value."""
+        case_data = create_test_case_data()
+        case_data["12345678"]["severity"] = "3 (Medium)"
+        load_cases_postgres(case_data)
+
+        with patch(
+            "t5gweb.database.operations.format_comment", side_effect=lambda x: x.body
+        ):
+            load_jira_card_postgres(case_data, "12345678", mock_jira_issue)
+            case_data["12345678"]["severity"] = "1 (Urgent)"
+            load_jira_card_postgres(case_data, "12345678", mock_jira_issue)
+
+        card = test_db_session.query(JiraCard).filter_by(jira_card_id="TEST-123").one()
+        assert card.severity == 1
 
 
 class TestSprintName:

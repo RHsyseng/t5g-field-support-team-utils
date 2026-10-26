@@ -654,3 +654,99 @@ class TestGetMyQueueCasesEdgeCases:
         result = get_my_queue_cases()
         case = result["10000001"]
         assert case["field_engineer"] is None
+
+
+class TestGetMyQueueCasesMultipleCards:
+    """A case is judged once, across every card tracking it."""
+
+    def test_answered_case_not_requeued_by_a_comment_less_card(self, test_db_session):
+        # CARD-A was answered after the customer's last word; CARD-B has no
+        # comments at all. Judged per card, whichever was processed last
+        # decided the outcome - the case has been answered, so it must stay
+        # out of the queue.
+        _seed(
+            test_db_session,
+            [
+                _case(),
+                _card(jira_card_id="CARD-A"),
+                _card(jira_card_id="CARD-B"),
+                _portal_comment(commented_at=CASE_DATE + timedelta(days=1)),
+                _jira_comment(
+                    jira_card_id="CARD-A",
+                    last_update_date=CASE_DATE + timedelta(days=2),
+                ),
+            ],
+        )
+
+        assert get_my_queue_cases() == {}
+
+    def test_case_queued_when_no_card_has_answered(self, test_db_session):
+        _seed(
+            test_db_session,
+            [
+                _case(),
+                _card(jira_card_id="CARD-A"),
+                _card(jira_card_id="CARD-B"),
+                _jira_comment(
+                    jira_card_id="CARD-A",
+                    last_update_date=CASE_DATE + timedelta(days=1),
+                ),
+                _portal_comment(commented_at=CASE_DATE + timedelta(days=2)),
+            ],
+        )
+
+        assert "10000001" in get_my_queue_cases()
+
+    def test_row_uses_the_most_recently_updated_card(self, test_db_session):
+        _seed(
+            test_db_session,
+            [
+                _case(),
+                _card(
+                    jira_card_id="CARD-A",
+                    status="Backlog",
+                    last_update_date=CASE_DATE + timedelta(days=1),
+                ),
+                _card(
+                    jira_card_id="CARD-B",
+                    status="In Progress",
+                    last_update_date=CASE_DATE + timedelta(days=9),
+                ),
+                _portal_comment(commented_at=CASE_DATE + timedelta(days=2)),
+            ],
+        )
+
+        case = get_my_queue_cases()["10000001"]
+        assert case["jira_card_id"] == "CARD-B"
+        assert case["jira_status"] == "In Progress"
+
+    def test_no_update_mark_on_any_card_excludes(self, test_db_session):
+        _seed(
+            test_db_session,
+            [
+                _case(),
+                _card(jira_card_id="CARD-A"),
+                _card(
+                    jira_card_id="CARD-B",
+                    no_update_date=CASE_DATE + timedelta(days=5),
+                ),
+                _portal_comment(commented_at=CASE_DATE + timedelta(days=2)),
+            ],
+        )
+
+        assert get_my_queue_cases() == {}
+
+
+class TestGetMyQueueCasesNullStatus:
+    def test_case_without_a_status_is_not_dropped(self, test_db_session):
+        # `status != 'Closed'` is NULL - and so false - for a NULL status.
+        _seed(
+            test_db_session,
+            [
+                _case(status=None),
+                _card(),
+                _portal_comment(commented_at=CASE_DATE + timedelta(days=2)),
+            ],
+        )
+
+        assert "10000001" in get_my_queue_cases()

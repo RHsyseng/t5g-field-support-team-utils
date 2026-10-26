@@ -716,25 +716,26 @@ def _fetch_case_comments_uiapi(cfg, token, case_numbers):
         logging.warning("comment watermarks unavailable, full fetch: %s", e)
         watermarks = {}
 
-    known = [case for case in case_numbers if case in watermarks]
     unknown = [case for case in case_numbers if case not in watermarks]
+    # One floor per chunk, and the chunk's own oldest watermark at that - so
+    # sort by watermark first. A single floor over all known cases would
+    # collapse to the oldest one (there is always a quiet case whose last
+    # comment is months old) and re-read almost everything anyway.
+    known = sorted(
+        (case for case in case_numbers if case in watermarks),
+        key=lambda case: watermarks[case],
+    )
 
     comments_by_case = {}
     state = {"headers": make_graphql_headers(token), "floor_rejected": False}
     # Cases with nothing stored need their full history; the rest only need
-    # what arrived since the oldest of their watermarks.
+    # what arrived since their own watermark.
     _sweep_case_comments(cfg, state, unknown, None, comments_by_case)
-    _sweep_case_comments(
-        cfg,
-        state,
-        known,
-        min(watermarks[case] for case in known) if known else None,
-        comments_by_case,
-    )
+    _sweep_case_comments(cfg, state, known, watermarks, comments_by_case)
     return comments_by_case
 
 
-def _sweep_case_comments(cfg, state, case_numbers, since, comments_by_case):
+def _sweep_case_comments(cfg, state, case_numbers, watermarks, comments_by_case):
     """Page the comment object for ``case_numbers``, into ``comments_by_case``.
 
     Args:
@@ -743,8 +744,8 @@ def _sweep_case_comments(cfg, state, case_numbers, since, comments_by_case):
             has already rejected the ``CreatedDate`` floor (so the remaining
             chunks stop sending it).
         case_numbers: case numbers to sweep.
-        since: only fetch comments created at/after this datetime, or None for
-            the full history.
+        watermarks: newest stored comment per case, used to floor each chunk at
+            its own oldest watermark, or None to fetch full histories.
         comments_by_case: result dict, appended to in place.
 
     Returns:
@@ -753,6 +754,7 @@ def _sweep_case_comments(cfg, state, case_numbers, since, comments_by_case):
     url = cfg["graphql_api"]
 
     for chunk in chunked(case_numbers, _CASE_DETAIL_CHUNK_SIZE):
+        since = min(watermarks[case] for case in chunk) if watermarks else None
         after = None
         # Collect per chunk, not straight into the result: dropping the floor
         # restarts the chunk from its first page, and pages already read would
@@ -848,12 +850,12 @@ def _comment_where(chunk, since):
     return {"and": [case_filter, {"CreatedDate": {"gte": {"value": floor}}}]}
 
 
-# A rejected CreatedDate floor is a GraphQL *validation* error naming the
-# filter; a 403/WAF throttle or a connection reset is not. Only the former means
-# "this API cannot do the floor" - retrying a throttled chunk without the floor
-# just re-reads every comment of every case while the API is already pushing
-# back.
-_FILTER_REJECTION_MARKERS = ("createddate", "$where", "validation")
+# A rejected CreatedDate floor is a GraphQL validation error naming the field
+# (or its input type) we added; a 403/WAF throttle, a connection reset, or any
+# other validation error that merely mentions $where is not. Only the former
+# means "this API cannot do the floor" - dropping it for anything else re-reads
+# every comment of every case, and the flag is sticky for the whole run.
+_FILTER_REJECTION_MARKERS = ("createddate", "datetimeinput")
 
 
 def _is_filter_rejection(exc):

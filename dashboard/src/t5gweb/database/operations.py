@@ -160,7 +160,13 @@ def load_open_cases_postgres():
 
     session = db_config.SessionLocal()
     try:
-        rows = session.query(Case).filter(Case.status != "Closed").all()
+        # NULL-safe: in SQL `status != 'Closed'` is NULL (and so filtered out)
+        # for a row with no status, which would hide the case entirely.
+        rows = (
+            session.query(Case)
+            .filter(or_(Case.status.is_(None), Case.status != "Closed"))
+            .all()
+        )
         return {
             row.case_number: {
                 "owner": row.owner,
@@ -272,7 +278,13 @@ def load_comments_postgres(case_number, case_created_date, api_comments):
             if not commented_at_str:
                 continue
 
-            commented_at = parser.parse(commented_at_str)
+            # The portal sends UTC ("...Z"); the column is naive, so without
+            # this the value lands in whatever the session TimeZone is. That
+            # skews the comparison against JIRA timestamps in
+            # get_my_queue_cases, and comment_watermarks_postgres would send a
+            # shifted floor back to the API - with a positive offset, comments
+            # in the offset window would never be fetched again.
+            commented_at = _utc_naive(parser.parse(commented_at_str))
 
             if (author, commented_at, body) in seen:
                 continue
@@ -362,18 +374,18 @@ def load_jira_card_postgres(cases, case_number, issue):
     card_processed = False
     card_comments = []  # Initialize card_comments for all code paths
 
+    # Extract severity as integer from cases data
+    severity_int = None
+    if case_number in cases and "severity" in cases[case_number]:
+        severity_match = re.search(r"\d+", str(cases[case_number]["severity"]))
+        if severity_match:
+            severity_int = int(severity_match.group())
+
     try:
         # Ensure JiraCard exists or create it
         jira_card = session.query(JiraCard).filter_by(jira_card_id=issue.key).first()
 
         if jira_card is None:
-            # Extract severity as integer from cases data
-            severity_int = None
-            if case_number in cases and "severity" in cases[case_number]:
-                severity_match = re.search(r"\d+", cases[case_number]["severity"])
-                if severity_match:
-                    severity_int = int(severity_match.group())
-
             # Use the case's creation date for the foreign key relationship
             case_created_date = parser.parse(cases[case_number]["createdate"])
 
@@ -450,6 +462,10 @@ def load_jira_card_postgres(cases, case_number, issue):
                 else None
             )
             jira_card.sprint = sprint_value
+            # Refresh the severity too: a case whose severity is raised would
+            # otherwise keep the value it had when the card was first stored.
+            if severity_int is not None:
+                jira_card.severity = severity_int
 
             session.merge(jira_card)
             card_processed = True
@@ -564,13 +580,14 @@ def get_my_queue_cases(active_sprint_name=None, engineer_email=None):
     try:
         # Query cases with JIRA cards - filter by sprint if provided
         cases_query = (
-            session.query(Case, JiraCard)
-            .join(
+            session.query(Case, JiraCard).join(
                 JiraCard,
                 (Case.case_number == JiraCard.case_number)
                 & (Case.created_date == JiraCard.created_date),
             )
-            .filter(Case.status != "Closed")
+            # NULL-safe (see load_open_cases_postgres): a case with no status
+            # must not vanish from the queue.
+            .filter(or_(Case.status.is_(None), Case.status != "Closed"))
             # A case can carry several cards; the last one processed wins the
             # row, so order the join to make that choice reproducible between
             # runs instead of leaving it to the planner.
@@ -615,7 +632,26 @@ def get_my_queue_cases(active_sprint_name=None, engineer_email=None):
         included_no_jira = 0
         no_update_marked = 0
 
+        # Judge a case once, across every card tracking it. Iterating the join
+        # row by row let a later card re-add a case an earlier one had excluded
+        # (and vice versa), so whether an answered case appeared came down to
+        # the order the cards came back in.
+        cards_by_case = {}
         for case, jira_card in all_cases:
+            cards_by_case.setdefault(case.case_number, (case, []))[1].append(jira_card)
+
+        for case, jira_cards in cards_by_case.values():
+            # The card the row is built from: the most recently updated one, so
+            # a case with several cards shows its live conversation.
+            jira_card = max(
+                jira_cards,
+                key=lambda card: (
+                    card.last_update_date is not None,
+                    card.last_update_date,
+                    card.jira_card_id,
+                ),
+            )
+
             # Newest portal comment the case is waiting on. Comments the Red Hat
             # side wrote on the portal don't count: the queue asks "has the
             # customer spoken since we last answered", so an engineer answering
@@ -637,10 +673,15 @@ def get_my_queue_cases(active_sprint_name=None, engineer_email=None):
                 .first()
             )
 
-            # Newest JIRA comment on the card
+            # Newest JIRA comment across every card tracking the case: an
+            # answer on any of them is still an answer.
             newest_jira_comment = (
                 session.query(JiraComment)
-                .filter(JiraComment.jira_card_id == jira_card.jira_card_id)
+                .filter(
+                    JiraComment.jira_card_id.in_(
+                        [card.jira_card_id for card in jira_cards]
+                    )
+                )
                 .order_by(JiraComment.last_update_date.desc())
                 .first()
             )
@@ -662,9 +703,15 @@ def get_my_queue_cases(active_sprint_name=None, engineer_email=None):
 
             # Exclude if the case was marked "no update needed" more recently
             # than the newest portal comment. Checked up front so it applies
-            # whether or not the card has JIRA comments.
+            # whether or not the card has JIRA comments. The latest mark on any
+            # of the case's cards counts.
             # (Vue: if noUpdate >= portal, exclude)
-            no_update_date = jira_card.no_update_date
+            marks = [
+                card.no_update_date
+                for card in jira_cards
+                if card.no_update_date is not None
+            ]
+            no_update_date = max(marks) if marks else None
             if no_update_date is not None:
                 if no_update_date.tzinfo is None:
                     no_update_date = no_update_date.replace(tzinfo=timezone.utc)
