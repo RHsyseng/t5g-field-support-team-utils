@@ -14,6 +14,7 @@ from jira.exceptions import JIRAError
 from t5gweb import libtelco5g
 from t5gweb.database import (
     PgError,
+    comment_watermarks_postgres,
     load_cases_postgres,
     load_comments_postgres,
     load_jira_card_postgres,
@@ -679,6 +680,14 @@ def _fetch_case_comments_uiapi(cfg, token, case_numbers):
     comments are queried wholesale from the top-level comment object, filtered by
     Case__r.CaseNumber__c and batched like the detail query.
 
+    Comments already stored in PostgreSQL are not re-fetched: cases that have
+    stored comments are swept with a ``CreatedDate`` floor (the oldest of their
+    newest-stored timestamps), while cases with none are swept in full. Without
+    that floor every run re-reads the complete history of every open case - one
+    page per 100 comments, i.e. hundreds of sequential requests against an API
+    whose real limit is WAF throttling. The floor is best-effort: if the API
+    rejects the filter, the sweep falls back to the unfiltered query.
+
     Args:
         cfg: Configuration dict (API endpoint + offline token for re-auth).
         token: a valid bearer access token.
@@ -686,33 +695,96 @@ def _fetch_case_comments_uiapi(cfg, token, case_numbers):
 
     Returns:
         dict: case number -> list of comment dicts (see uiapi_comment_to_dict).
-            Cases with no comments are omitted.
+            Cases with no new comments are omitted.
+    """
+    case_numbers = list(case_numbers)
+    try:
+        watermarks = comment_watermarks_postgres(case_numbers)
+    except Exception as e:
+        # No watermarks available (PostgreSQL down, or not reachable from this
+        # process) - fall back to fetching everything.
+        logging.warning("comment watermarks unavailable, full fetch: %s", e)
+        watermarks = {}
+
+    known = [case for case in case_numbers if case in watermarks]
+    unknown = [case for case in case_numbers if case not in watermarks]
+
+    comments_by_case = {}
+    state = {"headers": make_graphql_headers(token), "floor_rejected": False}
+    # Cases with nothing stored need their full history; the rest only need
+    # what arrived since the oldest of their watermarks.
+    _sweep_case_comments(cfg, state, unknown, None, comments_by_case)
+    _sweep_case_comments(
+        cfg,
+        state,
+        known,
+        min(watermarks[case] for case in known) if known else None,
+        comments_by_case,
+    )
+    return comments_by_case
+
+
+def _sweep_case_comments(cfg, state, case_numbers, since, comments_by_case):
+    """Page the comment object for ``case_numbers``, into ``comments_by_case``.
+
+    Args:
+        cfg: configuration dictionary (needs ``graphql_api`` / ``offline_token``).
+        state: mutable dict carrying the current ``headers`` and whether the API
+            has already rejected the ``CreatedDate`` floor (so the remaining
+            chunks stop sending it).
+        case_numbers: case numbers to sweep.
+        since: only fetch comments created at/after this datetime, or None for
+            the full history.
+        comments_by_case: result dict, appended to in place.
+
+    Returns:
+        None.
     """
     url = cfg["graphql_api"]
-    headers = make_graphql_headers(token)
-    comments_by_case = {}
 
     for chunk in chunked(case_numbers, _CASE_DETAIL_CHUNK_SIZE):
-        where = {"Case__r": {"CaseNumber__c": {"in": chunk}}}
         after = None
         while True:
-            variables = {"where": where, "after": after}
+            variables = {
+                "where": _comment_where(
+                    chunk, None if state["floor_rejected"] else since
+                ),
+                "after": after,
+            }
             try:
                 data = graphql_post(
-                    url, headers, GRAPHQL_CASE_COMMENTS_UIAPI_QUERY, variables
+                    url,
+                    state["headers"],
+                    GRAPHQL_CASE_COMMENTS_UIAPI_QUERY,
+                    variables,
                 )
             except RuntimeError as exc:
                 # Refresh the token once and retry; drop the chunk if it still
                 # fails so one bad batch does not abort the whole pass.
                 logging.warning("re-authenticating after comment error: %s", exc)
                 try:
-                    headers = make_graphql_headers(
+                    state["headers"] = make_graphql_headers(
                         libtelco5g.get_token(cfg["offline_token"])
                     )
                     data = graphql_post(
-                        url, headers, GRAPHQL_CASE_COMMENTS_UIAPI_QUERY, variables
+                        url,
+                        state["headers"],
+                        GRAPHQL_CASE_COMMENTS_UIAPI_QUERY,
+                        variables,
                     )
                 except Exception as exc2:
+                    if since is not None and not state["floor_rejected"]:
+                        # The CreatedDate floor is the only unusual thing in this
+                        # query; assume the API dislikes it and redo the sweep
+                        # without it rather than losing the comments.
+                        logging.warning(
+                            "comment query rejected with a CreatedDate floor "
+                            "(%s); retrying without it",
+                            exc2,
+                        )
+                        state["floor_rejected"] = True
+                        after = None
+                        continue
                     logging.warning(
                         "could not fetch comments for chunk %s: %s", chunk, exc2
                     )
@@ -737,7 +809,14 @@ def _fetch_case_comments_uiapi(cfg, token, case_numbers):
                 break
             after = page_info["endCursor"]
 
-    return comments_by_case
+
+def _comment_where(chunk, since):
+    """Build the comment query filter for a chunk, optionally floored by date."""
+    case_filter = {"Case__r": {"CaseNumber__c": {"in": chunk}}}
+    if since is None:
+        return case_filter
+    floor = since.strftime(_CANONICAL_TS_FORMAT)
+    return {"and": [case_filter, {"CreatedDate": {"gte": floor}}]}
 
 
 def get_cases(cfg):

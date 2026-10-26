@@ -5,16 +5,61 @@ import re
 from datetime import datetime, timezone
 
 from dateutil import parser
+from sqlalchemy import func, or_
 
 from t5gweb.utils import format_comment
 
 from .models import Case, Comment, JiraCard, JiraComment
 from .session import db_config
 
+# Portal comment author types written by the Red Hat side. The queue compares
+# "has the customer spoken since we answered", so these never count as the
+# customer's latest word (see get_my_queue_cases).
+_RED_HAT_COMMENT_TYPES = ("Associate", "Internal", "Bug")
+
 
 class PgError(Exception):
     """Raised when a PostgreSQL operation fails and the caller must decide how
     to recover (e.g. fall back to an empty result)."""
+
+
+# JIRA reports a sprint either as an object with a ``name`` or, on older
+# instances, as a serialized blob: ``com.atlassian...@1[id=5,name=Foo Sprint
+# 42,state=ACTIVE,...]``. Pull the real name out of the blob rather than
+# rebuilding it from the sprint number, which would relabel every board's
+# sprints with one hardcoded prefix.
+_SPRINT_NAME_RE = re.compile(r"name=([^,\]]+)")
+
+
+def _sprint_name(issue):
+    """Return the name of the card's current sprint, or None if it has none."""
+    sprints = getattr(issue.fields, "customfield_10020", None)
+    if not sprints:
+        return None
+
+    sprint_obj = sprints[-1]
+    name = getattr(sprint_obj, "name", None)
+    if name:
+        return name
+
+    blob = str(sprint_obj)
+    match = _SPRINT_NAME_RE.search(blob)
+    return match.group(1) if match else blob
+
+
+def _utc_naive(value):
+    """Normalize a datetime to naive UTC for storage.
+
+    ``JiraCard.last_update_date`` / ``JiraComment.last_update_date`` are
+    ``TIMESTAMP WITHOUT TIME ZONE``, so psycopg stores the wall clock and drops
+    the offset. A JIRA instance reporting e.g. +02:00 would therefore be stored
+    two hours ahead of the UTC portal timestamps it is later compared against
+    (``get_my_queue_cases`` re-labels these naive values as UTC). Convert to UTC
+    first so that re-labelling is true.
+    """
+    if value is None or value.tzinfo is None:
+        return value
+    return value.astimezone(timezone.utc).replace(tzinfo=None)
 
 
 def load_cases_postgres(cases):
@@ -139,6 +184,44 @@ def load_open_cases_postgres():
         session.close()
 
 
+def comment_watermarks_postgres(case_numbers):
+    """Return the newest stored portal-comment timestamp per case.
+
+    Lets the comment sync ask the API only for what it does not already hold:
+    the UIAPI comment object is queried wholesale (one page per 100 comments),
+    so re-reading complete histories every run costs hundreds of round-trips
+    against an API whose practical limit is WAF throttling.
+
+    Args:
+        case_numbers: case numbers to look up.
+
+    Returns:
+        dict: case number -> newest ``commented_at`` (naive UTC, as stored).
+            Cases with no stored comments are absent.
+
+    Raises:
+        PgError: on any database error, so the caller can fall back to a full
+            fetch rather than silently skipping comments.
+    """
+    if not case_numbers:
+        return {}
+
+    session = db_config.SessionLocal()
+    try:
+        rows = (
+            session.query(Comment.case_number, func.max(Comment.commented_at))
+            .filter(Comment.case_number.in_(list(case_numbers)))
+            .group_by(Comment.case_number)
+            .all()
+        )
+        return {case_number: newest for case_number, newest in rows if newest}
+    except Exception as e:
+        logging.error(f"Failed to read comment watermarks: {e}")
+        raise PgError(f"Failed to read comment watermarks: {e}") from e
+    finally:
+        session.close()
+
+
 def load_comments_postgres(case_number, case_created_date, api_comments):
     """Load or update Portal case comments in PostgreSQL.
 
@@ -170,9 +253,12 @@ def load_comments_postgres(case_number, case_created_date, api_comments):
             author = api_comment.get("createdBy", "unknown")
             body = api_comment.get("commentBody", "")
             comment_type = api_comment.get("createdByType")
-            # Default a missing visibility flag to public (matches the reference
-            # pipeline's .get("isPublic", True) convention).
-            is_public = bool(api_comment.get("isPublic", True))
+            # None means the source could not tell us (uiapi_comment_to_dict
+            # reports unknown visibility as None); store NULL rather than a
+            # guess, which readers render as public.
+            is_public = api_comment.get("isPublic")
+            if is_public is not None:
+                is_public = bool(is_public)
             commented_at_str = api_comment.get("createdDate")
             if not commented_at_str:
                 continue
@@ -200,9 +286,14 @@ def load_comments_postgres(case_number, case_created_date, api_comments):
                 )
                 session.add(comment)
             else:
-                if existing.comment_type is None and comment_type:
+                # The API is authoritative for both flags, so refresh them on
+                # every sync: a row written before these columns existed (NULL)
+                # gets backfilled, and one written from a wrong/guessed value is
+                # corrected instead of staying wrong forever. A value the API
+                # cannot supply (None) never overwrites a known one.
+                if comment_type:
                     existing.comment_type = comment_type
-                if existing.is_public is None:
+                if is_public is not None:
                     existing.is_public = is_public
 
         session.commit()
@@ -275,24 +366,13 @@ def load_jira_card_postgres(cases, case_number, issue):
             else:
                 time_now = datetime.now(timezone.utc)
 
-                sprint_value = None
-                if (
-                    hasattr(issue.fields, "customfield_10020")
-                    and issue.fields.customfield_10020
-                ):
-                    sprint_obj = issue.fields.customfield_10020[-1]
-                    raw_sprint_name = getattr(sprint_obj, "name", str(sprint_obj))
-                    match = re.search(r"Sprint\s+(\d+)", raw_sprint_name)
-                    if match:
-                        sprint_value = f"T5GFE Sprint {match.group(1)}"
-                    else:
-                        sprint_value = raw_sprint_name
+                sprint_value = _sprint_name(issue)
 
                 jira_card = JiraCard(
                     jira_card_id=issue.key,
                     case_number=case_number,
                     created_date=case_created_date,
-                    last_update_date=(
+                    last_update_date=_utc_naive(
                         parser.parse(issue.fields.updated)
                         if getattr(issue.fields, "updated", None)
                         else time_now
@@ -320,20 +400,9 @@ def load_jira_card_postgres(cases, case_number, issue):
         else:
             time_now = datetime.now(timezone.utc)
 
-            sprint_value = None
-            if (
-                hasattr(issue.fields, "customfield_10020")
-                and issue.fields.customfield_10020
-            ):
-                sprint_obj = issue.fields.customfield_10020[-1]
-                raw_sprint_name = getattr(sprint_obj, "name", str(sprint_obj))
-                match = re.search(r"Sprint\s+(\d+)", raw_sprint_name)
-                if match:
-                    sprint_value = f"T5GFE Sprint {match.group(1)}"
-                else:
-                    sprint_value = raw_sprint_name
+            sprint_value = _sprint_name(issue)
 
-            jira_card.last_update_date = (
+            jira_card.last_update_date = _utc_naive(
                 parser.parse(issue.fields.updated)
                 if getattr(issue.fields, "updated", None)
                 else time_now
@@ -376,7 +445,7 @@ def load_jira_card_postgres(cases, case_number, issue):
 
                     if existing_comment is None:
                         # Parse the comment timestamp
-                        last_comment_update = parser.parse(comment.updated)
+                        last_comment_update = _utc_naive(parser.parse(comment.updated))
 
                         jira_comment = JiraComment(
                             jira_comment_id=comment.id,
@@ -393,7 +462,7 @@ def load_jira_card_postgres(cases, case_number, issue):
                             jira_card_id=issue.key,
                             author=comment.author.displayName,
                             body=body,
-                            last_update_date=parser.parse(comment.updated),
+                            last_update_date=_utc_naive(parser.parse(comment.updated)),
                         )
                         session.merge(updated_comment)
 
@@ -440,17 +509,18 @@ def get_my_queue_cases(active_sprint_name=None, engineer_email=None):
                     'field_engineer': str,
                     'portal_status': str,
                     'jira_status': str,
-                    'portal_comments': [
-                        {'author': str, 'date': datetime, 'body': str}
-                    ],
-                    'jira_comments': [
-                        {'author': str, 'updated': datetime, 'body': str}
-                    ],
+                    'jira_card_id': str,
                     'most_recent_jira_comment': {
                         'author': str, 'updated': str, 'body': str
                     }
                 }
             }
+
+        The comment bodies themselves are deliberately not included: the table
+        only renders the newest JIRA comment, and the expanded row fetches the
+        full history on demand from ``/api/my-queue/case/<n>/comments``. Loading
+        every comment of every queued case here just to discard it made the page
+        render read thousands of rows it never showed.
     """
     session = db_config.SessionLocal()
     my_queue_cases = {}
@@ -465,6 +535,10 @@ def get_my_queue_cases(active_sprint_name=None, engineer_email=None):
                 & (Case.created_date == JiraCard.created_date),
             )
             .filter(Case.status != "Closed")
+            # A case can carry several cards; the last one processed wins the
+            # row, so order the join to make that choice reproducible between
+            # runs instead of leaving it to the planner.
+            .order_by(Case.case_number, JiraCard.jira_card_id)
         )
 
         # Apply sprint filter if provided
@@ -474,9 +548,14 @@ def get_my_queue_cases(active_sprint_name=None, engineer_email=None):
         else:
             sprint_msg = "all sprints"
 
-        # Apply engineer filter if provided (match on the JIRA assignee email)
-        if engineer_email:
-            cases_query = cases_query.filter(JiraCard.assignee_email == engineer_email)
+        # Apply engineer filter if provided (match on the JIRA assignee email).
+        # SAML and JIRA disagree on the case of an address often enough
+        # (Firstname.Lastname@ vs firstname.lastname@) that an exact match
+        # silently returns an empty queue, so compare case-insensitively.
+        if engineer_email is not None:
+            cases_query = cases_query.filter(
+                func.lower(JiraCard.assignee_email) == engineer_email.lower()
+            )
             engineer_msg = f", engineer '{engineer_email}'"
         else:
             engineer_msg = ""
@@ -488,6 +567,10 @@ def get_my_queue_cases(active_sprint_name=None, engineer_email=None):
             sprint_msg,
             engineer_msg,
         )
+        if engineer_email is not None and not all_cases:
+            # An empty queue is indistinguishable from a bad match, so say which
+            # address found nothing rather than rendering a blank table silently.
+            logging.warning("no JIRA cards matched assignee email '%s'", engineer_email)
 
         filtered_count = 0
         no_jira_comments = 0
@@ -497,31 +580,43 @@ def get_my_queue_cases(active_sprint_name=None, engineer_email=None):
         no_update_marked = 0
 
         for case, jira_card in all_cases:
-            # Load portal comments (newest first)
-            portal_comments = (
+            # Newest portal comment the case is waiting on. Comments the Red Hat
+            # side wrote on the portal don't count: the queue asks "has the
+            # customer spoken since we last answered", so an engineer answering
+            # on the portal instead of JIRA must be able to clear the case
+            # rather than keep it queued forever. An unknown type (NULL, i.e.
+            # synced before comment_type existed) is left in, so a case is never
+            # dropped from the queue just for lacking the new column.
+            newest_portal_comment = (
                 session.query(Comment)
                 .filter(Comment.case_number == case.case_number)
                 .filter(Comment.created_date == case.created_date)
+                .filter(
+                    or_(
+                        Comment.comment_type.is_(None),
+                        Comment.comment_type.notin_(_RED_HAT_COMMENT_TYPES),
+                    )
+                )
                 .order_by(Comment.commented_at.desc())
-                .all()
+                .first()
             )
 
-            # Load JIRA comments (newest first)
-            jira_comments = (
+            # Newest JIRA comment on the card
+            newest_jira_comment = (
                 session.query(JiraComment)
                 .filter(JiraComment.jira_card_id == jira_card.jira_card_id)
                 .order_by(JiraComment.last_update_date.desc())
-                .all()
+                .first()
             )
 
             # Track cases without portal comments
-            if not portal_comments:
+            if newest_portal_comment is None:
                 no_portal_comments += 1
 
             # Most recent portal comment date (tz-aware), epoch if none exist
             portal_comment_last_update = (
-                portal_comments[0].commented_at
-                if portal_comments
+                newest_portal_comment.commented_at
+                if newest_portal_comment
                 else datetime(1970, 1, 1, tzinfo=timezone.utc)
             )
             if portal_comment_last_update.tzinfo is None:
@@ -542,13 +637,13 @@ def get_my_queue_cases(active_sprint_name=None, engineer_email=None):
                     continue
 
             # If no JIRA comments exist, INCLUDE the case (Vue behavior line 50)
-            if not jira_comments:
+            if newest_jira_comment is None:
                 no_jira_comments += 1
                 included_no_jira += 1
                 # Fall through to add this case
             else:
                 # Get most recent JIRA comment date (tz-aware)
-                jira_comment_last_update = jira_comments[0].last_update_date
+                jira_comment_last_update = newest_jira_comment.last_update_date
                 if jira_comment_last_update.tzinfo is None:
                     jira_comment_last_update = jira_comment_last_update.replace(
                         tzinfo=timezone.utc
@@ -562,31 +657,9 @@ def get_my_queue_cases(active_sprint_name=None, engineer_email=None):
 
             filtered_count += 1
 
-            # Format portal comments
-            formatted_portal_comments = [
-                {
-                    "author": comment.author,
-                    "date": comment.commented_at.isoformat(),
-                    "body": comment.comment_text,
-                    "comment_type": comment.comment_type,
-                    "is_public": (
-                        True if comment.is_public is None else comment.is_public
-                    ),
-                }
-                for comment in portal_comments
-            ]
-
-            # Format JIRA comments
-            formatted_jira_comments = [
-                {
-                    "author": comment.author,
-                    "updated": comment.last_update_date.isoformat(),
-                    "body": comment.body,
-                }
-                for comment in jira_comments
-            ]
-
-            # Build result structure
+            # Build result structure. Only the newest JIRA comment is carried:
+            # the full histories are served by the comments endpoint when a row
+            # is expanded.
             my_queue_cases[case.case_number] = {
                 "case_number": case.case_number,
                 "severity": case.severity,
@@ -594,10 +667,15 @@ def get_my_queue_cases(active_sprint_name=None, engineer_email=None):
                 "field_engineer": jira_card.assignee,
                 "portal_status": case.status,
                 "jira_status": jira_card.status,
-                "portal_comments": formatted_portal_comments,
-                "jira_comments": formatted_jira_comments,
+                "jira_card_id": jira_card.jira_card_id,
                 "most_recent_jira_comment": (
-                    formatted_jira_comments[0] if formatted_jira_comments else None
+                    {
+                        "author": newest_jira_comment.author,
+                        "updated": newest_jira_comment.last_update_date.isoformat(),
+                        "body": newest_jira_comment.body,
+                    }
+                    if newest_jira_comment
+                    else None
                 ),
             }
 

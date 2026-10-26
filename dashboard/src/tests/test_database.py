@@ -22,6 +22,7 @@ from t5gweb.database import (
     load_jira_card_postgres,
     load_open_cases_postgres,
 )
+from t5gweb.database.operations import _sprint_name, _utc_naive
 
 
 @pytest.fixture
@@ -800,6 +801,74 @@ class TestLoadOpenCasesPostgres:
                 load_open_cases_postgres()
 
         failing_session.close.assert_called_once()
+
+
+class TestSprintName:
+    """The stored sprint keeps the board's own name."""
+
+    @staticmethod
+    def _issue(sprint):
+        issue = Mock()
+        issue.fields.customfield_10020 = sprint
+        return issue
+
+    def test_no_sprint(self):
+        assert _sprint_name(self._issue(None)) is None
+        assert _sprint_name(self._issue([])) is None
+
+    def test_uses_the_sprint_object_name(self):
+        sprint = Mock()
+        sprint.name = "T5GFE Sprint 42"
+        assert _sprint_name(self._issue([sprint])) == "T5GFE Sprint 42"
+
+    def test_other_boards_keep_their_own_name(self):
+        # Regression: the name used to be rebuilt as f"T5GFE Sprint {n}",
+        # silently filing every board's sprints under the T5GFE board.
+        sprint = Mock()
+        sprint.name = "CNF Sprint 7"
+        assert _sprint_name(self._issue([sprint])) == "CNF Sprint 7"
+
+    def test_name_extracted_from_serialized_blob(self):
+        blob = (
+            "com.atlassian.greenhopper.service.sprint.Sprint@1f["
+            "id=5,rapidViewId=9,state=ACTIVE,name=CNF Sprint 7,"
+            "startDate=2026-01-01T00:00:00.000Z]"
+        )
+        issue = self._issue([blob])
+        assert _sprint_name(issue) == "CNF Sprint 7"
+
+    def test_latest_sprint_wins(self):
+        old, new = Mock(), Mock()
+        old.name, new.name = "T5GFE Sprint 1", "T5GFE Sprint 2"
+        assert _sprint_name(self._issue([old, new])) == "T5GFE Sprint 2"
+
+
+class TestUtcNaive:
+    """JIRA timestamps are stored as true UTC wall-clock values."""
+
+    def test_offset_converted_to_utc(self):
+        value = parser.parse("2024-01-02T10:00:00.000+0200")
+        assert _utc_naive(value) == datetime(2024, 1, 2, 8, 0, 0)
+
+    def test_naive_and_none_pass_through(self):
+        naive = datetime(2024, 1, 2, 10, 0, 0)
+        assert _utc_naive(naive) == naive
+        assert _utc_naive(None) is None
+
+    def test_card_update_stored_in_utc(self, test_db_session, mock_jira_issue):
+        """A +02:00 'updated' must not be stored two hours ahead of the portal
+        timestamps get_my_queue_cases compares it against."""
+        mock_jira_issue.fields.updated = "2024-01-02T10:00:00.000+0200"
+        case_data = create_test_case_data()
+        load_cases_postgres(case_data)
+
+        with patch(
+            "t5gweb.database.operations.format_comment", side_effect=lambda x: x.body
+        ):
+            load_jira_card_postgres(case_data, "12345678", mock_jira_issue)
+
+        card = test_db_session.query(JiraCard).filter_by(jira_card_id="TEST-123").one()
+        assert card.last_update_date == datetime(2024, 1, 2, 8, 0, 0)
 
 
 if __name__ == "__main__":

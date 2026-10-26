@@ -255,6 +255,75 @@ class TestGetMyQueueCasesInclusion:
         assert "10000001" not in result
 
 
+class TestGetMyQueueCasesPortalCommentAuthor:
+    """Only the customer's portal comments keep a case in the queue."""
+
+    def test_red_hat_portal_reply_does_not_requeue(self, test_db_session):
+        # The engineer answered on the portal (Associate) after the JIRA
+        # comment. The case is answered, so it must leave the queue instead of
+        # being held open by Red Hat's own reply.
+        _seed(
+            test_db_session,
+            [
+                _case(),
+                _card(),
+                _portal_comment(
+                    commented_at=CASE_DATE + timedelta(days=1),
+                    comment_type="Customer",
+                    text="please help",
+                ),
+                _jira_comment(last_update_date=CASE_DATE + timedelta(days=2)),
+                _portal_comment(
+                    commented_at=CASE_DATE + timedelta(days=3),
+                    comment_type="Associate",
+                    author="engineer1",
+                    text="answered on the portal",
+                ),
+            ],
+        )
+
+        assert get_my_queue_cases() == {}
+
+    def test_customer_comment_after_red_hat_reply_requeues(self, test_db_session):
+        _seed(
+            test_db_session,
+            [
+                _case(),
+                _card(),
+                _jira_comment(last_update_date=CASE_DATE + timedelta(days=2)),
+                _portal_comment(
+                    commented_at=CASE_DATE + timedelta(days=3),
+                    comment_type="Associate",
+                    author="engineer1",
+                ),
+                _portal_comment(
+                    commented_at=CASE_DATE + timedelta(days=4),
+                    comment_type="Customer",
+                    author="customer1",
+                ),
+            ],
+        )
+
+        assert "10000001" in get_my_queue_cases()
+
+    def test_untyped_comment_still_counts(self, test_db_session):
+        # Rows synced before comment_type existed carry NULL; treating those as
+        # Red Hat's would silently drop cases out of the queue.
+        _seed(
+            test_db_session,
+            [
+                _case(),
+                _card(),
+                _jira_comment(last_update_date=CASE_DATE + timedelta(days=2)),
+                _portal_comment(
+                    commented_at=CASE_DATE + timedelta(days=3), comment_type=None
+                ),
+            ],
+        )
+
+        assert "10000001" in get_my_queue_cases()
+
+
 class TestGetMyQueueCasesFilters:
     """Test sprint and engineer filtering."""
 
@@ -352,6 +421,35 @@ class TestGetMyQueueCasesFilters:
         result = get_my_queue_cases(engineer_email="engineer@example.com")
         assert "10000001" in result
 
+    def test_engineer_filter_is_case_insensitive(self, test_db_session):
+        # SAML sends Firstname.Lastname@redhat.com where JIRA stores the
+        # lowercase form (or the reverse); an exact match would hand the
+        # engineer an empty queue with no error.
+        _seed(
+            test_db_session,
+            [
+                _case(case_number="10000001"),
+                _card(
+                    case_number="10000001",
+                    assignee_email="Engineer.One@example.com",
+                ),
+            ],
+        )
+
+        assert "10000001" in get_my_queue_cases(
+            engineer_email="engineer.one@example.com"
+        )
+        assert "10000001" in get_my_queue_cases(
+            engineer_email="ENGINEER.ONE@EXAMPLE.COM"
+        )
+
+    def test_empty_engineer_email_returns_nothing(self, test_db_session):
+        # An authenticated user with no mail attribute must not be shown every
+        # engineer's queue; "" is a filter that matches nothing, not "no filter".
+        self._seed_two_cases(test_db_session)
+
+        assert get_my_queue_cases(engineer_email="") == {}
+
 
 class TestGetMyQueueCasesReturnStructure:
     """Test the shape and content of returned data."""
@@ -384,48 +482,25 @@ class TestGetMyQueueCasesReturnStructure:
         assert case["field_engineer"] == "Alice"
         assert case["portal_status"] == "Open"
         assert case["jira_status"] == "In Progress"
-        assert isinstance(case["portal_comments"], list)
-        assert isinstance(case["jira_comments"], list)
+        assert case["jira_card_id"] == "CARD-1"
         assert case["most_recent_jira_comment"] is not None
 
-    def test_portal_comment_structure(self, test_db_session):
-        ts = CASE_DATE + timedelta(days=5)
+    def test_comment_bodies_not_loaded_into_the_row(self, test_db_session):
+        # The table never renders the histories (the expanded row fetches them
+        # on demand), so they must not be materialised per case here.
         _seed(
             test_db_session,
             [
                 _case(),
                 _card(),
-                _portal_comment(commented_at=ts, author="customer", text="Help me"),
+                _portal_comment(commented_at=CASE_DATE + timedelta(days=5)),
                 _jira_comment(last_update_date=CASE_DATE + timedelta(days=3)),
             ],
         )
 
         case = get_my_queue_cases()["10000001"]
-        pc = case["portal_comments"][0]
-        assert pc["author"] == "customer"
-        assert pc["body"] == "Help me"
-        assert "2024-01-06T00:00:00" in pc["date"]
-        assert "comment_type" in pc
-        # No stored visibility -> treated as public.
-        assert pc["is_public"] is True
-
-    def test_portal_comment_private_flag_preserved(self, test_db_session):
-        ts = CASE_DATE + timedelta(days=5)
-        _seed(
-            test_db_session,
-            [
-                _case(),
-                _card(),
-                _portal_comment(
-                    commented_at=ts, comment_type="Associate", is_public=False
-                ),
-                _jira_comment(last_update_date=CASE_DATE + timedelta(days=3)),
-            ],
-        )
-
-        pc = get_my_queue_cases()["10000001"]["portal_comments"][0]
-        assert pc["is_public"] is False
-        assert pc["comment_type"] == "Associate"
+        assert "portal_comments" not in case
+        assert "jira_comments" not in case
 
     def test_jira_comment_structure(self, test_db_session):
         ts = CASE_DATE + timedelta(days=3)
@@ -440,7 +515,7 @@ class TestGetMyQueueCasesReturnStructure:
         )
 
         case = get_my_queue_cases()["10000001"]
-        jc = case["jira_comments"][0]
+        jc = case["most_recent_jira_comment"]
         assert jc["author"] == "dev"
         assert jc["body"] == "Fixed"
         assert "2024-01-04T00:00:00" in jc["updated"]
@@ -479,28 +554,6 @@ class TestGetMyQueueCasesReturnStructure:
 
         case = get_my_queue_cases()["10000001"]
         assert case["most_recent_jira_comment"] is None
-        assert case["jira_comments"] == []
-
-    def test_comments_ordered_newest_first(self, test_db_session):
-        _seed(
-            test_db_session,
-            [
-                _case(),
-                _card(),
-                _portal_comment(
-                    commented_at=CASE_DATE + timedelta(days=10), text="newest"
-                ),
-                _portal_comment(
-                    commented_at=CASE_DATE + timedelta(days=1),
-                    text="oldest",
-                    author="customer2",
-                ),
-            ],
-        )
-
-        case = get_my_queue_cases()["10000001"]
-        assert case["portal_comments"][0]["body"] == "newest"
-        assert case["portal_comments"][1]["body"] == "oldest"
 
 
 class TestGetMyQueueCasesEdgeCases:
@@ -536,9 +589,7 @@ class TestGetMyQueueCasesEdgeCases:
         _seed(test_db_session, objects)
 
         result = get_my_queue_cases()
-        case = result["10000001"]
-        assert len(case["portal_comments"]) == 20
-        assert case["portal_comments"][0]["body"] == "comment 19"
+        assert "10000001" in result
 
     def test_various_non_closed_statuses_included(self, test_db_session):
         statuses = ["Open", "Waiting on Red Hat", "Waiting on Customer"]

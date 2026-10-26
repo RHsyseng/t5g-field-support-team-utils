@@ -9,6 +9,7 @@ the query text to return the matching envelope.
 """
 
 import json
+from datetime import datetime
 
 import pytest
 
@@ -114,10 +115,17 @@ class TestUiapiCommentToDict:
             uiapi_comment_to_dict(_comment_node("1", visibility="Private"))["isPublic"]
             is False
         )
-        # Null/missing visibility is treated as private (not "Public").
+
+    def test_is_public_unknown_when_visibility_absent(self):
+        # Null/missing visibility means "the API told us nothing": report None
+        # so it is stored as NULL (rendered public) rather than badging the
+        # whole history private on a guess.
         node = _comment_node("1")
         node["Visibility__c"] = None
-        assert uiapi_comment_to_dict(node)["isPublic"] is False
+        assert uiapi_comment_to_dict(node)["isPublic"] is None
+
+        del node["Visibility__c"]
+        assert uiapi_comment_to_dict(node)["isPublic"] is None
 
     def test_body_html_converted_to_markdown(self):
         # Body__c is entity-escaped HTML; it is unescaped then converted to MD.
@@ -320,6 +328,81 @@ class TestFetchCaseDetailsUiapi:
         assert result["1"]["comments"][0]["createdByType"] == "Customer"
         assert [c["commentBody"] for c in result["2"]["comments"]] == ["c2"]
         assert result["2"]["comments"][0]["createdByType"] == "Associate"
+
+
+class TestCommentFetchIsIncremental:
+    """Stored comments are not re-read on every sync."""
+
+    @staticmethod
+    def _collect(monkeypatch, watermarks, fail_on_floor=False):
+        """Run a detail fetch for cases 1 and 2, returning the comment wheres."""
+        monkeypatch.setattr(cache, "make_graphql_headers", lambda token: {})
+        monkeypatch.setattr(cache.libtelco5g, "get_token", lambda token: "fresh")
+        monkeypatch.setattr(
+            cache, "comment_watermarks_postgres", lambda cases: watermarks
+        )
+        comment_wheres = []
+
+        def fake_post(url, headers, query, variables):
+            if not _is_comment_query(query):
+                cns = variables["where"]["CaseNumber__c"]["in"]
+                return _detail_page([_detail_node(cn) for cn in cns])
+            where = variables["where"]
+            comment_wheres.append(where)
+            if fail_on_floor and "and" in where:
+                raise RuntimeError("GraphQL error: unknown filter CreatedDate")
+            return _comments_page([_comment_node("1", body="c1")])
+
+        monkeypatch.setattr(cache, "graphql_post", fake_post)
+        fetch_case_details_uiapi(
+            {"graphql_api": "u", "offline_token": "t"}, "tok", ["1", "2"]
+        )
+        return comment_wheres
+
+    def test_no_stored_comments_fetches_full_history(self, monkeypatch):
+        wheres = self._collect(monkeypatch, {})
+
+        assert wheres == [{"Case__r": {"CaseNumber__c": {"in": ["1", "2"]}}}]
+
+    def test_stored_comments_floor_the_query(self, monkeypatch):
+        wheres = self._collect(
+            monkeypatch,
+            {
+                "1": datetime(2026, 9, 10, 8, 0, 0),
+                "2": datetime(2026, 9, 12, 8, 0, 0),
+            },
+        )
+
+        # Both cases are known, so a single swept chunk floored at the oldest
+        # of the two watermarks - never re-reading what is already stored.
+        assert wheres == [
+            {
+                "and": [
+                    {"Case__r": {"CaseNumber__c": {"in": ["1", "2"]}}},
+                    {"CreatedDate": {"gte": "2026-09-10T08:00:00Z"}},
+                ]
+            }
+        ]
+
+    def test_case_without_stored_comments_still_swept_in_full(self, monkeypatch):
+        wheres = self._collect(monkeypatch, {"2": datetime(2026, 9, 12, 8, 0, 0)})
+
+        # Case 1 has nothing stored: its history must not be floored by case
+        # 2's watermark, or it would never be fetched at all.
+        assert wheres[0] == {"Case__r": {"CaseNumber__c": {"in": ["1"]}}}
+        assert wheres[1]["and"][0] == {"Case__r": {"CaseNumber__c": {"in": ["2"]}}}
+
+    def test_falls_back_to_unfiltered_when_floor_rejected(self, monkeypatch):
+        wheres = self._collect(
+            monkeypatch,
+            {"1": datetime(2026, 9, 10, 8, 0, 0), "2": datetime(2026, 9, 10, 8, 0, 0)},
+            fail_on_floor=True,
+        )
+
+        # The floored attempt (tried twice - once per token) is abandoned and
+        # the sweep redone without it, so comments are never silently lost.
+        assert "and" in wheres[0]
+        assert wheres[-1] == {"Case__r": {"CaseNumber__c": {"in": ["1", "2"]}}}
 
 
 class TestGetCaseDetails:

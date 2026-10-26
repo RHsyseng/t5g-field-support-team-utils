@@ -449,6 +449,18 @@ def chunked(items, size):
         yield items[start : start + size]
 
 
+def _visibility_to_is_public(node):
+    """Map a comment node's ``Visibility__c`` picklist to a public/private flag.
+
+    Returns True for "Public", False for any other value the API sends, and None
+    when the field is absent or null (unknown, not "private").
+    """
+    visibility = (node.get("Visibility__c") or {}).get("value")
+    if visibility is None:
+        return None
+    return visibility == "Public"
+
+
 def uiapi_comment_to_dict(node):
     """Flatten a UIAPI ``RedHatSupportCaseComment__c`` node into a comment dict.
 
@@ -458,9 +470,10 @@ def uiapi_comment_to_dict(node):
 
     Returns:
         dict: ``{"commentBody": str, "createdBy": str, "createdByType": str,
-        "isPublic": bool, "createdDate": str|None}``. ``commentBody`` is
+        "isPublic": bool|None, "createdDate": str|None}``. ``commentBody`` is
         Markdown. ``createdByType`` is "Customer", "Associate", or "Internal".
-        ``isPublic`` is ``Visibility__c == "Public"`` (customer-visible).
+        ``isPublic`` is ``Visibility__c == "Public"`` (customer-visible), or
+        ``None`` when the field carries no value at all.
     """
     if (node.get("IsCustomer__c") or {}).get("value"):
         created_by_type = "Customer"
@@ -478,9 +491,12 @@ def uiapi_comment_to_dict(node):
         "createdBy": ((node.get("CreatedBy") or {}).get("Name") or {}).get("value")
         or "unknown",
         "createdByType": created_by_type,
-        # Visibility__c is the authoritative public/private picklist; anything
-        # other than "Public" (incl. null) is treated as private.
-        "isPublic": (node.get("Visibility__c") or {}).get("value") == "Public",
+        # Visibility__c is the authoritative public/private picklist: "Public"
+        # -> public, any other value -> private. A missing/null field means the
+        # API told us nothing, which is reported as None (unknown) rather than
+        # as "private" - storing a guessed False would badge the whole history
+        # "private" if the field ever stops being returned.
+        "isPublic": _visibility_to_is_public(node),
         "createdDate": (node.get("CreatedDate") or {}).get("value"),
     }
 

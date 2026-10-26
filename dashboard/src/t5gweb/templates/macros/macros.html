@@ -386,8 +386,9 @@
                             {{ case_number }}
                         </a>
                     </td>
-                    <td class="align-middle text-center" data-order="{{ case_data.severity }}">
-                        <span class="badge bg-secondary">{{ case_data.severity }}</span>
+                    {# An unknown severity sorts last (not as NaN) in the numeric column. #}
+                    <td class="align-middle text-center" data-order="{{ case_data.severity if case_data.severity is not none else 99 }}">
+                        <span class="badge bg-secondary">{{ case_data.severity if case_data.severity is not none else "?" }}</span>
                     </td>
                     <td class="align-middle">{{ case_data.summary | e }}</td>
                     <td class="align-middle text-center">{{ case_data.field_engineer or "None" }}</td>

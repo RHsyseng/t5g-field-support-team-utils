@@ -104,8 +104,13 @@ function format (data) {
     result += '<div style=\'max-height: 400px; overflow-y: auto;\'>'
     for (let i = 0; i < data.jira_comments.length; i++) {
       const comment = data.jira_comments[i]
+      // A case can be tracked by several cards, so name the card each comment
+      // came from rather than mixing two conversations anonymously.
+      const cardLabel = comment.jira_card_id
+        ? ' <span class=\'fw-normal text-muted\'>(' + escapeHtml(comment.jira_card_id) + ')</span>'
+        : ''
       result += '<div class=\'mb-3 p-2 border-start border-3 border-success\'>'
-      result += '<div class=\'fw-bold\'>' + escapeHtml(comment.author || 'Unknown') + '</div>'
+      result += '<div class=\'fw-bold\'>' + escapeHtml(comment.author || 'Unknown') + cardLabel + '</div>'
       result += '<div class=\'text-muted small\'>' +
         (comment.updated ? escapeHtml(comment.updated.substring(0, 19).replace('T', ' ')) : 'No date') + '</div>'
       result += '<div class=\'mt-2\'>' + sanitizeHtml(comment.body) + '</div>'
@@ -180,7 +185,13 @@ $(document).ready(function () {
     const row = table.row(tr)
 
     if (row.child.isShown()) {
-      // This row is already open - close it
+      // This row is already open - close it. Abort an in-flight fetch for it,
+      // otherwise its success handler re-opens the row the user just closed.
+      const pending = tr.data('commentsRequest')
+      if (pending) {
+        pending.abort()
+        tr.removeData('commentsRequest')
+      }
       row.child.hide()
       tr.removeClass('shown')
     } else {
@@ -192,16 +203,23 @@ $(document).ready(function () {
       tr.addClass('shown')
 
       // Fetch comments from API
-      $.ajax({
+      const request = $.ajax({
         url: '/api/my-queue/case/' + caseNumber + '/comments',
         method: 'GET',
         success: function (data) {
           row.child(format(data)).show()
         },
-        error: function () {
+        error: function (jqXHR, textStatus) {
+          if (textStatus === 'abort') {
+            return
+          }
           row.child('<div class="alert alert-danger">Failed to load comments</div>').show()
+        },
+        complete: function () {
+          tr.removeData('commentsRequest')
         }
       })
+      tr.data('commentsRequest', request)
     }
   })
 })

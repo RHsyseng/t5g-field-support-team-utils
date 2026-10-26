@@ -160,30 +160,41 @@ def _migrate_add_missing_columns():
     ALTER TABLE ADD COLUMN for any gaps, so an already-created table gains new
     model columns (``cases.closed_date``, ``comments.comment_type``, ...) on the
     next startup. Additive only - never drops or renames - and the added columns
-    are nullable, which is safe for existing rows. Failures are logged rather
-    than fatal so a DB that pre-dates these columns still boots.
+    are nullable, which is safe for existing rows.
+
+    Every gunicorn worker and Celery process runs this at startup, so two of them
+    can race on the same column: each ALTER therefore uses ``IF NOT EXISTS`` and
+    commits on its own, so a loser in the race cannot abort the columns that come
+    after it in the loop. Failures are logged rather than fatal so a DB that
+    pre-dates these columns still boots.
     """
     try:
         inspector = inspect(db_config.engine)
-        with db_config.engine.begin() as conn:
-            for table in Base.metadata.sorted_tables:
-                if not inspector.has_table(table.name):
-                    continue
-                existing = {c["name"] for c in inspector.get_columns(table.name)}
-                for col in table.columns:
-                    if col.name not in existing:
-                        col_type = col.type.compile(conn.dialect)
-                        logging.warning(
-                            "Adding missing column %s.%s (%s)",
-                            table.name,
-                            col.name,
-                            col_type,
-                        )
-                        conn.execute(
-                            text(
-                                f"ALTER TABLE {table.name} "
-                                f"ADD COLUMN {col.name} {col_type}"
-                            )
-                        )
+        missing = []
+        for table in Base.metadata.sorted_tables:
+            if not inspector.has_table(table.name):
+                continue
+            existing = {c["name"] for c in inspector.get_columns(table.name)}
+            missing += [
+                (table.name, col) for col in table.columns if col.name not in existing
+            ]
     except Exception as e:
         logging.warning("Column migration check skipped: %s", e)
+        return
+
+    dialect = db_config.engine.dialect
+    for table_name, col in missing:
+        col_type = col.type.compile(dialect)
+        logging.warning(
+            "Adding missing column %s.%s (%s)", table_name, col.name, col_type
+        )
+        try:
+            with db_config.engine.begin() as conn:
+                conn.execute(
+                    text(
+                        f"ALTER TABLE {table_name} "
+                        f"ADD COLUMN IF NOT EXISTS {col.name} {col_type}"
+                    )
+                )
+        except Exception as e:
+            logging.warning("Could not add column %s.%s: %s", table_name, col.name, e)
