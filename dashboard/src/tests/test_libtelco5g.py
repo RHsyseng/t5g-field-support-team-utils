@@ -170,15 +170,21 @@ def _handle_old_case_context(mocker, previous_issue):
     return conn, context, cfg
 
 
-def test_handle_old_case_skips_reopen_when_already_todo(mocker, monkeypatch):
-    """A card already in 'To Do' must not be reopened or commented on.
+@pytest.mark.parametrize(
+    "status",
+    ["To Do", "New", "Open", "In Progress", "Code Review", "QE Review", "Blocked"],
+)
+def test_handle_old_case_skips_reopen_when_card_open(mocker, monkeypatch, status):
+    """A card in any open column must not be reopened or commented on.
 
     This is the hourly-spam guard: the card is linked to the case but is
     already open, so transitioning + commenting every sync is a no-op that
-    should be suppressed.
+    should be suppressed. It covers both an idle card still in To Do and one
+    an assignee has actively advanced (e.g. In Progress) -- reverting the
+    latter is the hourly reopen loop.
     """
     monkeypatch.delenv("READ_ONLY", raising=False)
-    previous_issue = _fake_issue("TESTPROJ-1", "11111111: issue", status="To Do")
+    previous_issue = _fake_issue("TESTPROJ-1", "11111111: issue", status=status)
     conn, context, cfg = _handle_old_case_context(mocker, previous_issue)
 
     result = _handle_old_case("11111111", context, cfg)
@@ -190,10 +196,11 @@ def test_handle_old_case_skips_reopen_when_already_todo(mocker, monkeypatch):
     conn.add_issues_to_sprint.assert_not_called()
 
 
-def test_handle_old_case_reopens_closed_card(mocker, monkeypatch):
+@pytest.mark.parametrize("status", ["Closed", "Done", "Won't Fix / Obsolete"])
+def test_handle_old_case_reopens_closed_card(mocker, monkeypatch, status):
     """A card in a closed/done column is genuinely reopened and commented on."""
     monkeypatch.delenv("READ_ONLY", raising=False)
-    previous_issue = _fake_issue("TESTPROJ-1", "11111111: issue", status="Closed")
+    previous_issue = _fake_issue("TESTPROJ-1", "11111111: issue", status=status)
     conn, context, cfg = _handle_old_case_context(mocker, previous_issue)
 
     result = _handle_old_case("11111111", context, cfg)
