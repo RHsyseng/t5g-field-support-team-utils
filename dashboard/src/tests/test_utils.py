@@ -7,6 +7,7 @@ from t5gweb.utils import (
     set_defaults,
     severity_label,
     severity_text,
+    unescape_api_text,
 )
 
 
@@ -225,3 +226,20 @@ class TestCardSeverity:
     def test_unreadable_severity_defaults_without_raising(self, caplog):
         assert _card_severity("10000001", None) == "Medium"
         assert "unreadable severity" in caplog.text
+
+
+class TestUnescapeApiText:
+    """Free-text API fields arrive HTML-entity-encoded."""
+
+    def test_entities_are_decoded(self):
+        assert (
+            unescape_api_text("Mirroring fails with &quot;manifest invalid&quot;")
+            == 'Mirroring fails with "manifest invalid"'
+        )
+        # Otherwise the template escapes the & again and the page shows the
+        # entity itself.
+        assert unescape_api_text("AT&amp;T") == "AT&T"
+
+    def test_plain_and_missing_values_pass_through(self):
+        assert unescape_api_text("plain subject") == "plain subject"
+        assert unescape_api_text(None) is None

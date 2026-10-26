@@ -487,6 +487,16 @@ def chunked(items, size):
         yield items[start : start + size]
 
 
+def unescape_api_text(value):
+    """Unescape an HTML-entity-encoded string from the API.
+
+    Free-text fields come back entity-encoded (``&quot;manifest invalid&quot;``)
+    exactly as ``Body__c`` does. Stored raw, the template escapes the ampersand
+    again and the dashboard literally shows ``&quot;``.
+    """
+    return html.unescape(value) if isinstance(value, str) else value
+
+
 def _comment_author_type(node):
     """Classify a comment's author as Customer, Associate or Internal.
 

@@ -27,6 +27,7 @@ from t5gweb.utils import (
     format_date,
     int_or_none,
     is_support_case_number,
+    unescape_api_text,
     severity_label,
     severity_text,
     uiapi_comment_to_dict,
@@ -303,11 +304,13 @@ def fetch_saved_search_cases(cfg, token, limit=None):
             cases.append(
                 {
                     "caseNumber": node["CaseNumber__c"]["value"],
-                    "account": account,
+                    "account": unescape_api_text(account),
                     "severity": (node.get("Priority") or {}).get("value"),
                     "status": (node.get("Status") or {}).get("value"),
-                    "problem": (node.get("Subject") or {}).get("value"),
-                    "product": product,
+                    "problem": unescape_api_text(
+                        (node.get("Subject") or {}).get("value")
+                    ),
+                    "product": unescape_api_text(product),
                     "createdate": (node.get("CreatedDate") or {}).get("value"),
                     "last_update": (node.get("LastModifiedDate") or {}).get("value"),
                 }
@@ -483,11 +486,11 @@ def fetch_case_projection_uiapi(cfg, token, case_numbers):
         )
         product = ((node.get("Product") or {}).get("Name") or {}).get("value")
         return {
-            "account": account,
+            "account": unescape_api_text(account),
             "severity": (node.get("Priority") or {}).get("value"),
             "status": (node.get("Status") or {}).get("value"),
-            "problem": (node.get("Subject") or {}).get("value"),
-            "product": product,
+            "problem": unescape_api_text((node.get("Subject") or {}).get("value")),
+            "product": unescape_api_text(product),
             "createdate": (node.get("CreatedDate") or {}).get("value"),
             "last_update": (node.get("LastModifiedDate") or {}).get("value"),
             "is_closed": bool((node.get("IsClosed") or {}).get("value")),

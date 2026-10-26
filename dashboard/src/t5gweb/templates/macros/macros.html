@@ -362,8 +362,11 @@
 
 {% macro my_queue_cases_table(cases, jira_server) -%}
     <div class="loading text-center fs-3" style="display: none;">Loading Table...</div>
-    <div class="my-queue-table">
-        <table class="table table-bordered table-hover table-responsive mt-5 w-100" id="my-queue-data">
+    {# table-responsive belongs on the wrapper: on the table itself Bootstrap
+       turns it into a block element, so the row never scrolls and wide content
+       just overflows the page instead. #}
+    <div class="my-queue-table table-responsive">
+        <table class="table table-bordered table-hover mt-5 w-100" id="my-queue-data">
             <caption style="caption-side: top; text-align: center;">Cases in your queue needing attention</caption>
             <thead>
                 <tr>
@@ -390,9 +393,9 @@
                     <td class="align-middle text-center" data-order="{{ case_data.severity if case_data.severity is not none else 99 }}">
                         <span class="badge bg-secondary">{{ case_data.severity if case_data.severity is not none else "?" }}</span>
                     </td>
-                    <td class="align-middle">{{ case_data.summary | e }}</td>
+                    <td class="align-middle queue-text">{{ case_data.summary | e }}</td>
                     <td class="align-middle text-center">{{ case_data.field_engineer or "None" }}</td>
-                    <td class="align-middle">
+                    <td class="align-middle queue-text queue-comment">
                         {% if case_data.most_recent_jira_comment %}
                             <span class="fw-bold fst-italic">{{ case_data.most_recent_jira_comment.updated[:10] }}</span> - {{ case_data.most_recent_jira_comment.body[:100] | e }}{% if case_data.most_recent_jira_comment.body | length > 100 %}...{% endif %}
                         {% else %}

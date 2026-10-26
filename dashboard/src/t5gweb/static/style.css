@@ -227,3 +227,20 @@ span.anchor {
   color: black !important;
 }
 
+
+/* My Queue table
+   Case summaries are often one unbroken token (e.g.
+   CK07.RH.MOH.PB_openshift-cluster-node-tuning-operator_profile_degraded),
+   which cannot wrap and stretches its column until the rest of the row is
+   squeezed. Let the two free-text columns break anywhere and cap their width
+   so the fixed columns keep their space. */
+.my-queue-table td.queue-text {
+  overflow-wrap: anywhere;
+  word-break: break-word;
+  max-width: 28rem;
+  min-width: 12rem;
+}
+
+.my-queue-table td.queue-comment {
+  max-width: 32rem;
+}
