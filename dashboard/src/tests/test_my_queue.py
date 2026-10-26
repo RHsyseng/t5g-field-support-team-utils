@@ -256,33 +256,29 @@ class TestGetMyQueueCasesInclusion:
 
 
 class TestGetMyQueueCasesPortalCommentAuthor:
-    """Only the customer's portal comments keep a case in the queue."""
+    """Any portal comment counts, whoever wrote it."""
 
-    def test_red_hat_portal_reply_does_not_requeue(self, test_db_session):
-        # The engineer answered on the portal (Associate) after the JIRA
-        # comment. The case is answered, so it must leave the queue instead of
-        # being held open by Red Hat's own reply.
+    def test_red_hat_associate_chase_keeps_the_case_queued(self, test_db_session):
+        # Regression: these were filtered out as "Red Hat already answered".
+        # In practice the associate who owns the case chases the telco
+        # engineer on the portal, and that chase is precisely the work this
+        # queue is for - excluding it hid 9 of 29 live cases.
         _seed(
             test_db_session,
             [
                 _case(),
                 _card(),
-                _portal_comment(
-                    commented_at=CASE_DATE + timedelta(days=1),
-                    comment_type="Customer",
-                    text="please help",
-                ),
                 _jira_comment(last_update_date=CASE_DATE + timedelta(days=2)),
                 _portal_comment(
                     commented_at=CASE_DATE + timedelta(days=3),
                     comment_type="Associate",
-                    author="engineer1",
-                    text="answered on the portal",
+                    author="case owner",
+                    text="we are still waiting for an update on this case",
                 ),
             ],
         )
 
-        assert get_my_queue_cases() == {}
+        assert "10000001" in get_my_queue_cases()
 
     def test_customer_comment_after_red_hat_reply_requeues(self, test_db_session):
         _seed(
@@ -291,11 +287,6 @@ class TestGetMyQueueCasesPortalCommentAuthor:
                 _case(),
                 _card(),
                 _jira_comment(last_update_date=CASE_DATE + timedelta(days=2)),
-                _portal_comment(
-                    commented_at=CASE_DATE + timedelta(days=3),
-                    comment_type="Associate",
-                    author="engineer1",
-                ),
                 _portal_comment(
                     commented_at=CASE_DATE + timedelta(days=4),
                     comment_type="Customer",
@@ -307,8 +298,7 @@ class TestGetMyQueueCasesPortalCommentAuthor:
         assert "10000001" in get_my_queue_cases()
 
     def test_untyped_comment_still_counts(self, test_db_session):
-        # Rows synced before comment_type existed carry NULL; treating those as
-        # Red Hat's would silently drop cases out of the queue.
+        # Rows synced before comment_type existed carry NULL.
         _seed(
             test_db_session,
             [
@@ -322,6 +312,23 @@ class TestGetMyQueueCasesPortalCommentAuthor:
         )
 
         assert "10000001" in get_my_queue_cases()
+
+    def test_jira_answer_after_the_portal_comment_still_clears(self, test_db_session):
+        # The way to clear a case stays what it always was: answer on JIRA.
+        _seed(
+            test_db_session,
+            [
+                _case(),
+                _card(),
+                _portal_comment(
+                    commented_at=CASE_DATE + timedelta(days=3),
+                    comment_type="Associate",
+                ),
+                _jira_comment(last_update_date=CASE_DATE + timedelta(days=4)),
+            ],
+        )
+
+        assert get_my_queue_cases() == {}
 
 
 class TestGetMyQueueCasesFilters:

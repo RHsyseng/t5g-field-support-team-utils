@@ -12,11 +12,6 @@ from t5gweb.utils import format_comment, severity_text
 from .models import Case, Comment, JiraCard, JiraComment
 from .session import db_config
 
-# Portal comment author types written by the Red Hat side. The queue compares
-# "has the customer spoken since we answered", so these never count as the
-# customer's latest word (see get_my_queue_cases).
-_RED_HAT_COMMENT_TYPES = ("Associate", "Internal", "Bug")
-
 
 class PgError(Exception):
     """Raised when a PostgreSQL operation fails and the caller must decide how
@@ -652,23 +647,18 @@ def get_my_queue_cases(active_sprint_name=None, engineer_email=None):
                 ),
             )
 
-            # Newest portal comment the case is waiting on. Comments the Red Hat
-            # side wrote on the portal don't count: the queue asks "has the
-            # customer spoken since we last answered", so an engineer answering
-            # on the portal instead of JIRA must be able to clear the case
-            # rather than keep it queued forever. An unknown type (NULL, i.e.
-            # synced before comment_type existed) is left in, so a case is never
-            # dropped from the queue just for lacking the new column.
+            # Newest portal comment of ANY author type, which is what the case
+            # is waiting on. Restricting this to the customer looks right on
+            # paper - "has the customer spoken since we answered" - but the
+            # Red Hat associate who owns the case chases the telco engineer on
+            # the portal ("we are still waiting for an update on this case"),
+            # and those chases are exactly the work this queue exists to
+            # surface: measured against the live data, filtering them out hid
+            # 9 of 29 cases and not one of them was the engineer's own reply.
             newest_portal_comment = (
                 session.query(Comment)
                 .filter(Comment.case_number == case.case_number)
                 .filter(Comment.created_date == case.created_date)
-                .filter(
-                    or_(
-                        Comment.comment_type.is_(None),
-                        Comment.comment_type.notin_(_RED_HAT_COMMENT_TYPES),
-                    )
-                )
                 .order_by(Comment.commented_at.desc())
                 .first()
             )
