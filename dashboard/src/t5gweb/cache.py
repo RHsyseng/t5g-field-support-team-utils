@@ -556,6 +556,16 @@ def merge_closed_cases(cfg, token, cases):
         pg_prior = {}
     prior = {**pg_prior, **(libtelco5g.redis_get("cases") or {})}
 
+    # The selection above drops non-support records (EN-* escalation
+    # notifications), but both halves of the prior universe still hold the ones
+    # stored before that filter existed. Carrying them forward would re-add them
+    # to the cache on every run - and because case(id) 404s on them they can
+    # never be verified closed, so they would stay "open" indefinitely and
+    # sync_portal_to_jira would keep turning them into JIRA cards.
+    prior = {
+        case: entry for case, entry in prior.items() if is_support_case_number(case)
+    }
+
     dropped = [case for case in prior if case not in cases]
     if not dropped:
         return
@@ -640,7 +650,14 @@ def backfill_tracked_cases(cfg, token, cases, tracked_case_numbers):
         list[str]: the case numbers that were backfilled (so the caller can
             persist just those). Empty if nothing was missing or the fetch failed.
     """
-    missing = [case for case in set(tracked_case_numbers) if case not in cases]
+    # Skip non-support records (EN-*). While a card wrongly created against one
+    # still exists it stays in the tracked set, and case(id) 404s on it, so it
+    # would be re-fetched and fail on every single run.
+    missing = [
+        case
+        for case in set(tracked_case_numbers)
+        if case not in cases and is_support_case_number(case)
+    ]
     if not missing:
         return []
 
