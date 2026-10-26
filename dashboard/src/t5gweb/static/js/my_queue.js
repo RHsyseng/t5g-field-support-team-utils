@@ -54,7 +54,7 @@ function renderMarkdown (text) {
  * @returns {string} HTML string for child row
  */
 function format (data) {
-  let result = '<div class=\'card p-3\'>'
+  let result = '<div class=\'card p-3 queue-child\'>'
   result += '<div class=\'row\'>'
 
   // Left column - Portal comments (60% width)

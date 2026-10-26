@@ -244,3 +244,33 @@ span.anchor {
 .my-queue-table td.queue-comment {
   max-width: 32rem;
 }
+
+/* Expanded ("open a case") child row.
+   Portal comments carry log excerpts, which Markdown renders as <pre>. A <pre>
+   does not wrap, so its longest line becomes the row's minimum width and drags
+   the whole table past the viewport - measured at 7750px against a 1440px
+   screen before this. Make every long thing inside the panel wrap instead. */
+.my-queue-table .queue-child {
+  overflow-wrap: anywhere;
+  word-break: break-word;
+}
+
+.my-queue-table .queue-child pre,
+.my-queue-table .queue-child code {
+  white-space: pre-wrap;
+  overflow-wrap: anywhere;
+  max-width: 100%;
+}
+
+/* A Markdown table can still be wider than the panel: let that one scroll
+   rather than stretching the row. */
+.my-queue-table .queue-child table {
+  display: block;
+  max-width: 100%;
+  overflow-x: auto;
+}
+
+.my-queue-table .queue-child img {
+  max-width: 100%;
+  height: auto;
+}
