@@ -1,4 +1,4 @@
-/* global $, sessionStorage */ // eslint-disable-line no-redeclare
+/* global $, sessionStorage, marked, DOMPurify */ // eslint-disable-line no-redeclare
 
 let currentAnalysisId = null
 let currentCaseNumber = null
@@ -579,30 +579,22 @@ function escapeHtml (str) {
   return div.innerHTML
 }
 
+/**
+ * Render a Markdown string to sanitized HTML. The AI report fields (root cause
+ * hypothesis, recommendations, reasoning) are LLM-generated Markdown and vary
+ * by model (headers, lists, links), so parse them with marked and sanitize the
+ * result with DOMPurify. Falls back to escaped text if marked is not loaded.
+ * @param {string} markdown - Markdown source (untrusted)
+ * @returns {string} sanitized HTML string
+ */
 function markdownToHtml (markdown) {
   if (!markdown) return ''
-
-  // Escape HTML first
-  let html = escapeHtml(markdown)
-
-  // Convert markdown to HTML
-  // Bold **text**
-  html = html.replace(/\*\*(.+?)\*\*/g, '<strong>$1</strong>')
-  // Italic *text*
-  html = html.replace(/\*(.+?)\*/g, '<em>$1</em>')
-  // Code `code`
-  html = html.replace(/`(.+?)`/g, '<code>$1</code>')
-  // Line breaks
-  html = html.replace(/\n/g, '<br>')
-
-  // Headers
-  html = html.replace(/^### (.+)$/gm, '<h5>$1</h5>')
-  html = html.replace(/^## (.+)$/gm, '<h4>$1</h4>')
-  html = html.replace(/^# (.+)$/gm, '<h3>$1</h3>')
-
-  // Bullet lists (simple version)
-  html = html.replace(/^- (.+)$/gm, '<li>$1</li>')
-  html = html.replace(/(<li>.*<\/li>)/s, '<ul>$1</ul>')
-
-  return html
+  if (typeof marked !== 'undefined') {
+    let html = marked.parse(markdown)
+    if (typeof DOMPurify !== 'undefined') {
+      html = DOMPurify.sanitize(html)
+    }
+    return html
+  }
+  return escapeHtml(markdown)
 }

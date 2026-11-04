@@ -231,6 +231,8 @@
             </div>
         </div>
     </div>
+    <script src="{{ url_for('static', filename='node_modules/marked/marked.min.js') }}"></script>
+    <script src="{{ url_for('static', filename='node_modules/dompurify/dist/purify.min.js') }}"></script>
     <script type="text/javascript" charset="utf8"
             src="{{ url_for('static', filename='js/agent.js') }}"></script>
 {% endblock %}
