@@ -17,18 +17,23 @@ from t5gweb.utils import (
 )
 
 
-def _access_env(allowed="", login_disabled="false"):
+def _access_env(allowed="", login_disabled="false", user_override=""):
     """Build the env overlay the access check reads.
 
     Args:
         allowed: Value for agentic_ui_allowed_users. "" stands for unset
             (both deny everyone); pass None to leave the variable untouched.
         login_disabled: Value for FLASK_LOGIN_DISABLED.
+        user_override: Value for the AGENTIC_USER_EMAIL dev override
+            ("" stands for unset).
 
     Returns:
         dict: Env var overrides for patch.dict.
     """
-    env = {"FLASK_LOGIN_DISABLED": login_disabled}
+    env = {
+        "FLASK_LOGIN_DISABLED": login_disabled,
+        "AGENTIC_USER_EMAIL": user_override,
+    }
     if allowed is not None:
         env["agentic_ui_allowed_users"] = allowed
     return env
@@ -110,13 +115,63 @@ class TestAgenticUiAccessAllowed:
             assert agentic_ui_access_allowed(None) is False
             assert agentic_ui_access_allowed("") is False
 
-    def test_dev_mode_bypasses_the_allow_list(self):
-        # FLASK_LOGIN_DISABLED=true (local dev) has no SAML identity to
-        # authorize, mirroring how login_required is bypassed in dev.
+    def test_anonymous_with_auth_enabled_is_denied(self):
+        # Authentication enabled but no session (e.g. the login page
+        # rendering the nav): there is no identity to authorize.
+        with patch.dict(os.environ, _access_env('["someone@redhat.com"]'), clear=False):
+            assert agentic_ui_access_allowed(None) is False
+
+    def test_dev_mode_without_override_stays_open(self):
+        # FLASK_LOGIN_DISABLED=true (local dev) with no simulated user and
+        # no allow-list configured: the tool stays open for development.
         with patch.dict(
             os.environ, _access_env("", login_disabled="true"), clear=False
         ):
             assert agentic_ui_access_allowed(None) is True
+
+    def test_dev_override_on_the_list_is_allowed(self):
+        with patch.dict(
+            os.environ,
+            _access_env(
+                '["someone@redhat.com"]',
+                login_disabled="true",
+                user_override="Someone@RedHat.com",
+            ),
+            clear=False,
+        ):
+            assert agentic_ui_access_allowed(None) is True
+
+    def test_dev_override_off_the_list_is_denied(self):
+        with patch.dict(
+            os.environ,
+            _access_env(
+                '["someone@redhat.com"]',
+                login_disabled="true",
+                user_override="other@redhat.com",
+            ),
+            clear=False,
+        ):
+            assert agentic_ui_access_allowed(None) is False
+
+    def test_dev_override_with_empty_list_is_denied(self):
+        with patch.dict(
+            os.environ,
+            _access_env(
+                "[]", login_disabled="true", user_override="someone@redhat.com"
+            ),
+            clear=False,
+        ):
+            assert agentic_ui_access_allowed(None) is False
+
+    def test_real_identity_outranks_the_dev_override(self):
+        # A real session decides access even when AGENTIC_USER_EMAIL leaks
+        # into an environment: the override never outranks a real identity.
+        with patch.dict(
+            os.environ,
+            _access_env('["someone@redhat.com"]', user_override="other@redhat.com"),
+            clear=False,
+        ):
+            assert agentic_ui_access_allowed("someone@redhat.com") is True
 
     def test_set_cfg_exposes_the_allow_list(self):
         with patch.dict(os.environ, _access_env('["someone@redhat.com"]'), clear=False):

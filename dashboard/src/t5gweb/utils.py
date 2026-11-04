@@ -231,10 +231,17 @@ def agentic_ui_access_allowed(user_email):
     same identity My Queue filters queues on (``current_user.mail``).
 
     Access rules:
-    - ``FLASK_LOGIN_DISABLED=true`` (local dev, no SAML identity to check)
-      grants access, mirroring how ``login_required`` is bypassed in dev.
-    - An empty allow-list denies everyone (deny by default).
-    - Otherwise the normalized address must appear in the allow-list.
+    - A logged-in user must appear in the allow-list; an empty allow-list
+      denies everyone (deny by default).
+    - With no usable identity and authentication enabled (an anonymous
+      visitor on the login page), access is denied.
+    - With no usable identity and authentication disabled
+      (``FLASK_LOGIN_DISABLED=true``, local dev), the ``AGENTIC_USER_EMAIL``
+      override simulates a logged-in user so the allow-list can be exercised
+      without SAML - the same trick My Queue plays with
+      ``ENGINEER_OVERRIDE``. The override deliberately never outranks a real
+      session, so it cannot grant production access if it leaks there. With
+      no override either, dev access stays open.
 
     Args:
         user_email: Email address of the logged-in user, or None when there
@@ -243,10 +250,18 @@ def agentic_ui_access_allowed(user_email):
     Returns:
         bool: True if the user may use the agentic UI, False otherwise.
     """
-    if os.getenv("FLASK_LOGIN_DISABLED", "false") == "true":
-        return True
+    if not user_email:
+        if os.getenv("FLASK_LOGIN_DISABLED", "false") != "true":
+            # Authentication is enabled but there is no session (e.g. the
+            # login page rendering the nav): no identity to authorize.
+            return False
+        # Local dev with SAML disabled: fall back to the override so the
+        # allow-list can be tested without SAML.
+        user_email = os.getenv("AGENTIC_USER_EMAIL", "")
+        if not user_email:
+            return True
     allowed = get_agentic_ui_allowed_users()
-    if not allowed or not user_email:
+    if not allowed:
         return False
     return user_email.strip().lower() in allowed
 
