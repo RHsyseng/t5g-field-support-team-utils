@@ -11,6 +11,8 @@ services:
     # Persist redis data so that you don't have to regather data
     volumes:
       - redis_data:/data
+    networks:
+      - dashboard_default
   ### PostgresQL
   postgresql:
     image: pgvector/pgvector:pg17
@@ -24,9 +26,11 @@ services:
       timeout: 5s
       retries: 5
     volumes:
-      - postgresql_data:/var/lib/postgresql
+      - postgresql_data:/var/lib/postgresql/data
     ports:
       - "5432:5432"
+    networks:
+      - dashboard_default
 
   ### Frontend
   dashboard-ui:
@@ -40,7 +44,9 @@ services:
     environment:
       - FLASK_LOGIN_DISABLED=true  # Disable SSO Login for dev environments
       - FLASK_DEBUG=true
-      - AI_AGENTS_API_URL=http://ai-agents:8081
+      - AI_AGENTS_API_URL=http://t5g-field-agents_api_1:8081
+    networks:
+      - dashboard_default
     depends_on:
       redis:
         condition: service_healthy
@@ -61,6 +67,8 @@ services:
     command: bash -c "flask init-cache"
     env_file:
       - ../cfg/local.env
+    networks:
+      - dashboard_default
     depends_on:
       redis:
         condition: service_healthy
@@ -73,6 +81,8 @@ services:
     command: celery -A t5gweb.taskmgr worker --loglevel=info -E
     env_file:
       - ../cfg/local.env
+    networks:
+      - dashboard_default
     depends_on:
       redis:
         condition: service_healthy
@@ -84,6 +94,8 @@ services:
     command: celery -A t5gweb.taskmgr beat -s /tmp/schedule
     env_file:
       - ../cfg/local.env
+    networks:
+      - dashboard_default
     depends_on:
       redis:
         condition: service_healthy
@@ -98,11 +110,17 @@ services:
       - 8000:8080
     env_file:
       - ../cfg/local.env
+    networks:
+      - dashboard_default
     depends_on:
       redis:
         condition: service_healthy
       postgresql:
         condition: service_healthy
+networks:
+  dashboard_default:
+    external: true
+
 volumes:
   redis_data:
   postgresql_data:

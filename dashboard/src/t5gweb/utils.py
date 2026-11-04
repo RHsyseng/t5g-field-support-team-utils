@@ -565,7 +565,6 @@ def uiapi_comment_to_dict(node):
     }
 
 
-
 def format_date(the_date):
     """Converts a date string in to the required format
 
