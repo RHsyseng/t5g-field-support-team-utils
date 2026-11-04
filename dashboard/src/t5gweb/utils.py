@@ -186,6 +186,71 @@ def read_env_config(keys):
     return ecfg
 
 
+def get_agentic_ui_allowed_users():
+    """Return the set of email addresses allowed to use the agentic UI.
+
+    The allow-list lives in the ``agentic_ui_allowed_users`` setting
+    (ConfigMap ``dashboard-config``) as a JSON array of email addresses, in
+    the same shape as ``team`` or ``saved_search``. Addresses are normalized
+    to lowercase with surrounding whitespace stripped so matching survives
+    sloppy config edits.
+
+    An unset, empty, or invalid value yields an empty set, which denies
+    everybody - the agentic UI is restricted by default.
+
+    Returns:
+        set: Normalized (lowercase) email addresses allowed to access the
+            agentic UI (``/agent`` page and ``/api/ai/*`` endpoints).
+    """
+    raw = os.environ.get("agentic_ui_allowed_users")
+    if not raw:
+        return set()
+    try:
+        addresses = json.loads(raw)
+    except ValueError:
+        logging.warning("agentic_ui_allowed_users is not valid JSON; denying access")
+        return set()
+    # Tolerate a single quoted address ("someone@redhat.com") instead of an array.
+    if isinstance(addresses, str):
+        addresses = [addresses]
+    if not isinstance(addresses, list):
+        logging.warning("agentic_ui_allowed_users is not a JSON array; denying access")
+        return set()
+    return {
+        address.strip().lower()
+        for address in addresses
+        if isinstance(address, str) and address.strip()
+    }
+
+
+def agentic_ui_access_allowed(user_email):
+    """Check whether a user may access the agentic UI.
+
+    Gates the ``/agent`` page and every ``/api/ai/*`` endpoint. The user is
+    identified by the SAML ``mail`` attribute of the logged-in session, the
+    same identity My Queue filters queues on (``current_user.mail``).
+
+    Access rules:
+    - ``FLASK_LOGIN_DISABLED=true`` (local dev, no SAML identity to check)
+      grants access, mirroring how ``login_required`` is bypassed in dev.
+    - An empty allow-list denies everyone (deny by default).
+    - Otherwise the normalized address must appear in the allow-list.
+
+    Args:
+        user_email: Email address of the logged-in user, or None when there
+            is no usable identity.
+
+    Returns:
+        bool: True if the user may use the agentic UI, False otherwise.
+    """
+    if os.getenv("FLASK_LOGIN_DISABLED", "false") == "true":
+        return True
+    allowed = get_agentic_ui_allowed_users()
+    if not allowed or not user_email:
+        return False
+    return user_email.strip().lower() in allowed
+
+
 def set_cfg():
     """Generate complete configuration from defaults and environment variables
 
@@ -200,6 +265,7 @@ def set_cfg():
             - Team member assignments
             - Database connection parameters
             - RBAC and authentication settings
+            - Agentic UI access settings
             - Query and result limits
     """
     # Set the default configuration values
@@ -266,6 +332,8 @@ def set_cfg():
     cfg["POSTGRESQL_DATABASE"] = os.environ.get("POSTGRESQL_DATABASE")
     # sso
     cfg["rbac"] = os.environ.get("rbac").split(",") if os.environ.get("rbac") else []
+    # agentic ui (/agent page and /api/ai/* endpoints)
+    cfg["agentic_ui_allowed_users"] = get_agentic_ui_allowed_users()
     cfg["max_to_create"] = os.environ.get("max_to_create")
     return cfg
 

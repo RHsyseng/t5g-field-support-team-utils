@@ -7,7 +7,7 @@ import re
 
 import requests as http_requests
 from flask import Blueprint, jsonify, request
-from flask_login import login_required
+from flask_login import current_user, login_required
 
 from t5gweb.cache import (
     get_bz_details,
@@ -19,7 +19,7 @@ from t5gweb.cache import (
     get_stats,
 )
 from t5gweb.libtelco5g import generate_stats, redis_get, redis_set, sync_portal_to_jira
-from t5gweb.utils import set_cfg
+from t5gweb.utils import agentic_ui_access_allowed, set_cfg
 
 log = logging.getLogger(__name__)
 
@@ -165,6 +165,10 @@ def _ai_api_url():
 
 
 def _ai_proxy(method, path, **kwargs):
+    # Every /api/ai/* route funnels through this helper, so the agentic UI
+    # allow-list is enforced in one place and no route can bypass it.
+    if not agentic_ui_access_allowed(getattr(current_user, "mail", None)):
+        return jsonify({"error": "Not authorized to use AI agent features"}), 403
     url = f"{_ai_api_url()}{path}"
     try:
         resp = getattr(http_requests, method)(url, timeout=30, **kwargs)

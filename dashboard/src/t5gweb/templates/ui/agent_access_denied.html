@@ -1,0 +1,24 @@
+{% extends "skeleton.html" %}
+{% block title %}AI Case Analysis{% endblock %}
+{% block content %}
+    <div class="container-fluid copy mt-5 pt-4">
+        <div class="row justify-content-center">
+            <div class="col-12 col-lg-10">
+                <h2>AI Case Analysis</h2>
+
+                <div class="alert alert-warning" role="alert">
+                    <strong>Access restricted.</strong>
+                    The AI Case Analysis tool is currently limited to a small
+                    group of users, and your account is not on the access list.
+                </div>
+
+                <p class="text-muted">
+                    If you believe you should have access, contact
+                    <a href="mailto:rh-telco5g-field-support@redhat.com">rh-telco5g-field-support@redhat.com</a>
+                    and include your email address
+                    ({{ current_user.mail if current_user.is_authenticated }}).
+                </p>
+            </div>
+        </div>
+    </div>
+{% endblock %}
