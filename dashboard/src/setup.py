@@ -13,6 +13,8 @@ setup(
         "flower==2.0.1",
         "gunicorn==23.0.0",
         "jira==3.10.5",
+        # kombu 5.7.0+ requires redis-py >= 6.1.0, conflicting with redis==5.2.1:
+        "kombu==5.6.2",
         "markdownify==0.13.1",
         "prometheus_flask_exporter==0.23.1",
         "python-bugzilla==3.3.0",
