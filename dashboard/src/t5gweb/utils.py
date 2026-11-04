@@ -236,12 +236,12 @@ def agentic_ui_access_allowed(user_email):
     - With no usable identity and authentication enabled (an anonymous
       visitor on the login page), access is denied.
     - With no usable identity and authentication disabled
-      (``FLASK_LOGIN_DISABLED=true``, local dev), the ``AGENTIC_USER_EMAIL``
-      override simulates a logged-in user so the allow-list can be exercised
-      without SAML - the same trick My Queue plays with
-      ``ENGINEER_OVERRIDE``. The override deliberately never outranks a real
-      session, so it cannot grant production access if it leaks there. With
-      no override either, dev access stays open.
+      (``FLASK_LOGIN_DISABLED=true``, local dev), the ``ENGINEER_OVERRIDE``
+      dev override - the same email My Queue filters on - simulates a
+      logged-in user so the allow-list can be exercised without SAML.
+      The override deliberately never outranks a real session, so it cannot
+      grant production access if it leaks there. With no override either,
+      dev access stays open.
 
     Args:
         user_email: Email address of the logged-in user, or None when there
@@ -255,9 +255,10 @@ def agentic_ui_access_allowed(user_email):
             # Authentication is enabled but there is no session (e.g. the
             # login page rendering the nav): no identity to authorize.
             return False
-        # Local dev with SAML disabled: fall back to the override so the
-        # allow-list can be tested without SAML.
-        user_email = os.getenv("AGENTIC_USER_EMAIL", "")
+        # Local dev with SAML disabled: fall back to the same dev override
+        # My Queue uses (ENGINEER_OVERRIDE) so the allow-list can be tested
+        # without SAML.
+        user_email = os.getenv("ENGINEER_OVERRIDE", "")
         if not user_email:
             return True
     allowed = get_agentic_ui_allowed_users()

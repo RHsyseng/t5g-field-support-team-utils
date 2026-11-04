@@ -17,14 +17,14 @@ from t5gweb.utils import (
 )
 
 
-def _access_env(allowed="", login_disabled="false", user_override=""):
+def _access_env(allowed="", login_disabled="false", engineer_override=""):
     """Build the env overlay the access check reads.
 
     Args:
         allowed: Value for agentic_ui_allowed_users. "" stands for unset
             (both deny everyone); pass None to leave the variable untouched.
         login_disabled: Value for FLASK_LOGIN_DISABLED.
-        user_override: Value for the AGENTIC_USER_EMAIL dev override
+        engineer_override: Value for the ENGINEER_OVERRIDE dev override
             ("" stands for unset).
 
     Returns:
@@ -32,7 +32,7 @@ def _access_env(allowed="", login_disabled="false", user_override=""):
     """
     env = {
         "FLASK_LOGIN_DISABLED": login_disabled,
-        "AGENTIC_USER_EMAIL": user_override,
+        "ENGINEER_OVERRIDE": engineer_override,
     }
     if allowed is not None:
         env["agentic_ui_allowed_users"] = allowed
@@ -130,12 +130,14 @@ class TestAgenticUiAccessAllowed:
             assert agentic_ui_access_allowed(None) is True
 
     def test_dev_override_on_the_list_is_allowed(self):
+        # ENGINEER_OVERRIDE - the same dev override My Queue uses - doubles
+        # as the simulated agentic UI user.
         with patch.dict(
             os.environ,
             _access_env(
                 '["someone@redhat.com"]',
                 login_disabled="true",
-                user_override="Someone@RedHat.com",
+                engineer_override="Someone@RedHat.com",
             ),
             clear=False,
         ):
@@ -147,7 +149,7 @@ class TestAgenticUiAccessAllowed:
             _access_env(
                 '["someone@redhat.com"]',
                 login_disabled="true",
-                user_override="other@redhat.com",
+                engineer_override="other@redhat.com",
             ),
             clear=False,
         ):
@@ -157,18 +159,18 @@ class TestAgenticUiAccessAllowed:
         with patch.dict(
             os.environ,
             _access_env(
-                "[]", login_disabled="true", user_override="someone@redhat.com"
+                "[]", login_disabled="true", engineer_override="someone@redhat.com"
             ),
             clear=False,
         ):
             assert agentic_ui_access_allowed(None) is False
 
     def test_real_identity_outranks_the_dev_override(self):
-        # A real session decides access even when AGENTIC_USER_EMAIL leaks
+        # A real session decides access even when ENGINEER_OVERRIDE leaks
         # into an environment: the override never outranks a real identity.
         with patch.dict(
             os.environ,
-            _access_env('["someone@redhat.com"]', user_override="other@redhat.com"),
+            _access_env('["someone@redhat.com"]', engineer_override="other@redhat.com"),
             clear=False,
         ):
             assert agentic_ui_access_allowed("someone@redhat.com") is True
