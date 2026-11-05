@@ -146,7 +146,7 @@ function renderSimilarCases (report) {
   if (cases.length === 0) { $('#similar-cases-card').addClass('d-none'); return }
   $('#similar-cases-card').removeClass('d-none')
   const html = cases.map(function (c) {
-    const caseLink = '<a href="https://access.redhat.com/support/cases/' + escapeHtml(c.case_number) + '" target="_blank">' + escapeHtml(c.case_number) + '</a>'
+    const caseLink = externalLink('https://access.redhat.com/support/cases/' + encodeURIComponent(c.case_number || ''), c.case_number)
     return '<tr><td>' + caseLink + '</td>' +
       '<td>' + (c.similarity ? (c.similarity * 100).toFixed(0) + '%' : '') + '</td>' +
       '<td><span class="badge ' + relevanceBadgeClass(c.relevance) + '">' + escapeHtml(c.relevance || '') + '</span></td>' +
@@ -160,9 +160,7 @@ function renderJiras (report) {
   if (jiras.length === 0) { $('#jiras-card').addClass('d-none'); return }
   $('#jiras-card').removeClass('d-none')
   const html = jiras.map(function (j) {
-    const keyHtml = j.url
-      ? '<a href="' + escapeHtml(j.url) + '" target="_blank">' + escapeHtml(j.key) + '</a>'
-      : escapeHtml(j.key)
+    const keyHtml = externalLink(j.url, j.key)
     return '<tr><td>' + keyHtml + '</td>' +
       '<td>' + escapeHtml(j.summary) + '</td>' +
       '<td>' + escapeHtml(j.status) + '</td>' +
@@ -177,9 +175,7 @@ function renderKB (report) {
   if (refs.length === 0) { $('#kb-card').addClass('d-none'); return }
   $('#kb-card').removeClass('d-none')
   const html = refs.map(function (r) {
-    const titleHtml = r.url
-      ? '<a href="' + escapeHtml(r.url) + '" target="_blank">' + escapeHtml(r.title) + '</a>'
-      : escapeHtml(r.title)
+    const titleHtml = externalLink(r.url, r.title)
     return '<tr><td>' + titleHtml + '</td>' +
       '<td>' + escapeHtml(r.doc_type || '') + '</td>' +
       '<td><small>' + escapeHtml(r.snippet || '') + '</small></td></tr>'
@@ -271,7 +267,7 @@ function renderValidation (mgValidation, sosValidation) {
     html += '<span class="badge bg-info me-2">Confidence: ' + (primary.confidence * 100).toFixed(0) + '%</span>'
   }
   if (primary.round) {
-    html += '<span class="badge bg-secondary">Round ' + primary.round + '</span>'
+    html += '<span class="badge bg-secondary">Round ' + escapeHtml(primary.round) + '</span>'
   }
   html += '</div>'
 
@@ -336,7 +332,7 @@ function _renderCommandAccordion (cmds, prefix, startIdx) {
     html += '<button class="accordion-button collapsed py-2" type="button" data-bs-toggle="collapse" data-bs-target="#' + collapseId + '">'
     html += '<span class="' + statusClass + ' me-2">' + statusIcon + '</span> '
     html += '<code class="me-2">' + escapeHtml(cmdText) + '</code> '
-    if (cmd.duration_ms) html += '<small class="text-muted">' + cmd.duration_ms + 'ms</small>'
+    if (cmd.duration_ms) html += '<small class="text-muted">' + escapeHtml(cmd.duration_ms) + 'ms</small>'
     html += '</button></h2>'
     html += '<div id="' + collapseId + '" class="accordion-collapse collapse">'
     html += '<div class="accordion-body">'
@@ -572,29 +568,68 @@ function relevanceBadgeClass (relevance) {
   return 'bg-secondary'
 }
 
-function escapeHtml (str) {
-  if (!str) return ''
-  const div = document.createElement('div')
-  div.appendChild(document.createTextNode(str))
-  return div.innerHTML
+const HTML_ESCAPES = {
+  '&': '&amp;',
+  '<': '&lt;',
+  '>': '&gt;',
+  '"': '&quot;',
+  "'": '&#39;'
+}
+
+/**
+ * Escape a value for use in HTML text and in quoted attribute values.
+ * Report fields are LLM output derived from customer case content, so they
+ * are untrusted: quotes must be escaped too, or a value placed inside an
+ * attribute (href, title) could break out of it.
+ * @param {*} value - value to escape (null/undefined render as empty)
+ * @returns {string} escaped string
+ */
+function escapeHtml (value) {
+  if (value === null || value === undefined) return ''
+  return String(value).replace(/[&<>"']/g, function (ch) { return HTML_ESCAPES[ch] })
+}
+
+/**
+ * Return the URL only if it is an absolute http(s) URL, otherwise null.
+ * Blocks javascript:, data: and other schemes coming from untrusted report data.
+ * @param {*} url - candidate URL
+ * @returns {string|null} the URL, or null when it must not be linked
+ */
+function safeUrl (url) {
+  if (typeof url !== 'string') return null
+  try {
+    const parsed = new URL(url)
+    return (parsed.protocol === 'https:' || parsed.protocol === 'http:') ? parsed.href : null
+  } catch (e) {
+    return null
+  }
+}
+
+/**
+ * Render an external link, or plain escaped text when the URL is not safe.
+ * @param {*} url - untrusted URL
+ * @param {*} text - untrusted link text
+ * @returns {string} HTML string
+ */
+function externalLink (url, text) {
+  const href = safeUrl(url)
+  if (!href) return escapeHtml(text)
+  return '<a href="' + escapeHtml(href) + '" target="_blank" rel="noopener noreferrer">' + escapeHtml(text) + '</a>'
 }
 
 /**
  * Render a Markdown string to sanitized HTML. The AI report fields (root cause
  * hypothesis, recommendations, reasoning) are LLM-generated Markdown and vary
  * by model (headers, lists, links), so parse them with marked and sanitize the
- * result with DOMPurify. Falls back to escaped text if marked is not loaded.
+ * result with DOMPurify. Falls back to escaped text unless both libraries are
+ * loaded, so unsanitized HTML is never inserted.
  * @param {string} markdown - Markdown source (untrusted)
  * @returns {string} sanitized HTML string
  */
 function markdownToHtml (markdown) {
   if (!markdown) return ''
-  if (typeof marked !== 'undefined') {
-    let html = marked.parse(markdown)
-    if (typeof DOMPurify !== 'undefined') {
-      html = DOMPurify.sanitize(html)
-    }
-    return html
+  if (typeof marked !== 'undefined' && typeof DOMPurify !== 'undefined') {
+    return DOMPurify.sanitize(marked.parse(String(markdown)))
   }
   return escapeHtml(markdown)
 }
