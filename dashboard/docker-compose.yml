@@ -11,11 +11,12 @@ services:
     # Persist redis data so that you don't have to regather data
     volumes:
       - redis_data:/data
-    networks:
-      - dashboard_default
   ### PostgresQL
   postgresql:
-    image: pgvector/pgvector:pg17
+    # pgvector build of postgres 18 on Debian trixie, matching postgres:latest
+    # (same data layout and glibc collations, so existing volumes keep working).
+    # The t5g-field-agents stack stores case embeddings here (vector extension).
+    image: docker.io/pgvector/pgvector:pg18-trixie
     environment:
       - POSTGRES_USER=postgres
       - POSTGRES_PASSWORD=secret
@@ -26,11 +27,9 @@ services:
       timeout: 5s
       retries: 5
     volumes:
-      - postgresql_data:/var/lib/postgresql/data
+      - postgresql_data:/var/lib/postgresql
     ports:
       - "5432:5432"
-    networks:
-      - dashboard_default
 
   ### Frontend
   dashboard-ui:
@@ -44,9 +43,10 @@ services:
     environment:
       - FLASK_LOGIN_DISABLED=true  # Disable SSO Login for dev environments
       - FLASK_DEBUG=true
-      - AI_AGENTS_API_URL=http://t5g-field-agents_api_1:8081
-    networks:
-      - dashboard_default
+      # t5g-field-agents API for the AI Agent view (/agent). The agents stack joins
+      # this project's dashboard_default network and exposes its api service as
+      # "ai-agents". Without it running, /agent reports the service unavailable.
+      - AI_AGENTS_API_URL=http://ai-agents:8081
     depends_on:
       redis:
         condition: service_healthy
@@ -67,8 +67,6 @@ services:
     command: bash -c "flask init-cache"
     env_file:
       - ../cfg/local.env
-    networks:
-      - dashboard_default
     depends_on:
       redis:
         condition: service_healthy
@@ -81,8 +79,6 @@ services:
     command: celery -A t5gweb.taskmgr worker --loglevel=info -E
     env_file:
       - ../cfg/local.env
-    networks:
-      - dashboard_default
     depends_on:
       redis:
         condition: service_healthy
@@ -94,8 +90,6 @@ services:
     command: celery -A t5gweb.taskmgr beat -s /tmp/schedule
     env_file:
       - ../cfg/local.env
-    networks:
-      - dashboard_default
     depends_on:
       redis:
         condition: service_healthy
@@ -110,17 +104,11 @@ services:
       - 8000:8080
     env_file:
       - ../cfg/local.env
-    networks:
-      - dashboard_default
     depends_on:
       redis:
         condition: service_healthy
       postgresql:
         condition: service_healthy
-networks:
-  dashboard_default:
-    external: true
-
 volumes:
   redis_data:
   postgresql_data:
