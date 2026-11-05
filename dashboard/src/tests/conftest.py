@@ -33,7 +33,9 @@ def test_db_engine():
         pool_pre_ping=True,
     )
     Base.metadata.create_all(engine)
-    return engine
+    yield engine
+    # Close pooled connections so each test does not leak an sqlite3 connection
+    engine.dispose()
 
 
 @pytest.fixture(scope="function")
