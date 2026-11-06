@@ -9,6 +9,7 @@ from unittest.mock import patch
 import pytest
 from sqlalchemy import create_engine
 from sqlalchemy.orm import scoped_session, sessionmaker
+
 from t5gweb.database import Base
 
 
@@ -32,7 +33,9 @@ def test_db_engine():
         pool_pre_ping=True,
     )
     Base.metadata.create_all(engine)
-    return engine
+    yield engine
+    # Close pooled connections so each test does not leak an sqlite3 connection
+    engine.dispose()
 
 
 @pytest.fixture(scope="function")

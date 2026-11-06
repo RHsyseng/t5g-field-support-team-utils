@@ -13,7 +13,10 @@ services:
       - redis_data:/data
   ### PostgresQL
   postgresql:
-    image: docker.io/postgres:latest
+    # pgvector build of postgres 18 on Debian trixie, matching postgres:latest
+    # (same data layout and glibc collations, so existing volumes keep working).
+    # The t5g-field-agents stack stores case embeddings here (vector extension).
+    image: docker.io/pgvector/pgvector:pg18-trixie
     environment:
       - POSTGRES_USER=postgres
       - POSTGRES_PASSWORD=secret
@@ -38,8 +41,12 @@ services:
     ports:
       - 8080:8080
     environment:
-      - FLASK_LOGIN_DISABLED=true # Disable SSO Login for dev environments
+      - FLASK_LOGIN_DISABLED=true  # Disable SSO Login for dev environments
       - FLASK_DEBUG=true
+      # t5g-field-agents API for the AI Agent view (/agent). The agents stack joins
+      # this project's dashboard_default network and exposes its api service as
+      # "ai-agents". Without it running, /agent reports the service unavailable.
+      - AI_AGENTS_API_URL=http://ai-agents:8081
     depends_on:
       redis:
         condition: service_healthy

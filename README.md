@@ -79,6 +79,17 @@ You can run the dashboard without Red Hat Portal or Jira API credentials by usin
    ```
    (With docker-compose, use `docker-compose` instead of `podman-compose`.)
 
+### Using the AI Agent view
+
+The AI Agent view (`/agent`) proxies requests to the t5g-field-agents API, configured with `AI_AGENTS_API_URL`.
+The local dev stack already points it at `http://ai-agents:8081` and runs the database on `pgvector/pgvector:pg18-trixie`, because the agents store case embeddings in the dashboard database.
+
+1. Start the dashboard first (`cd dashboard && podman-compose up -d`), which creates the `dashboard_default` network.
+2. Start the t5g-field-agents stack, which joins `dashboard_default` and uses the dashboard's `postgresql` and `redis`.
+
+Stop the agents stack before running `podman-compose down` here; otherwise the `dashboard_default` network is left behind because agents containers are still attached to it.
+Without the agents stack the rest of the dashboard works as usual, and the AI Agent view reports the service as unavailable.
+
 Please see our [CONTRIBUTING.md](https://github.com/RHsyseng/t5g-field-support-team-utils/blob/main/CONTRIBUTING.md) for further development help.
 ## CI
 

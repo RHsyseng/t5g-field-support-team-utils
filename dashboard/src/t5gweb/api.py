@@ -1,9 +1,14 @@
 """API endpoints for t5gweb"""
 
 import json
+import logging
+import os
+import re
 
+import requests as http_requests
 from flask import Blueprint, jsonify, request
-from flask_login import login_required
+from flask_login import current_user, login_required
+
 from t5gweb.cache import (
     get_bz_details,
     get_cards,
@@ -14,7 +19,9 @@ from t5gweb.cache import (
     get_stats,
 )
 from t5gweb.libtelco5g import generate_stats, redis_get, redis_set, sync_portal_to_jira
-from t5gweb.utils import set_cfg
+from t5gweb.utils import agentic_ui_access_allowed, set_cfg
+
+log = logging.getLogger(__name__)
 
 BP = Blueprint("api", __name__, url_prefix="/api")
 
@@ -151,3 +158,115 @@ def show_stats():
     """Generate and return current statistics in JSON format."""
     stats = generate_stats()
     return jsonify(stats)
+
+
+AI_PROXY_TIMEOUT = 30
+# Opaque IDs (task/analysis) are UUIDs or integers upstream; restrict them to a
+# safe charset so they cannot alter the upstream path (e.g. "..").
+_AI_ID_RE = re.compile(r"[A-Za-z0-9_-]{1,128}")
+
+
+def _ai_api_url():
+    return os.environ.get("AI_AGENTS_API_URL", "http://localhost:8081").rstrip("/")
+
+
+def _ai_proxy(method, path, **kwargs):
+    """Forward a request to the AI Agents service and relay its JSON response.
+
+    Upstream failures (unreachable, timeout, non-JSON body such as a router
+    error page) are mapped to a JSON error so the frontend can always parse
+    the response and keep polling on transient errors.
+    """
+    # Every /api/ai/* route funnels through this helper, so the agentic UI
+    # allow-list is enforced in one place and no route can bypass it.
+    if not agentic_ui_access_allowed(getattr(current_user, "mail", None)):
+        return jsonify({"error": "Not authorized to use AI agent features"}), 403
+    url = f"{_ai_api_url()}{path}"
+    try:
+        resp = http_requests.request(method, url, timeout=AI_PROXY_TIMEOUT, **kwargs)
+    except http_requests.ConnectionError:
+        log.warning("AI Agents API unreachable at %s", url)
+        return jsonify({"error": "AI Agents service unavailable"}), 502
+    except http_requests.Timeout:
+        log.warning("AI Agents API timed out at %s", url)
+        return jsonify({"error": "AI Agents service timeout"}), 504
+    except http_requests.RequestException:
+        log.exception("AI Agents API request to %s failed", url)
+        return jsonify({"error": "AI Agents service request failed"}), 502
+    try:
+        body = resp.json()
+    except ValueError:
+        log.warning(
+            "AI Agents API returned non-JSON response (HTTP %s) at %s",
+            resp.status_code,
+            url,
+        )
+        return (
+            jsonify({"error": f"AI Agents service error (HTTP {resp.status_code})"}),
+            resp.status_code if resp.status_code >= 400 else 502,
+        )
+    return jsonify(body), resp.status_code
+
+
+def _validate_case_number(case_number):
+    if not re.fullmatch(r"[0-9]{8}", case_number):
+        return jsonify({"error": "Case number must be exactly 8 digits"}), 400
+    return None
+
+
+def _validate_id(value):
+    if not _AI_ID_RE.fullmatch(value):
+        return jsonify({"error": "Invalid identifier"}), 400
+    return None
+
+
+@BP.route("/ai/report/case/<string:case_number>")
+@login_required
+def ai_report_by_case(case_number):
+    err = _validate_case_number(case_number)
+    if err:
+        return err
+    return _ai_proxy("get", f"/report/case/{case_number}")
+
+
+@BP.route("/ai/analyze/<string:case_number>", methods=["POST"])
+@login_required
+def ai_analyze(case_number):
+    err = _validate_case_number(case_number)
+    if err:
+        return err
+    force = request.args.get("force", "false").lower() == "true"
+    params = {"force": "true" if force else "false"}
+    return _ai_proxy("post", f"/analyze/{case_number}", params=params)
+
+
+@BP.route("/ai/status/<string:task_id>")
+@login_required
+def ai_status(task_id):
+    err = _validate_id(task_id)
+    if err:
+        return err
+    return _ai_proxy("get", f"/status/{task_id}")
+
+
+@BP.route("/ai/logs/<string:analysis_id>")
+@login_required
+def ai_logs(analysis_id):
+    err = _validate_id(analysis_id)
+    if err:
+        return err
+    return _ai_proxy("get", f"/logs/{analysis_id}")
+
+
+@BP.route("/ai/feedback/<string:analysis_id>", methods=["GET", "POST"])
+@login_required
+def ai_feedback(analysis_id):
+    err = _validate_id(analysis_id)
+    if err:
+        return err
+    if request.method == "POST":
+        payload = request.get_json(silent=True)
+        if not isinstance(payload, dict):
+            return jsonify({"error": "Request body must be a JSON object"}), 400
+        return _ai_proxy("post", f"/feedback/{analysis_id}", json=payload)
+    return _ai_proxy("get", f"/feedback/{analysis_id}")

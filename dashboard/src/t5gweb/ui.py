@@ -38,7 +38,7 @@ from t5gweb.libtelco5g import (
 )
 from t5gweb.t5gweb import get_new_cases, get_new_comments, get_trending_cards, plots
 from t5gweb.taskmgr import refresh_background
-from t5gweb.utils import make_pie_dict, set_cfg
+from t5gweb.utils import agentic_ui_access_allowed, make_pie_dict, set_cfg
 
 BP = Blueprint("ui", __name__, url_prefix="/")
 login_manager = LoginManager()
@@ -106,6 +106,21 @@ def load_user(user_id):
     if user_id in users:
         return User(user_id)
     return None
+
+
+@BP.app_context_processor
+def inject_agentic_ui_access():
+    """Expose agentic UI access to all templates.
+
+    Lets skeleton.html hide the AI Agent nav button from users who are not
+    on the ``agentic_ui_allowed_users`` allow-list, instead of showing a
+    button that leads to a 403 page.
+    """
+    return {
+        "agentic_ui_access": agentic_ui_access_allowed(
+            getattr(current_user, "mail", None)
+        )
+    }
 
 
 def init_saml_auth(req):
@@ -572,6 +587,20 @@ def get_stats():
         histogram_stats=histogram_stats,
         page_title="stats",
     )
+
+
+@BP.route("/agent")
+@login_required
+def agent_view():
+    """Render the AI agent analysis view, restricted to an allow-list of users.
+
+    Access is limited to the email addresses configured in
+    ``agentic_ui_allowed_users`` (see ``agentic_ui_access_allowed``); anyone
+    else gets a 403 page explaining that the tool is restricted.
+    """
+    if not agentic_ui_access_allowed(getattr(current_user, "mail", None)):
+        return render_template("ui/agent_access_denied.html"), 403
+    return render_template("ui/agent.html", timestamp=redis_get("timestamp"))
 
 
 @BP.route("/account/<string:account>")
