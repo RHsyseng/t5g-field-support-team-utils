@@ -239,7 +239,7 @@ function renderAttachments (report) {
   const html = atts.map(function (a) {
     return '<tr><td>' + escapeHtml(a.file_name) + '</td>' +
       '<td>' + escapeHtml(a.file_type || '') + '</td>' +
-      '<td>' + (a.size_kb || '') + '</td>' +
+      '<td>' + escapeHtml(a.size_kb || '') + '</td>' +
       '<td>' + escapeHtml(a.status || '') + '</td></tr>'
   }).join('')
   $('#attachments-tbody').html(html)
@@ -464,13 +464,13 @@ function loadThinkingLog () {
         const tokensInClass = l.input_tokens != null ? '' : 'text-muted'
         const tokensOutClass = l.output_tokens != null ? '' : 'text-muted'
 
-        return '<tr><td>' + round + '</td>' +
+        return '<tr><td>' + escapeHtml(round) + '</td>' +
           '<td>' + escapeHtml(l.agent_name || '') + '</td>' +
           '<td><span class="badge bg-secondary">' + escapeHtml(l.action_type || '') + '</span></td>' +
           '<td><small>' + escapeHtml(l.detail || '') + '</small></td>' +
-          '<td>' + (l.duration_ms != null ? l.duration_ms + 'ms' : '') + '</td>' +
-          '<td class="' + tokensInClass + '">' + tokensIn + '</td>' +
-          '<td class="' + tokensOutClass + '">' + tokensOut + '</td></tr>'
+          '<td>' + (l.duration_ms != null ? escapeHtml(l.duration_ms + 'ms') : '') + '</td>' +
+          '<td class="' + tokensInClass + '">' + escapeHtml(tokensIn) + '</td>' +
+          '<td class="' + tokensOutClass + '">' + escapeHtml(tokensOut) + '</td></tr>'
       }).join('')
       $('#thinking-log-tbody').html(html)
     },
