@@ -14,11 +14,19 @@ UPSTREAM = "http://agents.test:8081"
 
 @pytest.fixture
 def client(monkeypatch):
-    """Flask test client with only the API blueprint and login disabled"""
+    """Flask test client with only the API blueprint and login disabled
+
+    No identity and FLASK_LOGIN_DISABLED=true leaves the agentic UI
+    allow-list open (local dev mode), so the proxy itself can be tested.
+    """
     monkeypatch.setenv("AI_AGENTS_API_URL", UPSTREAM + "/")
+    monkeypatch.setenv("FLASK_LOGIN_DISABLED", "true")
+    monkeypatch.delenv("ENGINEER_OVERRIDE", raising=False)
     app = Flask(__name__)
     app.config.update(TESTING=True, LOGIN_DISABLED=True)
-    LoginManager().init_app(app)
+    login_manager = LoginManager()
+    login_manager.init_app(app)
+    login_manager.user_loader(lambda user_id: None)
     app.register_blueprint(api.BP)
     return app.test_client()
 
@@ -81,6 +89,38 @@ class TestProxyForwarding:
             timeout=api.AI_PROXY_TIMEOUT,
             json={"rating": "up"},
         )
+
+
+class TestAccessControl:
+    @pytest.mark.parametrize(
+        "method, path",
+        [
+            ("get", "/api/ai/report/case/01234567"),
+            ("post", "/api/ai/analyze/01234567"),
+            ("get", "/api/ai/status/task-1"),
+            ("post", "/api/ai/feedback/abc-123"),
+        ],
+    )
+    def test_user_off_the_allow_list_gets_403(
+        self, client, upstream, monkeypatch, method, path
+    ):
+        monkeypatch.setenv("agentic_ui_allowed_users", '["someone@redhat.com"]')
+        monkeypatch.setenv("ENGINEER_OVERRIDE", "other@redhat.com")
+
+        resp = getattr(client, method)(path, json={})
+
+        assert resp.status_code == 403
+        assert resp.get_json() == {"error": "Not authorized to use AI agent features"}
+        upstream.assert_not_called()
+
+    def test_user_on_the_allow_list_is_proxied(self, client, upstream, monkeypatch):
+        monkeypatch.setenv("agentic_ui_allowed_users", '["someone@redhat.com"]')
+        monkeypatch.setenv("ENGINEER_OVERRIDE", "someone@redhat.com")
+
+        resp = client.get("/api/ai/status/task-1")
+
+        assert resp.status_code == 200
+        upstream.assert_called_once()
 
 
 class TestUpstreamFailures:
