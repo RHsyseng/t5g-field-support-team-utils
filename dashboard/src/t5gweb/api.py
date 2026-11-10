@@ -32,20 +32,20 @@ def index():
     """Return a dictionary with 'endpoints' key containing list of endpoint URLs."""
     endpoints = {
         "endpoints": [
-            "{}refresh/cards".format(request.base_url),
-            "{}refresh/cases".format(request.base_url),
-            "{}refresh/bugs".format(request.base_url),
-            "{}refresh/details".format(request.base_url),
-            "{}refresh/escalations".format(request.base_url),
-            "{}refresh/issues".format(request.base_url),
-            "{}refresh/stats".format(request.base_url),
-            "{}cards".format(request.base_url),
-            "{}cases".format(request.base_url),
-            "{}bugs".format(request.base_url),
-            "{}details".format(request.base_url),
-            "{}escalations".format(request.base_url),
-            "{}issues".format(request.base_url),
-            "{}stats".format(request.base_url),
+            f"{request.base_url}refresh/cards",
+            f"{request.base_url}refresh/cases",
+            f"{request.base_url}refresh/bugs",
+            f"{request.base_url}refresh/details",
+            f"{request.base_url}refresh/escalations",
+            f"{request.base_url}refresh/issues",
+            f"{request.base_url}refresh/stats",
+            f"{request.base_url}cards",
+            f"{request.base_url}cases",
+            f"{request.base_url}bugs",
+            f"{request.base_url}details",
+            f"{request.base_url}escalations",
+            f"{request.base_url}issues",
+            f"{request.base_url}stats",
         ]
     }
     return endpoints
@@ -101,7 +101,7 @@ def refresh(data_type):
         get_stats()
         return jsonify({"caching stats": "ok"})
     else:
-        return jsonify({"error": "unknown data type: {}".format(data_type)})
+        return jsonify({"error": f"unknown data type: {data_type}"})
 
 
 @BP.route("/cards")
@@ -236,8 +236,17 @@ def ai_analyze(case_number):
     if err:
         return err
     force = request.args.get("force", "false").lower() == "true"
-    params = {"force": "true" if force else "false"}
+    params = {"force": "true" if force else "false", "interactive": "true"}
     return _ai_proxy("post", f"/analyze/{case_number}", params=params)
+
+
+@BP.route("/ai/queue/position/<string:case_number>")
+@login_required
+def ai_queue_position(case_number):
+    err = _validate_case_number(case_number)
+    if err:
+        return err
+    return _ai_proxy("get", f"/queue/position/{case_number}")
 
 
 @BP.route("/ai/status/<string:task_id>")

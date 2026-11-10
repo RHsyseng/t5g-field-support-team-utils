@@ -4,6 +4,7 @@ let currentAnalysisId = null
 let currentCaseNumber = null
 let showingRaw = false
 let pollErrorCount = 0
+let statusPollVersion = 0
 const MAX_POLL_ERRORS = 5
 
 $(document).ready(function () {
@@ -363,6 +364,13 @@ function toggleView () {
   }
 }
 
+function ordinal (n) {
+  const lastTwo = n % 100
+  if (lastTwo >= 11 && lastTwo <= 13) return n + 'th'
+  const suffixes = { 1: 'st', 2: 'nd', 3: 'rd' }
+  return n + (suffixes[n % 10] || 'th')
+}
+
 function triggerAnalysis (force) {
   if (!currentCaseNumber) return
   hideAlert()
@@ -381,7 +389,11 @@ function triggerAnalysis (force) {
     dataType: 'json',
     success: function (data) {
       if (data.task_id) {
-        $('#analysis-status-text').text('Task queued. Polling for completion...')
+        if (data.queue_position != null && data.queue_length != null) {
+          $('#analysis-status-text').text('You are ' + ordinal(data.queue_position) + ' of ' + data.queue_length + ' in the analysis queue')
+        } else {
+          $('#analysis-status-text').text('Task queued. Polling for completion...')
+        }
         // Save to sessionStorage for resume on page reload
         sessionStorage.setItem('activeAnalysis', JSON.stringify({
           task_id: data.task_id,
@@ -403,6 +415,7 @@ function triggerAnalysis (force) {
 }
 
 function pollStatus (taskId) {
+  const pollVersion = ++statusPollVersion
   $.ajax({
     url: '/api/ai/status/' + encodeURIComponent(taskId),
     method: 'GET',
@@ -416,6 +429,22 @@ function pollStatus (taskId) {
         statusText = 'Running AI analysis...'
       }
       $('#analysis-status-text').text(statusText)
+
+      if (data.state === 'PENDING') {
+        const caseNumber = currentCaseNumber
+        $.ajax({
+          url: '/api/ai/queue/position/' + encodeURIComponent(currentCaseNumber),
+          method: 'GET',
+          dataType: 'json',
+          success: function (positionData) {
+            // Ignore delayed positions once a newer status poll has started.
+            if (pollVersion !== statusPollVersion || caseNumber !== currentCaseNumber) return
+            if (positionData.state === 'queued' && positionData.position != null) {
+              $('#analysis-status-text').text('You are ' + ordinal(positionData.position) + ' of ' + positionData.queue_length + ' in the analysis queue')
+            }
+          }
+        })
+      }
 
       if (data.state === 'SUCCESS') {
         sessionStorage.removeItem('activeAnalysis')
