@@ -33,7 +33,7 @@ function setup () {
 
 test('ordinal handles endings and the teen exceptions', function () {
   const { context } = setup()
-  const expected = ['1st', '2nd', '3rd', '4th', '11th', '12th', '13th', '21st', '22nd', '23rd', '101st', '111th']
+  const expected = ['1st', '2nd', '3rd', '4th', '11th', '12th', '13th', '21st', '22nd', '23rd', '101st', '111th', '112th', '113th']
   for (const value of expected) {
     assert.equal(context.ordinal(parseInt(value, 10)), value)
   }
@@ -55,8 +55,10 @@ test('submission without queue metadata retains the original message', function 
 
 test('pending polls show live positions and keep the three-second cadence', function () {
   const { context, requests, timers, texts } = setup()
-  context.pollStatus('task-1')
+  context.pollStatus('task-1', '01234567')
   requests[0].success({ state: 'PENDING' })
+  // No generic placeholder before the position reply: writing both flickers.
+  assert.equal(texts['#analysis-status-text'], undefined)
   assert.equal(requests[1].url, '/api/ai/queue/position/01234567')
   assert.equal(requests[1].method, 'GET')
   requests[1].success({ state: 'queued', position: 21, queue_length: 23 })
@@ -66,18 +68,17 @@ test('pending polls show live positions and keep the three-second cadence', func
 
 test('missing position retains the generic pending message', function () {
   const { context, requests, texts } = setup()
-  context.pollStatus('task-1')
+  context.pollStatus('task-1', '01234567')
   requests[0].success({ state: 'PENDING' })
   requests[1].success({ state: 'not_found', position: null, queue_length: 0 })
   assert.equal(texts['#analysis-status-text'], 'Queued, waiting for worker...')
 })
 
-test('queue request failures leave pending text and status retries unchanged', function () {
+test('queue request failures fall back to the generic pending message', function () {
   const { context, requests, timers, texts } = setup()
-  context.pollStatus('task-1')
+  context.pollStatus('task-1', '01234567')
   requests[0].success({ state: 'PENDING' })
-  // jQuery has no error callback to invoke for this best-effort request.
-  assert.equal(requests[1].error, undefined)
+  requests[1].error()
   assert.equal(texts['#analysis-status-text'], 'Queued, waiting for worker...')
   assert.equal(vm.runInContext('pollErrorCount', context), 0)
   assert.equal(timers[0].delay, 3000)
@@ -85,7 +86,7 @@ test('queue request failures leave pending text and status retries unchanged', f
 
 test('a delayed queue response cannot overwrite STARTED', function () {
   const { context, requests, timers, texts } = setup()
-  context.pollStatus('task-1')
+  context.pollStatus('task-1', '01234567')
   requests[0].success({ state: 'PENDING' })
   const positionRequest = requests[1]
   timers[0].callback()
@@ -97,11 +98,28 @@ test('a delayed queue response cannot overwrite STARTED', function () {
 
 test('a delayed queue response cannot overwrite a status retry message', function () {
   const { context, requests, timers, texts } = setup()
-  context.pollStatus('task-1')
+  context.pollStatus('task-1', '01234567')
   requests[0].success({ state: 'PENDING' })
   timers[0].callback()
   requests[2].error()
   requests[1].success({ state: 'queued', position: 1, queue_length: 3 })
   assert.equal(texts['#analysis-status-text'], 'Connection issue, retrying... (1/5)')
   assert.equal(timers[1].delay, 5000)
+})
+
+test('no position request once the analysis has started', function () {
+  const { context, requests, texts } = setup()
+  context.pollStatus('task-1', '01234567')
+  requests[0].success({ state: 'STARTED' })
+  assert.equal(requests.length, 1)
+  assert.equal(texts['#analysis-status-text'], 'Running AI analysis...')
+})
+
+test('positions are dropped after the user moved on to another case', function () {
+  const { context, requests, texts } = setup()
+  context.pollStatus('task-1', '01234567')
+  requests[0].success({ state: 'PENDING' })
+  vm.runInContext("currentCaseNumber = '08765432'", context)
+  requests[1].success({ state: 'queued', position: 3, queue_length: 5 })
+  assert.equal(texts['#analysis-status-text'], undefined)
 })

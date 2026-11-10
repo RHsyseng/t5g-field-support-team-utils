@@ -400,7 +400,7 @@ function triggerAnalysis (force) {
           case_number: currentCaseNumber,
           started_at: Date.now()
         }))
-        pollStatus(data.task_id)
+        pollStatus(data.task_id, currentCaseNumber)
       }
     },
     error: function (xhr) {
@@ -414,7 +414,7 @@ function triggerAnalysis (force) {
   })
 }
 
-function pollStatus (taskId) {
+function pollStatus (taskId, caseNumber) {
   const pollVersion = ++statusPollVersion
   $.ajax({
     url: '/api/ai/status/' + encodeURIComponent(taskId),
@@ -422,28 +422,35 @@ function pollStatus (taskId) {
     dataType: 'json',
     success: function (data) {
       pollErrorCount = 0
-      let statusText = 'State: ' + data.state
       if (data.state === 'PENDING') {
-        statusText = 'Queued, waiting for worker...'
-      } else if (data.state === 'STARTED') {
-        statusText = 'Running AI analysis...'
-      }
-      $('#analysis-status-text').text(statusText)
-
-      if (data.state === 'PENDING') {
-        const caseNumber = currentCaseNumber
+        // No generic placeholder here: the position request below fills the
+        // text (the position, or the generic message when the case is not
+        // queued or the request fails) — writing both would flicker.
         $.ajax({
-          url: '/api/ai/queue/position/' + encodeURIComponent(currentCaseNumber),
+          url: '/api/ai/queue/position/' + encodeURIComponent(caseNumber),
           method: 'GET',
           dataType: 'json',
           success: function (positionData) {
-            // Ignore delayed positions once a newer status poll has started.
+            // Ignore delayed positions once a newer status poll has started
+            // or the user moved on to another case.
             if (pollVersion !== statusPollVersion || caseNumber !== currentCaseNumber) return
             if (positionData.state === 'queued' && positionData.position != null) {
               $('#analysis-status-text').text('You are ' + ordinal(positionData.position) + ' of ' + positionData.queue_length + ' in the analysis queue')
+            } else {
+              $('#analysis-status-text').text('Queued, waiting for worker...')
             }
+          },
+          error: function () {
+            if (pollVersion !== statusPollVersion || caseNumber !== currentCaseNumber) return
+            $('#analysis-status-text').text('Queued, waiting for worker...')
           }
         })
+      } else {
+        let statusText = 'State: ' + data.state
+        if (data.state === 'STARTED') {
+          statusText = 'Running AI analysis...'
+        }
+        $('#analysis-status-text').text(statusText)
       }
 
       if (data.state === 'SUCCESS') {
@@ -455,7 +462,7 @@ function pollStatus (taskId) {
         $('#analysis-progress').addClass('d-none')
         showAlert('Analysis failed: ' + (data.error || 'Unknown error'), 'danger')
       } else {
-        setTimeout(function () { pollStatus(taskId) }, 3000)
+        setTimeout(function () { pollStatus(taskId, caseNumber) }, 3000)
       }
     },
     error: function () {
@@ -562,7 +569,7 @@ function resumeOngoingAnalysis () {
     $('#analysis-status-text').text('Resuming analysis...')
 
     // Start polling
-    pollStatus(data.task_id)
+    pollStatus(data.task_id, data.case_number)
   } catch (e) {
     // Invalid JSON, clear it
     sessionStorage.removeItem('activeAnalysis')

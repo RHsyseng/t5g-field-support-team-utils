@@ -6,6 +6,7 @@ import pytest
 import requests
 from flask import Flask
 from flask_login import LoginManager
+
 from t5gweb import api
 
 UPSTREAM = "http://agents.test:8081"
