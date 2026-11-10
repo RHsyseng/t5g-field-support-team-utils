@@ -72,12 +72,33 @@ class TestProxyForwarding:
         "query, expected",
         [("", "false"), ("?force=true", "true"), ("?force=TRUE", "true")],
     )
-    def test_analyze_sends_lowercase_force_flag(
+    def test_analyze_sends_lowercase_force_and_interactive_flags(
         self, client, upstream, query, expected
     ):
         client.post(f"/api/ai/analyze/01234567{query}")
 
-        assert upstream.call_args.kwargs["params"] == {"force": expected}
+        assert upstream.call_args.kwargs["params"] == {
+            "force": expected,
+            "interactive": "true",
+        }
+
+    def test_queue_position_forwards_and_relays_json(self, client, upstream):
+        body = {
+            "case_number": "01234567",
+            "queue": "manual",
+            "state": "queued",
+            "position": 2,
+            "queue_length": 3,
+        }
+        upstream.return_value = make_response(200, body)
+
+        resp = client.get("/api/ai/queue/position/01234567")
+
+        assert resp.status_code == 200
+        assert resp.get_json() == body
+        upstream.assert_called_once_with(
+            "get", f"{UPSTREAM}/queue/position/01234567", timeout=api.AI_PROXY_TIMEOUT
+        )
 
     def test_feedback_post_forwards_json_object(self, client, upstream):
         resp = client.post("/api/ai/feedback/abc-123", json={"rating": "up"})
@@ -98,6 +119,7 @@ class TestAccessControl:
             ("get", "/api/ai/report/case/01234567"),
             ("post", "/api/ai/analyze/01234567"),
             ("get", "/api/ai/status/task-1"),
+            ("get", "/api/ai/queue/position/01234567"),
             ("post", "/api/ai/feedback/abc-123"),
         ],
     )
@@ -169,6 +191,7 @@ class TestInputValidation:
     def test_rejects_invalid_case_numbers(self, client, upstream, case_number):
         assert client.get(f"/api/ai/report/case/{case_number}").status_code == 400
         assert client.post(f"/api/ai/analyze/{case_number}").status_code == 400
+        assert client.get(f"/api/ai/queue/position/{case_number}").status_code == 400
         upstream.assert_not_called()
 
     @pytest.mark.parametrize(
