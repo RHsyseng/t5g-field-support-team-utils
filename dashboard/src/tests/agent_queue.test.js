@@ -22,7 +22,8 @@ function setup () {
   }
   $.ajax = function (options) { requests.push(options) }
   const context = vm.createContext({
-    $, document: {},
+    $,
+    document: {},
     sessionStorage: { setItem: function () {}, removeItem: function () {} },
     setTimeout: function (callback, delay) { timers.push({ callback, delay }) }
   })
