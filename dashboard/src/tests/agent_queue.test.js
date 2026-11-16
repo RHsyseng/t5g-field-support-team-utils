@@ -108,6 +108,20 @@ test('a delayed queue response cannot overwrite a status retry message', functio
   assert.equal(timers[1].delay, 5000)
 })
 
+test('a poll retried after a connection error keeps the case number', function () {
+  const { context, requests, timers, texts } = setup()
+  context.pollStatus('task-1', '01234567')
+  requests[0].error()
+  assert.equal(timers[0].delay, 5000)
+  timers[0].callback()
+  assert.equal(requests[1].url, '/api/ai/status/task-1')
+  requests[1].success({ state: 'PENDING' })
+  assert.equal(requests[2].url, '/api/ai/queue/position/01234567')
+  requests[2].success({ state: 'queued', position: 2, queue_length: 3 })
+  assert.equal(texts['#analysis-status-text'], 'You are 2nd of 3 in the analysis queue')
+  assert.equal(timers[1].delay, 3000)
+})
+
 test('no position request once the analysis has started', function () {
   const { context, requests, texts } = setup()
   context.pollStatus('task-1', '01234567')
