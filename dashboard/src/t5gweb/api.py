@@ -236,8 +236,17 @@ def ai_analyze(case_number):
     if err:
         return err
     force = request.args.get("force", "false").lower() == "true"
-    params = {"force": "true" if force else "false"}
+    params = {"force": "true" if force else "false", "interactive": "true"}
     return _ai_proxy("post", f"/analyze/{case_number}", params=params)
+
+
+@BP.route("/ai/queue/position/<string:case_number>")
+@login_required
+def ai_queue_position(case_number):
+    err = _validate_case_number(case_number)
+    if err:
+        return err
+    return _ai_proxy("get", f"/queue/position/{case_number}")
 
 
 @BP.route("/ai/status/<string:task_id>")

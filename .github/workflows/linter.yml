@@ -60,3 +60,9 @@ jobs:
         run: pip install -r .github/workflows/requirements-pytest.txt
       - name: Test with pytest
         run: pytest . --cov
+      - name: Set Up Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+      - name: Test agent.js helpers with node
+        run: node --test dashboard/src/tests/*.test.js

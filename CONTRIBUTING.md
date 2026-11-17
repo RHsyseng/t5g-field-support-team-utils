@@ -185,6 +185,8 @@ In this case, the API call will not take place, and will instead be represented 
 
 Our unit tests are located in `tests/`, and we run tests automatically for PR's and commits on the `main` branch via GitHub Actions (`.github/workflows/linter.yml`). You can run tests locally by installing pytest and pytest-mock, and then running `pytest` from the root directory of the repository (`t5g-field-support-team-utils/`).
 
+Frontend helpers in `dashboard/src/t5gweb/static/js/agent.js` are tested with Node's built-in test runner (no dependencies to install). Run them from the repository root with `node --test dashboard/src/tests/*.test.js`; CI runs the same command.
+
 ### Add a new scheduled task
 
 We use [Celery beat](https://docs.celeryq.dev/en/stable/userguide/periodic-tasks.html) to run our scheduled tasks, which gather data from various APIs and combine it into what is visible on our dashboard.

@@ -9,6 +9,8 @@ This directory contains comprehensive tests for several modules of the dashboard
 - **`test_database.py`** - Comprehensive database module tests
 - **`test_libtelco5g.py`** - Existing libtelco5g utility tests
 - **`test_utils.py`** - Existing utility function tests
+- **`test_ai_proxy.py`** - AI agents proxy routes (forwarding, access control, validation)
+- **`agent_queue.test.js`** - `agent.js` queue-position UI, run with `node --test` (not pytest)
 - **`conftest.py`** - Shared pytest fixtures and configuration
 - **`pytest.ini`** - Pytest configuration settings
 

@@ -4,6 +4,7 @@ let currentAnalysisId = null
 let currentCaseNumber = null
 let showingRaw = false
 let pollErrorCount = 0
+let statusPollVersion = 0
 const MAX_POLL_ERRORS = 5
 
 $(document).ready(function () {
@@ -363,6 +364,13 @@ function toggleView () {
   }
 }
 
+function ordinal (n) {
+  const lastTwo = n % 100
+  if (lastTwo >= 11 && lastTwo <= 13) return n + 'th'
+  const suffixes = { 1: 'st', 2: 'nd', 3: 'rd' }
+  return n + (suffixes[n % 10] || 'th')
+}
+
 function triggerAnalysis (force) {
   if (!currentCaseNumber) return
   hideAlert()
@@ -381,14 +389,18 @@ function triggerAnalysis (force) {
     dataType: 'json',
     success: function (data) {
       if (data.task_id) {
-        $('#analysis-status-text').text('Task queued. Polling for completion...')
+        if (data.queue_position != null && data.queue_length != null) {
+          $('#analysis-status-text').text(queuePositionText(data.queue_position, data.queue_length))
+        } else {
+          $('#analysis-status-text').text('Task queued. Polling for completion...')
+        }
         // Save to sessionStorage for resume on page reload
         sessionStorage.setItem('activeAnalysis', JSON.stringify({
           task_id: data.task_id,
           case_number: currentCaseNumber,
           started_at: Date.now()
         }))
-        pollStatus(data.task_id)
+        pollStatus(data.task_id, currentCaseNumber)
       }
     },
     error: function (xhr) {
@@ -402,46 +414,83 @@ function triggerAnalysis (force) {
   })
 }
 
-function pollStatus (taskId) {
-  $.ajax({
-    url: '/api/ai/status/' + encodeURIComponent(taskId),
-    method: 'GET',
-    dataType: 'json',
-    success: function (data) {
-      pollErrorCount = 0
-      let statusText = 'State: ' + data.state
-      if (data.state === 'PENDING') {
-        statusText = 'Queued, waiting for worker...'
-      } else if (data.state === 'STARTED') {
-        statusText = 'Running AI analysis...'
-      }
-      $('#analysis-status-text').text(statusText)
+function queuePositionText (position, length) {
+  return 'You are ' + ordinal(position) + ' of ' + length + ' in the analysis queue'
+}
 
-      if (data.state === 'SUCCESS') {
-        sessionStorage.removeItem('activeAnalysis')
-        $('#analysis-progress').addClass('d-none')
-        searchCase()
-      } else if (data.state === 'FAILURE') {
-        sessionStorage.removeItem('activeAnalysis')
-        $('#analysis-progress').addClass('d-none')
-        showAlert('Analysis failed: ' + (data.error || 'Unknown error'), 'danger')
-      } else {
-        setTimeout(function () { pollStatus(taskId) }, 3000)
-      }
-    },
-    error: function () {
-      pollErrorCount++
-      if (pollErrorCount >= MAX_POLL_ERRORS) {
-        pollErrorCount = 0
-        sessionStorage.removeItem('activeAnalysis')
-        $('#analysis-progress').addClass('d-none')
-        showAlert('Lost contact with analysis task after multiple retries. Please run a new analysis.', 'warning')
-      } else {
-        $('#analysis-status-text').text('Connection issue, retrying... (' + pollErrorCount + '/' + MAX_POLL_ERRORS + ')')
-        setTimeout(function () { pollStatus(taskId) }, 5000)
-      }
+// The task and its case are bound once here; every retry reuses them, so a
+// retry path can never lose the case number.
+function pollStatus (taskId, caseNumber) {
+  function poll () {
+    const pollVersion = ++statusPollVersion
+    // A position reply is stale once a newer status poll has started or the
+    // user moved on to another case.
+    function isStale () {
+      return pollVersion !== statusPollVersion || caseNumber !== currentCaseNumber
     }
-  })
+
+    $.ajax({
+      url: '/api/ai/status/' + encodeURIComponent(taskId),
+      method: 'GET',
+      dataType: 'json',
+      success: function (data) {
+        pollErrorCount = 0
+        if (data.state === 'PENDING') {
+          // No generic placeholder here: the position request below fills the
+          // text (the position, or the generic message when the case is not
+          // queued or the request fails) — writing both would flicker.
+          $.ajax({
+            url: '/api/ai/queue/position/' + encodeURIComponent(caseNumber),
+            method: 'GET',
+            dataType: 'json',
+            success: function (positionData) {
+              if (isStale()) return
+              if (positionData.state === 'queued' && positionData.position != null) {
+                $('#analysis-status-text').text(queuePositionText(positionData.position, positionData.queue_length))
+              } else {
+                $('#analysis-status-text').text('Queued, waiting for worker...')
+              }
+            },
+            error: function () {
+              if (isStale()) return
+              $('#analysis-status-text').text('Queued, waiting for worker...')
+            }
+          })
+        } else {
+          let statusText = 'State: ' + data.state
+          if (data.state === 'STARTED') {
+            statusText = 'Running AI analysis...'
+          }
+          $('#analysis-status-text').text(statusText)
+        }
+
+        if (data.state === 'SUCCESS') {
+          sessionStorage.removeItem('activeAnalysis')
+          $('#analysis-progress').addClass('d-none')
+          searchCase()
+        } else if (data.state === 'FAILURE') {
+          sessionStorage.removeItem('activeAnalysis')
+          $('#analysis-progress').addClass('d-none')
+          showAlert('Analysis failed: ' + (data.error || 'Unknown error'), 'danger')
+        } else {
+          setTimeout(poll, 3000)
+        }
+      },
+      error: function () {
+        pollErrorCount++
+        if (pollErrorCount >= MAX_POLL_ERRORS) {
+          pollErrorCount = 0
+          sessionStorage.removeItem('activeAnalysis')
+          $('#analysis-progress').addClass('d-none')
+          showAlert('Lost contact with analysis task after multiple retries. Please run a new analysis.', 'warning')
+        } else {
+          $('#analysis-status-text').text('Connection issue, retrying... (' + pollErrorCount + '/' + MAX_POLL_ERRORS + ')')
+          setTimeout(poll, 5000)
+        }
+      }
+    })
+  }
+  poll()
 }
 
 function loadThinkingLog () {
@@ -533,7 +582,7 @@ function resumeOngoingAnalysis () {
     $('#analysis-status-text').text('Resuming analysis...')
 
     // Start polling
-    pollStatus(data.task_id)
+    pollStatus(data.task_id, data.case_number)
   } catch (e) {
     // Invalid JSON, clear it
     sessionStorage.removeItem('activeAnalysis')
