@@ -10,10 +10,12 @@ function setup () {
   const requests = []
   const timers = []
   const texts = {}
+  const storage = {}
   const element = {
     ready: function () {},
     addClass: function () { return this },
-    removeClass: function () { return this }
+    removeClass: function () { return this },
+    val: function () { return this }
   }
   function $ (selector) {
     return Object.assign({}, element, {
@@ -24,12 +26,28 @@ function setup () {
   const context = vm.createContext({
     $,
     document: {},
-    sessionStorage: { setItem: function () {}, removeItem: function () {} },
+    sessionStorage: {
+      setItem: function (key, value) { storage[key] = String(value) },
+      getItem: function (key) {
+        return Object.prototype.hasOwnProperty.call(storage, key) ? storage[key] : null
+      },
+      removeItem: function (key) { delete storage[key] }
+    },
     setTimeout: function (callback, delay) { timers.push({ callback, delay }) }
   })
   vm.runInContext(source, context)
   vm.runInContext("currentCaseNumber = '01234567'", context)
-  return { context, requests, timers, texts }
+  return { context, requests, timers, texts, storage }
+}
+
+// Submits the current case and accepts it as taskId, without queue metadata.
+function submitAccepted (context, requests, taskId) {
+  context.triggerAnalysis(false)
+  requests[requests.length - 1].success({ task_id: taskId, queue_position: null, queue_length: null })
+}
+
+function posts (requests) {
+  return requests.filter(function (r) { return r.method === 'POST' })
 }
 
 test('ordinal handles endings and the teen exceptions', function () {
@@ -67,12 +85,12 @@ test('pending polls show live positions and keep the three-second cadence', func
   assert.equal(timers[0].delay, 3000)
 })
 
-test('missing position retains the generic pending message', function () {
+test('a task already held by the worker shows it is next in line', function () {
   const { context, requests, texts } = setup()
   context.pollStatus('task-1', '01234567')
   requests[0].success({ state: 'PENDING' })
-  requests[1].success({ state: 'not_found', position: null, queue_length: 0 })
-  assert.equal(texts['#analysis-status-text'], 'Queued, waiting for worker...')
+  requests[1].success({ state: 'not_found', position: null, queue_length: 1 })
+  assert.equal(texts['#analysis-status-text'], 'Next in line: waiting for the current analysis to finish')
 })
 
 test('queue request failures fall back to the generic pending message', function () {
@@ -137,4 +155,81 @@ test('positions are dropped after the user moved on to another case', function (
   vm.runInContext("currentCaseNumber = '08765432'", context)
   requests[1].success({ state: 'queued', position: 3, queue_length: 5 })
   assert.equal(texts['#analysis-status-text'], undefined)
+})
+
+test('a stale status reply cannot overwrite the newer loop', function () {
+  const { context, requests, texts } = setup()
+  context.pollStatus('task-1', '01234567')
+  context.pollStatus('task-2', '01234567')
+  requests[0].success({ state: 'STARTED' })
+  assert.equal(texts['#analysis-status-text'], undefined)
+  requests[1].success({ state: 'STARTED' })
+  assert.equal(texts['#analysis-status-text'], 'Running AI analysis...')
+})
+
+test('a superseded loop stops requesting after its timer fires', function () {
+  const { context, requests, timers, texts } = setup()
+  context.pollStatus('task-1', '01234567')
+  requests[0].success({ state: 'PENDING' })
+  context.pollStatus('task-2', '01234567')
+  requests[2].success({ state: 'STARTED' })
+  timers[0].callback()
+  requests[1].success({ state: 'queued', position: 1, queue_length: 3 })
+  assert.equal(requests.length, 3)
+  assert.equal(texts['#analysis-status-text'], 'Running AI analysis...')
+})
+
+test('resubmitting the analyzing case resumes its task instead of stacking a new one', function () {
+  const { context, requests, texts } = setup()
+  submitAccepted(context, requests, 'task-1')
+  context.triggerAnalysis(false)
+  assert.equal(posts(requests).length, 1)
+  assert.equal(texts['#analysis-status-text'], 'Analysis already in progress...')
+  assert.equal(requests[requests.length - 1].url, '/api/ai/status/task-1')
+})
+
+test('an expired stored analysis no longer blocks a fresh submission', function () {
+  const { context, requests, storage } = setup()
+  submitAccepted(context, requests, 'task-1')
+  storage.activeAnalysis = JSON.stringify({ task_id: 'task-1', case_number: '01234567', started_at: Date.now() - 3 * 60 * 60 * 1000 })
+  context.triggerAnalysis(false)
+  assert.equal(posts(requests).length, 2)
+  assert.equal(posts(requests)[1].url, '/api/ai/analyze/01234567')
+})
+
+test('submitting a different case still creates a new analysis', function () {
+  const { context, requests } = setup()
+  submitAccepted(context, requests, 'task-1')
+  vm.runInContext("currentCaseNumber = '08765432'", context)
+  context.triggerAnalysis(false)
+  assert.equal(posts(requests).length, 2)
+  assert.equal(posts(requests)[1].url, '/api/ai/analyze/08765432')
+})
+
+test('re-analyze bypasses the stored analysis and submits with force', function () {
+  const { context, requests } = setup()
+  submitAccepted(context, requests, 'task-1')
+  context.triggerAnalysis(true)
+  assert.equal(posts(requests).length, 2)
+  assert.equal(posts(requests)[1].url, '/api/ai/analyze/01234567?force=true')
+})
+
+test('a page reload resumes polling the stored analysis', function () {
+  const { context, requests, texts, storage } = setup()
+  storage.activeAnalysis = JSON.stringify({ task_id: 'task-1', case_number: '08765432', started_at: Date.now() })
+  context.resumeOngoingAnalysis()
+  assert.equal(vm.runInContext('currentCaseNumber', context), '08765432')
+  assert.equal(texts['#analysis-status-text'], 'Resuming analysis...')
+  assert.equal(requests.length, 1)
+  assert.equal(requests[0].url, '/api/ai/status/task-1')
+})
+
+test('a page reload clears an expired or unreadable stored analysis', function () {
+  for (const value of [JSON.stringify({ task_id: 'task-1', case_number: '01234567', started_at: Date.now() - 3 * 60 * 60 * 1000 }), '{not json']) {
+    const { context, requests, storage } = setup()
+    storage.activeAnalysis = value
+    context.resumeOngoingAnalysis()
+    assert.equal(requests.length, 0)
+    assert.equal(storage.activeAnalysis, undefined)
+  }
 })

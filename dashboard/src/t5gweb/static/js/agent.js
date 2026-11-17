@@ -5,7 +5,9 @@ let currentCaseNumber = null
 let showingRaw = false
 let pollErrorCount = 0
 let statusPollVersion = 0
+let statusLoopVersion = 0
 const MAX_POLL_ERRORS = 5
+const ACTIVE_ANALYSIS_MAX_AGE_MS = 2 * 60 * 60 * 1000
 
 $(document).ready(function () {
   $('#search-btn').click(searchCase)
@@ -375,10 +377,18 @@ function triggerAnalysis (force) {
   if (!currentCaseNumber) return
   hideAlert()
   pollErrorCount = 0
-  $('#no-report').addClass('d-none')
-  $('#report-container').addClass('d-none')
-  $('#analysis-progress').removeClass('d-none')
-  $('#analysis-status-text').text('Queuing analysis...')
+
+  // One analysis of a case at a time: a repeat click would stack a duplicate
+  // task (it skips worker-side, but its poll loop garbles the status text).
+  // Resume polling the stored task instead of submitting again.
+  const active = force ? null : getActiveAnalysis()
+  if (active && active.case_number === currentCaseNumber) {
+    showAnalysisProgress('Analysis already in progress...')
+    pollStatus(active.task_id, active.case_number)
+    return
+  }
+
+  showAnalysisProgress('Queuing analysis...')
 
   let url = '/api/ai/analyze/' + encodeURIComponent(currentCaseNumber)
   if (force) url += '?force=true'
@@ -414,6 +424,31 @@ function triggerAnalysis (force) {
   })
 }
 
+function showAnalysisProgress (text) {
+  $('#no-report').addClass('d-none')
+  $('#report-container').addClass('d-none')
+  $('#analysis-progress').removeClass('d-none')
+  $('#analysis-status-text').text(text)
+}
+
+// The analysis saved by triggerAnalysis for resuming, or null. An expired
+// (likely lost) or unreadable entry is cleared.
+function getActiveAnalysis () {
+  const stored = sessionStorage.getItem('activeAnalysis')
+  if (!stored) return null
+  try {
+    const active = JSON.parse(stored)
+    if (Date.now() - active.started_at > ACTIVE_ANALYSIS_MAX_AGE_MS) {
+      sessionStorage.removeItem('activeAnalysis')
+      return null
+    }
+    return active
+  } catch (e) {
+    sessionStorage.removeItem('activeAnalysis')
+    return null
+  }
+}
+
 function queuePositionText (position, length) {
   return 'You are ' + ordinal(position) + ' of ' + length + ' in the analysis queue'
 }
@@ -421,9 +456,16 @@ function queuePositionText (position, length) {
 // The task and its case are bound once here; every retry reuses them, so a
 // retry path can never lose the case number.
 function pollStatus (taskId, caseNumber) {
+  // Each pollStatus call supersedes every older one: a superseded loop must
+  // stop requesting and writing, or two loops overwrite each other's status
+  // text every three seconds.
+  const loopVersion = ++statusLoopVersion
   function poll () {
+    // A superseded loop (new submission or page resume) or a case switch
+    // ends here instead of firing another request.
+    if (loopVersion !== statusLoopVersion || caseNumber !== currentCaseNumber) return
     const pollVersion = ++statusPollVersion
-    // A position reply is stale once a newer status poll has started or the
+    // A reply is stale once a newer status poll has started or the
     // user moved on to another case.
     function isStale () {
       return pollVersion !== statusPollVersion || caseNumber !== currentCaseNumber
@@ -434,6 +476,7 @@ function pollStatus (taskId, caseNumber) {
       method: 'GET',
       dataType: 'json',
       success: function (data) {
+        if (isStale()) return
         pollErrorCount = 0
         if (data.state === 'PENDING') {
           // No generic placeholder here: the position request below fills the
@@ -447,6 +490,10 @@ function pollStatus (taskId, caseNumber) {
               if (isStale()) return
               if (positionData.state === 'queued' && positionData.position != null) {
                 $('#analysis-status-text').text(queuePositionText(positionData.position, positionData.queue_length))
+              } else if (positionData.state === 'not_found') {
+                // The worker (concurrency 1) already holds this task: it runs
+                // next, behind the analysis currently executing.
+                $('#analysis-status-text').text('Next in line: waiting for the current analysis to finish')
               } else {
                 $('#analysis-status-text').text('Queued, waiting for worker...')
               }
@@ -477,6 +524,7 @@ function pollStatus (taskId, caseNumber) {
         }
       },
       error: function () {
+        if (isStale()) return
         pollErrorCount++
         if (pollErrorCount >= MAX_POLL_ERRORS) {
           pollErrorCount = 0
@@ -560,33 +608,13 @@ function submitFeedback (vote) {
 }
 
 function resumeOngoingAnalysis () {
-  const stored = sessionStorage.getItem('activeAnalysis')
-  if (!stored) return
+  const active = getActiveAnalysis()
+  if (!active) return
 
-  try {
-    const data = JSON.parse(stored)
-    const ageHours = (Date.now() - data.started_at) / (1000 * 60 * 60)
-
-    // Ignore if older than 2 hours (likely expired)
-    if (ageHours > 2) {
-      sessionStorage.removeItem('activeAnalysis')
-      return
-    }
-
-    // Resume the analysis
-    currentCaseNumber = data.case_number
-    $('#case-number-input').val(data.case_number)
-    $('#no-report').addClass('d-none')
-    $('#report-container').addClass('d-none')
-    $('#analysis-progress').removeClass('d-none')
-    $('#analysis-status-text').text('Resuming analysis...')
-
-    // Start polling
-    pollStatus(data.task_id, data.case_number)
-  } catch (e) {
-    // Invalid JSON, clear it
-    sessionStorage.removeItem('activeAnalysis')
-  }
+  currentCaseNumber = active.case_number
+  $('#case-number-input').val(active.case_number)
+  showAnalysisProgress('Resuming analysis...')
+  pollStatus(active.task_id, active.case_number)
 }
 
 function statusBadgeClass (status) {
